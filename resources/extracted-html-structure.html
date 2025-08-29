@@ -1,0 +1,195 @@
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar-nav" role="navigation" aria-label="Navigazione ruoli">
+        <div id="roleNavigation" role="list"></div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content" role="main">
+        <h1 class="page-title">⚽ Tracker Fantacalcio Mantra</h1>
+        
+        <!-- Dashboard -->
+        <section class="dashboard">
+            <!-- Stats Card -->
+            <div class="card">
+                <div class="card__body">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card__label">Crediti Totali</div>
+                            <div id="totalCredits" class="stat-card__value" aria-live="polite">500</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card__label">Crediti Rimanenti</div>
+                            <div id="remainingCredits" class="stat-card__value" aria-live="polite">500</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card__label">Giocatori Presi</div>
+                            <div id="playerCount" class="stat-card__value" aria-live="polite">0/30</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card__label">Giocatori Disponibili</div>
+                            <div id="availablePlayersCount" class="stat-card__value" aria-live="polite">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="player-counts">
+                        <div class="player-counts__title">📊 Giocatori per Ruolo</div>
+                        <div id="playerCounts" class="player-counts__grid" role="list"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Controls Card -->
+            <div class="card">
+                <div class="card__body controls">
+                    <div class="controls__header">
+                        <div class="controls__search">
+                            <label for="mainSearchInput" class="visually-hidden">Cerca giocatori</label>
+                            <input 
+                                type="text" 
+                                id="mainSearchInput" 
+                                class="form-control" 
+                                placeholder="🔍 Cerca giocatori per cognome..."
+                                aria-describedby="search-help"
+                            />
+                            <div id="search-help" class="visually-hidden">
+                                Digita il cognome del giocatore per filtrare i risultati
+                            </div>
+                        </div>
+                        <div class="controls__filters">
+                            <button 
+                                id="interestFilter" 
+                                class="btn btn--secondary"
+                                onclick="app.toggleInterestFilter()"
+                                aria-pressed="false"
+                                aria-describedby="interest-filter-help"
+                            >
+                                ⭐ Solo Interessanti
+                            </button>
+                            <div id="interest-filter-help" class="visually-hidden">
+                                Attiva o disattiva il filtro per mostrare solo i giocatori marcati come interessanti
+                            </div>
+                            <button 
+                                id="mainSearchClear" 
+                                class="btn btn--danger btn--sm"
+                                onclick="app.clearMainSearch()"
+                                aria-label="Pulisci ricerca"
+                            >
+                                ✖ Pulisci
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Tracker -->
+        <section class="tracker" id="tracker" aria-live="polite" aria-label="Lista giocatori"></section>
+    </main>
+
+    <!-- Sidebar Actions -->
+    <aside class="sidebar-actions" role="complementary" aria-label="Azioni principali">
+        <div class="sidebar-section">
+            <h3 class="visually-hidden">Gestione</h3>
+            <button 
+                id="ownedPlayersBtn" 
+                class="btn btn--success"
+                onclick="app.showOwnedPlayers()"
+                aria-describedby="owned-players-help"
+            >
+                📊 Giocatori Presi
+            </button>
+            <div id="owned-players-help" class="visually-hidden">
+                Visualizza tutti i giocatori che hai acquistato
+            </div>
+            
+            <button 
+                id="formationBtn" 
+                class="btn btn--secondary"
+                onclick="app.showFormationModal()"
+                aria-describedby="formation-help"
+            >
+                ⚽ Formazioni
+            </button>
+            <div id="formation-help" class="visually-hidden">
+                Crea e gestisci le tue formazioni tattiche
+            </div>
+            
+            <button 
+                id="participantsBtn" 
+                class="btn btn--info"
+                onclick="app.showParticipantsModal()"
+                aria-describedby="participants-help"
+            >
+                👥 Altri Partecipanti
+            </button>
+            <div id="participants-help" class="visually-hidden">
+                Gestisci gli altri partecipanti alla lega
+            </div>
+            
+            <button 
+                id="showRemovedButton" 
+                class="btn btn--primary"
+                onclick="app.showRemovedPlayers()"
+                aria-describedby="removed-help"
+            >
+                👻 Giocatori Rimossi
+            </button>
+            <div id="removed-help" class="visually-hidden">
+                Visualizza i giocatori che hai rimosso dalla lista
+            </div>
+        </div>
+        
+        <div class="sidebar-section">
+            <h3 class="visually-hidden">Strumenti</h3>
+            <button 
+                id="loadExcelBtn" 
+                class="btn btn--warning"
+                onclick="app.showLoadExcelModal()"
+                aria-describedby="excel-help"
+            >
+                📋 Carica Excel
+            </button>
+            <div id="excel-help" class="visually-hidden">
+                Carica il listone giocatori da file Excel
+            </div>
+            
+            <button 
+                id="formationImageBtn" 
+                class="btn btn--info"
+                onclick="app.showFormationImageModal()"
+                aria-describedby="formation-image-help"
+            >
+                📸 Immagini Formazioni
+            </button>
+            <div id="formation-image-help" class="visually-hidden">
+                Carica e visualizza immagini delle formazioni
+            </div>
+            
+            <button 
+                id="resetButton" 
+                class="btn btn--danger"
+                onclick="app.resetData()"
+                aria-describedby="reset-help"
+            >
+                🔄 Reset Dati
+            </button>
+            <div id="reset-help" class="visually-hidden">
+                Cancella tutti i dati salvati - attenzione: azione irreversibile
+            </div>
+        </div>
+    </aside>
+    
+    <!-- Scroll to Top Button -->
+    <button 
+        onclick="app.scrollToTop()" 
+        id="scrollTopBtn" 
+        class="scroll-top"
+        title="Torna in cima"
+        aria-label="Scorri all'inizio della pagina"
+    >
+        ↑
+    </button>
+
+    <!-- Modals will be added dynamically -->
+

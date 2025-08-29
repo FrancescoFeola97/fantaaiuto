@@ -1,0 +1,112 @@
+{
+  "name": "fanta-aiuto",
+  "version": "2.0.0",
+  "description": "Tracker Fantacalcio Mantra - Advanced Fantasy Football Manager",
+  "private": true,
+  "keywords": [
+    "fantasy-football",
+    "fantacalcio",
+    "tracker",
+    "sports",
+    "management"
+  ],
+  "license": "MIT",
+  "author": "Francesco",
+  "type": "module",
+  "main": "electron-main.cjs",
+  "homepage": "./",
+  "scripts": {
+    "dev": "webpack serve --open --config webpack.config.dev.cjs",
+    "start": "webpack serve --open --config webpack.config.dev.cjs",
+    "build": "webpack --config webpack.config.prod.cjs",
+    "build-electron": "npm run build && electron .",
+    "electron": "NODE_ENV=development electron .",
+    "electron-dev": "concurrently \"npm run start\" \"wait-on http://localhost:8084 && NODE_ENV=development electron .\"",
+    "dist": "npm run build && electron-builder",
+    "dist-win": "npm run build && electron-builder --win",
+    "dist-mac": "npm run build && electron-builder --mac",
+    "dist-linux": "npm run build && electron-builder --linux",
+    "preview": "vite preview",
+    "lint": "eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.0",
+    "lodash-es": "^4.17.21",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "copy-webpack-plugin": "^12.0.2",
+    "css-loader": "^6.8.1",
+    "electron": "^37.3.1",
+    "electron-builder": "^26.0.12",
+    "eslint": "^8.55.0",
+    "html-webpack-plugin": "^5.6.0",
+    "mini-css-extract-plugin": "^2.7.6",
+    "sass": "^1.69.5",
+    "sass-loader": "^13.3.2",
+    "style-loader": "^3.3.3",
+    "vitest": "^1.0.4",
+    "wait-on": "^8.0.4",
+    "webpack": "^5.94.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.1",
+    "webpack-merge": "^5.10.0"
+  },
+  "build": {
+    "appId": "com.francesco.fantaaiuto",
+    "productName": "FantaAiuto",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.cjs",
+      "electron-preload.cjs",
+      "assets/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/",
+        "to": "resources/",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico",
+      "publisherName": "Francesco",
+      "fileAssociations": [
+        {
+          "ext": "xlsx",
+          "name": "Excel File",
+          "description": "File Excel per FantaAiuto"
+        }
+      ]
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.sports"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png",
+      "category": "Game"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "FantaAiuto"
+    },
+    "dmg": {
+      "title": "FantaAiuto ${version}",
+      "icon": "assets/icon.icns"
+    }
+  }
+}
