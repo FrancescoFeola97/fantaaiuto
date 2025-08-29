@@ -178,41 +178,14 @@ export class FantaAiutoApp {
   }
 
   setupHeaderListeners() {
-    // Setup sidebar action buttons
+    // Most sidebar action buttons are handled by ActionsPanel
+    // Only keeping Excel import here as it's a core app function
     const loadExcelBtn = document.getElementById('loadExcelBtn');
     if (loadExcelBtn) {
       loadExcelBtn.addEventListener('click', () => this.handleExcelImport());
     }
 
-    const formationImageBtn = document.getElementById('formationImageBtn');
-    if (formationImageBtn) {
-      formationImageBtn.addEventListener('click', () => this.showFormationImageModal());
-    }
-
-    const ownedPlayersBtn = document.getElementById('ownedPlayersBtn');
-    if (ownedPlayersBtn) {
-      ownedPlayersBtn.addEventListener('click', () => this.showOwnedPlayers());
-    }
-
-    const formationBtn = document.getElementById('formationBtn');
-    if (formationBtn) {
-      formationBtn.addEventListener('click', () => this.showFormationModal());
-    }
-
-    const participantsBtn = document.getElementById('participantsBtn');
-    if (participantsBtn) {
-      participantsBtn.addEventListener('click', () => this.showParticipantsModal());
-    }
-
-    const showRemovedButton = document.getElementById('showRemovedButton');
-    if (showRemovedButton) {
-      showRemovedButton.addEventListener('click', () => this.showRemovedPlayers());
-    }
-
-    const resetButton = document.getElementById('resetButton');
-    if (resetButton) {
-      resetButton.addEventListener('click', () => this.resetData());
-    }
+    // Other sidebar buttons (reset, owned players, etc.) are handled by ActionsPanel
 
     // Setup search and filter controls
     const mainSearchInput = document.getElementById('mainSearchInput');
@@ -335,6 +308,23 @@ export class FantaAiutoApp {
     // Data reset event
     document.addEventListener('fantaaiuto:dataReset', () => {
       this.saveData();
+    });
+    
+    // Modal closed event - reset filters to show all players
+    document.addEventListener('fantaaiuto:modalClosed', (e) => {
+      const modalId = e.detail.modalId;
+      // Reset filters when closing modal views to prevent players from staying filtered
+      const modalsToReset = [
+        'owned-players-modal', 
+        'interesting-players-modal', 
+        'removed-players-modal',
+        'participants-modal',
+        'formation-modal'
+      ];
+      
+      if (modalsToReset.includes(modalId)) {
+        this.resetFiltersToDefault();
+      }
     });
   }
 
@@ -488,9 +478,6 @@ export class FantaAiutoApp {
     }, 30000);
   }
 
-  showFormationImageModal() {
-    this.services.images.showFormationImageModal();
-  }
 
   handleSearch(query) {
     if (this.components.tracker) {
@@ -541,38 +528,33 @@ export class FantaAiutoApp {
     }
   }
 
-  showOwnedPlayers() {
+  resetFiltersToDefault() {
     if (this.components.tracker) {
-      this.components.tracker.currentFilters.status = 'owned';
+      this.components.tracker.currentFilters = {
+        search: '',
+        role: 'all',
+        status: 'all',
+        tier: null
+      };
       this.components.tracker.updatePlayersList();
+      
+      // Reset UI elements
+      const searchInput = document.getElementById('mainSearchInput');
+      const roleFilter = document.getElementById('mainRoleFilter');
+      const interestFilter = document.getElementById('interestFilter');
+      
+      if (searchInput) searchInput.value = '';
+      if (roleFilter) roleFilter.value = 'all';
+      if (interestFilter) {
+        interestFilter.classList.remove('active');
+        interestFilter.setAttribute('aria-pressed', 'false');
+      }
     }
   }
 
-  showFormationModal() {
-    this.services.notifications.show('info', 'Formazioni', 'Gestione formazioni in sviluppo');
-  }
 
-  showParticipantsModal() {
-    this.services.notifications.show('info', 'Partecipanti', 'Gestione partecipanti in sviluppo');
-  }
 
-  showRemovedPlayers() {
-    if (this.components.tracker) {
-      this.components.tracker.currentFilters.status = 'removed';
-      this.components.tracker.updatePlayersList();
-    }
-  }
-
-  resetData() {
-    if (confirm('Sei sicuro di voler cancellare tutti i dati? Questa azione non può essere annullata.')) {
-      this.appData.players = [];
-      this.appData.formations = [];
-      this.appData.formationImages = [];
-      this.services.storage.clear();
-      this.updateAllComponents();
-      this.services.notifications.show('info', 'Reset', 'Tutti i dati sono stati cancellati');
-    }
-  }
+  // resetData is now handled by ActionsPanel.resetAll() which provides better UX with modal confirmation
 
   scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });

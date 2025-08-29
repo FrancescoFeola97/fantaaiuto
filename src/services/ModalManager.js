@@ -147,6 +147,9 @@ export class ModalManager {
       if (this.activeModals.size === 0) {
         this.container.classList.remove('active');
       }
+      
+      // Emit modal closed event
+      Utils.dispatchCustomEvent('fantaaiuto:modalClosed', { modalId: id });
     }, 300);
   }
 
