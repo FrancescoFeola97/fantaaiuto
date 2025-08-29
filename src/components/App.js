@@ -116,9 +116,18 @@ export class FantaAiutoApp {
   async loadUserData() {
     try {
       console.log('🔄 Loading saved data...');
+      console.log('🔧 Storage available:', this.services.storage.isAvailable);
+      console.log('🔧 Current hostname:', window.location.hostname);
+      
       const savedData = await this.services.storage.load();
       if (savedData) {
         console.log('📊 Found saved data - Players:', savedData.players ? savedData.players.length : 0);
+        
+        // Validate saved data integrity
+        if (!savedData.players || !Array.isArray(savedData.players)) {
+          console.warn('⚠️ Invalid players data in storage, initializing empty array');
+          savedData.players = [];
+        }
         
         // Deep merge to preserve existing structure
         const originalPlayersLength = this.appData.players.length;
@@ -467,12 +476,15 @@ export class FantaAiutoApp {
       }
     });
 
-    // Save every 30 seconds as backup (only if we have data)
+    // Save every 30 seconds as backup and verify data integrity
     setInterval(() => {
       if (this.appData.players && this.appData.players.length > 0) {
         console.log('⏰ Auto-save triggered - Players count:', this.appData.players.length);
         this.saveData();
       }
+      
+      // Check for data integrity issues
+      this.checkDataIntegrity();
     }, 30000);
   }
 
@@ -592,7 +604,8 @@ export class FantaAiutoApp {
     if (totalCreditsEl) totalCreditsEl.textContent = this.appData.settings.totalBudget;
     if (remainingCreditsEl) remainingCreditsEl.textContent = this.appData.stats.budgetRemaining || this.appData.settings.totalBudget;
     if (playerCountEl) playerCountEl.textContent = `${this.appData.stats.playersOwned || 0}/${this.appData.settings.maxPlayers}`;
-    if (availablePlayersCountEl) availablePlayersCountEl.textContent = this.appData.players.length;
+    const availablePlayers = this.appData.players.filter(p => !p.rimosso);
+    if (availablePlayersCountEl) availablePlayersCountEl.textContent = availablePlayers.length;
 
     this.updateRoleCounts();
   }
@@ -620,21 +633,41 @@ export class FantaAiutoApp {
     try {
       console.log('💾 Saving data - Players:', this.appData.players?.length || 0, 'Participants:', this.appData.participants?.length || 0);
       
+      // Add validation before saving
+      if (!this.appData.players) {
+        this.appData.players = [];
+      }
+      if (!this.appData.participants) {
+        this.appData.participants = [];
+      }
+      
       await this.services.storage.save(this.appData);
       
-      // Debug info for development
-      if (window.location.hostname === 'localhost') {
-        const storageInfo = await this.services.storage.getStorageInfo();
-        console.log('📝 Dati salvati con successo:', {
-          players: this.appData.players?.length || 0,
-          participants: this.appData.participants?.length || 0,
-          storage: storageInfo.sizeFormatted,
-          timestamp: new Date().toLocaleTimeString()
-        });
+      // Enhanced debug info for production and development
+      const storageInfo = await this.services.storage.getStorageInfo();
+      console.log('📝 Dati salvati con successo:', {
+        players: this.appData.players?.length || 0,
+        participants: this.appData.participants?.length || 0,
+        storage: storageInfo.sizeFormatted,
+        timestamp: new Date().toLocaleTimeString(),
+        hostname: window.location.hostname,
+        storageAvailable: this.services.storage.isAvailable
+      });
+      
+      // Verify save by immediately loading
+      const verifyData = await this.services.storage.load();
+      if (!verifyData || verifyData.players?.length !== this.appData.players?.length) {
+        console.error('⚠️ Save verification failed - data mismatch!');
+        this.services.notifications.show('warning', 'Attenzione', 'Potrebbero esserci problemi nel salvataggio dati');
       }
+      
     } catch (error) {
       console.error('❌ Error saving data:', error);
-      this.services.notifications.show('error', 'Errore', 'Impossibile salvare i dati');
+      if (error.message === 'Storage quota exceeded') {
+        this.services.notifications.show('error', 'Errore', 'Spazio di archiviazione esaurito. Eliminare alcuni dati per continuare.');
+      } else {
+        this.services.notifications.show('error', 'Errore', 'Impossibile salvare i dati: ' + error.message);
+      }
     }
   }
 
@@ -675,6 +708,38 @@ export class FantaAiutoApp {
     } catch (error) {
       this.services.notifications.show('error', 'Errore', 'File di backup non valido');
       console.error('Import error:', error);
+    }
+  }
+
+  checkDataIntegrity() {
+    try {
+      const currentPlayersCount = this.appData.players?.length || 0;
+      const availablePlayersEl = document.getElementById('availablePlayersCount');
+      const displayedCount = availablePlayersEl ? parseInt(availablePlayersEl.textContent) : 0;
+      
+      if (currentPlayersCount !== displayedCount && currentPlayersCount > 0) {
+        console.warn('🔍 Data integrity issue detected:', {
+          actualPlayers: currentPlayersCount,
+          displayedCount: displayedCount,
+          timestamp: new Date().toLocaleTimeString()
+        });
+        
+        // Force update the display
+        this.updateDashboardStats();
+      }
+      
+      // Check localStorage persistence
+      if (this.services.storage.isAvailable) {
+        const storageData = localStorage.getItem('fantaaiuto_v2');
+        if (!storageData && currentPlayersCount > 0) {
+          console.error('🚨 Critical: Players in memory but not in localStorage!');
+          this.services.notifications.show('warning', 'Problema di Persistenza', 
+            'I dati potrebbero non essere salvati correttamente. Prova a esportare un backup.');
+        }
+      }
+      
+    } catch (error) {
+      console.error('❌ Error in data integrity check:', error);
     }
   }
 
