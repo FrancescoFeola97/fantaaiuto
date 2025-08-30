@@ -9,6 +9,14 @@ export class ApiClient {
     this.baseURL = `${getBackendUrl()}/api`;
     this.token = localStorage.getItem('fantaaiuto_token');
     
+    // Debug logging for production debugging
+    console.log('🌐 ApiClient initialized with:', {
+      hostname: window.location.hostname,
+      backendURL: getBackendUrl(),
+      fullApiURL: this.baseURL,
+      hasStoredToken: !!this.token
+    });
+    
     // Set up default headers
     this.headers = {
       'Content-Type': 'application/json',
