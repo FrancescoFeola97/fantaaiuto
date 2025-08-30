@@ -27,6 +27,10 @@ const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config();
+// Also try to load production env if it exists
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '.env.production' });
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;

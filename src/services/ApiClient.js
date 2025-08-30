@@ -1,10 +1,12 @@
+import { getBackendUrl } from '../config/environment.js';
+
 /**
  * API Client for FantaAiuto Backend
  * Handles all HTTP requests to the backend API with authentication
  */
 export class ApiClient {
   constructor() {
-    this.baseURL = process.env.BACKEND_URL || 'http://localhost:3001/api';
+    this.baseURL = `${getBackendUrl()}/api`;
     this.token = localStorage.getItem('fantaaiuto_token');
     
     // Set up default headers
