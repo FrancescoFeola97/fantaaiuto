@@ -1,5 +1,8 @@
 /* ===== FANTAAIUTO - DESIGN SYSTEM ===== */
 
+/* Import authentication styles */
+@import url('./auth.css');
+
 /* Modal Fixes - Prevent visual glitches and duplicates */
 .modals-container {
   position: fixed;

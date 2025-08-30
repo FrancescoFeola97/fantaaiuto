@@ -1,15 +1,108 @@
 import { Utils } from '../utils/Utils.js';
+import { apiClient } from './ApiClient.js';
+import { authManager } from './AuthManager.js';
 
 export class PlayerManager {
   constructor(appData) {
     this.appData = appData;
+    this.isOnline = true; // Will be set based on backend availability
   }
 
   async init() {
+    // Check if backend is available
+    try {
+      await apiClient.healthCheck();
+      this.isOnline = true;
+      console.log('🌐 Backend is available - using online mode');
+      
+      // Load players from backend if authenticated
+      if (authManager.isUserAuthenticated()) {
+        await this.syncFromBackend();
+      }
+    } catch (error) {
+      this.isOnline = false;
+      console.warn('⚠️ Backend unavailable - using offline mode');
+    }
+    
     return Promise.resolve();
   }
 
+  // Sync players from backend
+  async syncFromBackend() {
+    if (!this.isOnline || !authManager.isUserAuthenticated()) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.getPlayers();
+      this.appData.players = response.players;
+      
+      console.log(`📊 Synced ${response.players.length} players from backend`);
+      
+      Utils.dispatchCustomEvent('fantaaiuto:playersSynced', {
+        players: response.players.length
+      });
+      
+      return response.players;
+    } catch (error) {
+      console.error('❌ Failed to sync players from backend:', error);
+      throw error;
+    }
+  }
+
+  // Sync stats from backend
+  async syncStatsFromBackend() {
+    if (!this.isOnline || !authManager.isUserAuthenticated()) {
+      this.updateStats(); // Fall back to local calculation
+      return;
+    }
+
+    try {
+      const stats = await apiClient.getPlayersStats();
+      this.appData.stats = stats;
+      
+      Utils.dispatchCustomEvent('fantaaiuto:statsUpdated', { stats });
+      
+      return stats;
+    } catch (error) {
+      console.error('❌ Failed to sync stats from backend:', error);
+      this.updateStats(); // Fall back to local calculation
+    }
+  }
+
   async importPlayers(newPlayers) {
+    // If online and authenticated, use backend
+    if (this.isOnline && authManager.isUserAuthenticated()) {
+      return this.importPlayersOnline(newPlayers, '1');
+    }
+    
+    // Otherwise fall back to offline mode
+    return this.importPlayersOffline(newPlayers);
+  }
+
+  async importPlayersOnline(newPlayers, mode = '1') {
+    try {
+      const response = await apiClient.importPlayers(newPlayers, mode);
+      
+      // Refresh local data from backend
+      await this.syncFromBackend();
+      await this.syncStatsFromBackend();
+      
+      Utils.dispatchCustomEvent('fantaaiuto:playersImported', {
+        total: response.total,
+        added: response.imported,
+        updated: response.updated,
+        mode: response.mode
+      });
+      
+      return response.imported + response.updated;
+    } catch (error) {
+      console.error('❌ Failed to import players online:', error);
+      throw new Error(`Import failed: ${error.message}`);
+    }
+  }
+
+  async importPlayersOffline(newPlayers) {
     const existingNames = new Set(this.appData.players.map(p => p.nome.toLowerCase()));
     const uniquePlayers = newPlayers.filter(player => 
       !existingNames.has(player.nome.toLowerCase())
@@ -200,7 +293,63 @@ export class PlayerManager {
     return this.appData.players.filter(p => p.rimosso === true);
   }
 
-  setPlayerStatus(playerId, status, additionalData = {}) {
+  async setPlayerStatus(playerId, status, additionalData = {}) {
+    // If online and authenticated, update via backend
+    if (this.isOnline && authManager.isUserAuthenticated()) {
+      return this.setPlayerStatusOnline(playerId, status, additionalData);
+    }
+    
+    // Otherwise update locally
+    return this.setPlayerStatusOffline(playerId, status, additionalData);
+  }
+
+  async setPlayerStatusOnline(playerId, status, additionalData = {}) {
+    try {
+      const response = await apiClient.updatePlayerStatus(
+        playerId, 
+        status, 
+        additionalData.costoReale || 0, 
+        additionalData.note || null
+      );
+      
+      // Update local player data
+      const player = this.getPlayer(playerId);
+      if (player) {
+        const oldStatus = player.status;
+        player.status = status;
+        
+        if (status === 'owned') {
+          player.interessante = false;
+          player.rimosso = false;
+          player.dataAcquisto = new Date().toISOString();
+          player.costoReale = additionalData.costoReale || player.prezzo || 0;
+        } else if (status === 'removed') {
+          player.rimosso = true;
+          player.dataRimozione = new Date().toISOString();
+        } else if (status === 'interesting') {
+          player.interessante = true;
+        }
+        
+        Object.assign(player, additionalData);
+        
+        Utils.dispatchCustomEvent('fantaaiuto:playerStatusChanged', {
+          player,
+          oldStatus,
+          newStatus: status
+        });
+      }
+      
+      // Refresh stats from backend
+      await this.syncStatsFromBackend();
+      
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to update player status online:', error);
+      throw new Error(`Status update failed: ${error.message}`);
+    }
+  }
+
+  setPlayerStatusOffline(playerId, status, additionalData = {}) {
     const player = this.getPlayer(playerId);
     if (player) {
       const oldStatus = player.status;
@@ -225,6 +374,11 @@ export class PlayerManager {
         player.costoReale = 0;
         player.costoAltri = 0;
         player.proprietario = null;
+      } else if (status === 'removed') {
+        player.rimosso = true;
+        player.dataRimozione = new Date().toISOString();
+      } else if (status === 'interesting') {
+        player.interessante = true;
       }
       
       // Apply any additional data

@@ -8,12 +8,15 @@ import { ViewManager } from '../services/ViewManager.js';
 import { FormationManager } from '../services/FormationManager.js';
 import { ParticipantsManager } from '../services/ParticipantsManager.js';
 import { ImageManager } from '../services/ImageManager.js';
+import { authManager } from '../services/AuthManager.js';
+import { apiClient } from '../services/ApiClient.js';
 import { DashboardComponent } from './ui/Dashboard.js';
 import { TrackerComponent } from './tracker/Tracker.js';
 import { FormationComponent } from './formation/Formation.js';
 import { AnalyticsComponent } from './ui/Analytics.js';
 import { RoleNavigationComponent } from './ui/RoleNavigation.js';
 import { ActionsPanelComponent } from './ui/ActionsPanel.js';
+import { LoginForm } from './auth/LoginForm.js';
 
 export class FantaAiutoApp {
   constructor() {
@@ -42,17 +45,34 @@ export class FantaAiutoApp {
   async init() {
     try {
       this.showLoadingScreen();
+      
+      // Initialize authentication first
+      console.log('🔐 Initializing authentication...');
+      const isAuthenticated = await authManager.init();
+      
+      if (!isAuthenticated) {
+        // Show login form if not authenticated
+        this.hideLoadingScreen();
+        this.showLoginForm();
+        return;
+      }
+      
+      // User is authenticated, proceed with app initialization
+      console.log('✅ User authenticated, initializing app...');
       await this.initializeServices();
       await this.initializeComponents();
       await this.loadUserData();
       this.setupEventListeners();
+      this.setupAuthEventListeners();
       this.hideLoadingScreen();
       this.isInitialized = true;
       
-      this.services.notifications.show('success', 'Benvenuto!', 'FantaAiuto è stato caricato con successo');
+      const user = authManager.getUser();
+      this.services.notifications.show('success', 'Benvenuto!', `Ciao ${user.displayName}! FantaAiuto è pronto.`);
     } catch (error) {
       this.services.notifications?.show('error', 'Errore', 'Errore durante l\'inizializzazione dell\'applicazione');
       console.error('App initialization error:', error);
+      this.hideLoadingScreen();
     }
   }
 
@@ -326,6 +346,121 @@ export class FantaAiutoApp {
         this.resetFiltersToDefault();
       }
     });
+  }
+
+  setupAuthEventListeners() {
+    // Handle user logout
+    document.addEventListener('fantaaiuto:userLoggedOut', () => {
+      this.handleUserLogout();
+    });
+
+    // Handle session expired
+    document.addEventListener('fantaaiuto:sessionExpired', (e) => {
+      this.services.notifications.show('warning', 'Sessione Scaduta', 
+        'La tua sessione è scaduta. Effettua di nuovo il login.');
+      this.showLoginForm();
+    });
+
+    // Handle successful login from login form
+    document.addEventListener('fantaaiuto:authFormLoginSuccess', (e) => {
+      this.handleUserLogin(e.detail.user);
+    });
+  }
+
+  async handleUserLogin(user) {
+    console.log('🔐 User logged in, initializing app for:', user.displayName);
+    
+    this.showLoadingScreen();
+    
+    try {
+      // Reinitialize services and components for the authenticated user
+      await this.initializeServices();
+      await this.initializeComponents();
+      await this.loadUserData();
+      
+      this.hideLoadingScreen();
+      this.hideLoginForm();
+      this.showMainApp();
+      
+      this.services.notifications.show('success', 'Benvenuto!', 
+        `Ciao ${user.displayName}! FantaAiuto è pronto.`);
+        
+    } catch (error) {
+      console.error('❌ Error initializing app after login:', error);
+      this.services.notifications.show('error', 'Errore', 
+        'Errore durante l\'inizializzazione dell\'applicazione');
+      this.hideLoadingScreen();
+    }
+  }
+
+  handleUserLogout() {
+    console.log('🚪 User logged out, showing login form');
+    
+    // Clear app data
+    this.appData.players = [];
+    this.appData.participants = [];
+    this.appData.formations = [];
+    
+    // Clear components
+    Object.values(this.components).forEach(component => {
+      if (typeof component.destroy === 'function') {
+        component.destroy();
+      }
+    });
+    this.components = {};
+    
+    this.hideMainApp();
+    this.showLoginForm();
+  }
+
+  showLoginForm() {
+    let loginContainer = document.getElementById('login-container');
+    
+    if (!loginContainer) {
+      // Create login container if it doesn't exist
+      loginContainer = document.createElement('div');
+      loginContainer.id = 'login-container';
+      loginContainer.className = 'login-container';
+      document.body.appendChild(loginContainer);
+    }
+
+    // Hide main app
+    this.hideMainApp();
+
+    // Initialize and show login form
+    this.loginForm = new LoginForm('#login-container', {
+      showRegister: true,
+      redirectOnLogin: false
+    });
+    
+    this.loginForm.render();
+    loginContainer.style.display = 'flex';
+  }
+
+  hideLoginForm() {
+    const loginContainer = document.getElementById('login-container');
+    if (loginContainer) {
+      loginContainer.style.display = 'none';
+    }
+    
+    if (this.loginForm) {
+      this.loginForm.destroy();
+      this.loginForm = null;
+    }
+  }
+
+  showMainApp() {
+    const appContainer = document.getElementById('app-container') || document.querySelector('.container');
+    if (appContainer) {
+      appContainer.style.display = 'block';
+    }
+  }
+
+  hideMainApp() {
+    const appContainer = document.getElementById('app-container') || document.querySelector('.container');
+    if (appContainer) {
+      appContainer.style.display = 'none';
+    }
   }
 
   // Removed view switching - single page interface
