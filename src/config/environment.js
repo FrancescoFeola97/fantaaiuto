@@ -1,9 +1,9 @@
 // Environment configuration for FantaAiuto
 
 export const config = {
-  // Production backend URL (will be set after backend deployment)
+  // Production backend URL - Render deployment
   BACKEND_URL: process.env.NODE_ENV === 'production' 
-    ? 'https://fantaaiuto-backend.up.railway.app'  // Will update with actual URL
+    ? 'https://fantaaiuto-backend.onrender.com'
     : 'http://localhost:3001',
     
   API_TIMEOUT: 10000, // 10 seconds
