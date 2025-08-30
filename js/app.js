@@ -1,5 +1,4 @@
 import { FantaAiutoApp } from '../src/components/App.js';
-import '../css/style.css';
 
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 DOM loaded, initializing FantaAiuto...');
@@ -53,7 +52,6 @@ async function loadAuthenticatedApp() {
     
     // Initialize the full app
     console.log('📱 Creating FantaAiutoApp instance...');
-    const { FantaAiutoApp } = await import('../src/components/App.js');
     const app = new FantaAiutoApp();
     
     console.log('🚀 Starting app initialization...');
