@@ -118,9 +118,14 @@ export class FantaAiutoApp {
   }
 
   showLoadingScreen() {
+    console.log('📱 Showing loading screen...');
     const loadingScreen = document.getElementById('loading-screen');
     if (loadingScreen) {
+      loadingScreen.style.display = 'flex';
       loadingScreen.classList.remove('hidden');
+      console.log('✅ Loading screen shown');
+    } else {
+      console.warn('⚠️ Loading screen element not found');
     }
   }
 
