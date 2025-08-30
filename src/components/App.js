@@ -43,8 +43,11 @@ export class FantaAiutoApp {
   }
 
   async init() {
+    console.log('🚀 Starting FantaAiuto initialization...');
+    
     try {
       this.showLoadingScreen();
+      console.log('📱 Loading screen shown');
       
       // Initialize authentication first
       console.log('🔐 Initializing authentication...');
@@ -52,6 +55,7 @@ export class FantaAiutoApp {
       let isAuthenticated = false;
       try {
         isAuthenticated = await authManager.init();
+        console.log('🔐 Authentication result:', isAuthenticated);
       } catch (authError) {
         console.warn('⚠️ Authentication failed, proceeding with offline mode:', authError);
         isAuthenticated = false;
@@ -63,14 +67,27 @@ export class FantaAiutoApp {
       }
       
       // Initialize app (either authenticated online or offline mode)
-      console.log('✅ Initializing app...');
+      console.log('✅ Initializing app services...');
       await this.initializeServices();
+      console.log('✅ Services initialized');
+      
+      console.log('✅ Initializing app components...');
       await this.initializeComponents();
+      console.log('✅ Components initialized');
+      
+      console.log('✅ Loading user data...');
       await this.loadUserData();
+      console.log('✅ User data loaded');
+      
+      console.log('✅ Setting up event listeners...');
       this.setupEventListeners();
       this.setupAuthEventListeners();
+      console.log('✅ Event listeners set up');
+      
+      console.log('📱 Hiding loading screen...');
       this.hideLoadingScreen();
       this.isInitialized = true;
+      console.log('🎉 App initialization complete!');
       
       if (isAuthenticated) {
         const user = authManager.getUser();
@@ -79,9 +96,24 @@ export class FantaAiutoApp {
         this.services.notifications.show('info', 'Modalità Offline', 'FantaAiuto è stato caricato in modalità offline.');
       }
     } catch (error) {
-      this.services.notifications?.show('error', 'Errore', 'Errore durante l\'inizializzazione dell\'applicazione');
-      console.error('App initialization error:', error);
+      console.error('💥 App initialization error:', error);
+      console.error('Error stack:', error.stack);
+      
+      // Ensure loading screen is hidden even on error
       this.hideLoadingScreen();
+      
+      // Try to show notification if service is available
+      try {
+        if (this.services?.notifications) {
+          this.services.notifications.show('error', 'Errore', 'Errore durante l\'inizializzazione dell\'applicazione');
+        } else {
+          // Fallback: show error in console and hide loading screen
+          alert('Errore durante l\'inizializzazione dell\'applicazione. Controlla la console per dettagli.');
+        }
+      } catch (notificationError) {
+        console.error('Failed to show error notification:', notificationError);
+        alert('Errore durante l\'inizializzazione dell\'applicazione. Controlla la console per dettagli.');
+      }
     }
   }
 
@@ -93,35 +125,64 @@ export class FantaAiutoApp {
   }
 
   hideLoadingScreen() {
+    console.log('🚪 Attempting to hide loading screen...');
     const loadingScreen = document.getElementById('loading-screen');
     if (loadingScreen) {
+      console.log('✅ Loading screen element found, hiding...');
       setTimeout(() => {
         loadingScreen.classList.add('hidden');
-      }, 500);
+        loadingScreen.style.display = 'none'; // Ensure it's hidden even if CSS fails
+        console.log('✅ Loading screen hidden');
+      }, 100); // Reduced timeout for faster hiding
+    } else {
+      console.warn('⚠️ Loading screen element not found');
     }
   }
 
   async initializeServices() {
-    this.services.storage = new StorageManager('fantaaiuto_v2');
-    this.services.notifications = new NotificationManager();
-    this.services.modals = new ModalManager();
-    this.services.excel = new ExcelManager(this.services.modals);
-    this.services.players = new PlayerManager(this.appData);
-    this.services.views = new ViewManager();
-    this.services.formations = new FormationManager(this.appData);
-    this.services.participants = new ParticipantsManager(this.appData);
-    this.services.images = new ImageManager(this.services.modals, this.services.notifications);
+    try {
+      console.log('🏗️ Creating service instances...');
+      this.services.storage = new StorageManager('fantaaiuto_v2');
+      this.services.notifications = new NotificationManager();
+      this.services.modals = new ModalManager();
+      this.services.excel = new ExcelManager(this.services.modals);
+      this.services.players = new PlayerManager(this.appData);
+      this.services.views = new ViewManager();
+      this.services.formations = new FormationManager(this.appData);
+      this.services.participants = new ParticipantsManager(this.appData);
+      this.services.images = new ImageManager(this.services.modals, this.services.notifications);
+      console.log('✅ Service instances created');
 
-    await Promise.all([
-      this.services.storage.init(),
-      this.services.notifications.init(),
-      this.services.modals.init(),
-      this.services.excel.init(),
-      this.services.players.init(),
-      this.services.formations.init(),
-      this.services.participants.init(),
-      this.services.images.init()
-    ]);
+      // Initialize services sequentially with better error handling
+      const services = [
+        { name: 'storage', service: this.services.storage },
+        { name: 'notifications', service: this.services.notifications },
+        { name: 'modals', service: this.services.modals },
+        { name: 'excel', service: this.services.excel },
+        { name: 'players', service: this.services.players },
+        { name: 'formations', service: this.services.formations },
+        { name: 'participants', service: this.services.participants },
+        { name: 'images', service: this.services.images }
+      ];
+
+      for (const { name, service } of services) {
+        try {
+          console.log(`🔧 Initializing ${name} service...`);
+          if (service && typeof service.init === 'function') {
+            await service.init();
+          }
+          console.log(`✅ ${name} service initialized`);
+        } catch (error) {
+          console.error(`❌ Failed to initialize ${name} service:`, error);
+          // Continue with other services - don't fail completely
+        }
+      }
+      
+      console.log('🎯 Service initialization completed');
+    } catch (error) {
+      console.error('💥 Service initialization failed:', error);
+      throw error;
+    }
   }
 
   async initializeComponents() {
