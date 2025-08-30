@@ -89,6 +89,12 @@ export class FantaAiutoApp {
       this.isInitialized = true;
       console.log('🎉 App initialization complete!');
       
+      // Hide static login form regardless of auth status since app initialized
+      const staticLoginContainer = document.getElementById('static-login-container');
+      if (staticLoginContainer) {
+        staticLoginContainer.style.display = 'none';
+      }
+      
       if (isAuthenticated) {
         const user = authManager.getUser();
         this.services.notifications.show('success', 'Benvenuto!', `Ciao ${user.displayName}! FantaAiuto è pronto.`);

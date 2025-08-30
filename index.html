@@ -27,6 +27,44 @@
 
 <body>
   <div id="app" class="app">
+    <!-- Emergency Login Form (shown first, hidden by JS if not needed) -->
+    <div id="static-login-container" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #f8f9fa; display: flex; align-items: center; justify-content: center; z-index: 3000;">
+      <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 400px; width: 90%;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #007bff; margin: 0 0 10px 0;">⚽ FantaAiuto</h1>
+          <p style="color: #666; margin: 0;">Fantasy Football Manager</p>
+        </div>
+        
+        <form id="static-login-form" style="margin-bottom: 20px;">
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Nome utente o Email</label>
+            <input type="text" id="static-username" required 
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+                   placeholder="Inserisci nome utente o email" />
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Password</label>
+            <input type="password" id="static-password" required 
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+                   placeholder="Inserisci password" />
+          </div>
+          
+          <button type="submit" style="width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 500; cursor: pointer;">
+            🔐 Accedi
+          </button>
+        </form>
+        
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; text-align: center; font-size: 14px;">
+          <p style="margin: 0 0 10px 0; font-weight: 500;">🎮 Account Demo</p>
+          <p style="margin: 0 0 5px 0;"><strong>Username:</strong> admin</p>
+          <p style="margin: 0;"><strong>Password:</strong> password</p>
+        </div>
+        
+        <div id="static-error" style="margin-top: 15px; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 6px; color: #c33; display: none;"></div>
+      </div>
+    </div>
+
     <!-- Authentication will be handled dynamically by JavaScript -->
     <div id="app-container" style="display: none;">
     <!-- Loading Screen -->
@@ -255,6 +293,72 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
   <script type="module" src="js/app.js"></script>
+  
+  <!-- Static Login Form Handler -->
+  <script>
+    // Handle static login form
+    document.addEventListener('DOMContentLoaded', () => {
+      const staticForm = document.getElementById('static-login-form');
+      if (staticForm) {
+        staticForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const username = document.getElementById('static-username').value.trim();
+          const password = document.getElementById('static-password').value;
+          const errorDiv = document.getElementById('static-error');
+          const submitBtn = e.target.querySelector('button[type="submit"]');
+          
+          if (!username || !password) {
+            errorDiv.textContent = 'Nome utente e password sono obbligatori';
+            errorDiv.style.display = 'block';
+            return;
+          }
+          
+          try {
+            errorDiv.style.display = 'none';
+            submitBtn.textContent = '⏳ Accesso in corso...';
+            submitBtn.disabled = true;
+            
+            const response = await fetch('https://fantaaiuto-backend.onrender.com/api/auth/login', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ username, password })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.token) {
+              // Store token and hide login form
+              localStorage.setItem('fantaaiuto_token', result.token);
+              console.log('✅ Static login successful');
+              
+              // Hide static login and show main app
+              document.getElementById('static-login-container').style.display = 'none';
+              document.getElementById('app-container').style.display = 'block';
+              
+              // Force app initialization with authentication
+              if (window.forceAppReload) {
+                window.forceAppReload();
+              } else {
+                location.reload();
+              }
+            } else {
+              throw new Error(result.error || 'Credenziali non valide');
+            }
+          } catch (error) {
+            console.error('Static login error:', error);
+            errorDiv.textContent = error.message || 'Errore di connessione. Verifica la connessione internet.';
+            errorDiv.style.display = 'block';
+          } finally {
+            submitBtn.textContent = '🔐 Accedi';
+            submitBtn.disabled = false;
+          }
+        });
+      }
+    });
+  </script>
   
   <!-- Fallback script to hide loading screen if modules fail -->
   <script>

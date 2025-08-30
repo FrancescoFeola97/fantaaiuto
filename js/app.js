@@ -18,6 +18,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const app = new FantaAiutoApp();
     await app.init();
     clearTimeout(forceLoginTimeout); // Cancel timeout if init succeeds
+    
+    // Hide static login form if app initialized successfully
+    const staticLoginContainer = document.getElementById('static-login-container');
+    if (staticLoginContainer) {
+      staticLoginContainer.style.display = 'none';
+    }
   } catch (error) {
     clearTimeout(forceLoginTimeout);
     console.error('💥 Failed to initialize FantaAiuto:', error);
