@@ -48,17 +48,22 @@ export class FantaAiutoApp {
       
       // Initialize authentication first
       console.log('🔐 Initializing authentication...');
-      const isAuthenticated = await authManager.init();
       
-      if (!isAuthenticated) {
-        // Show login form if not authenticated
-        this.hideLoadingScreen();
-        this.showLoginForm();
-        return;
+      let isAuthenticated = false;
+      try {
+        isAuthenticated = await authManager.init();
+      } catch (authError) {
+        console.warn('⚠️ Authentication failed, proceeding with offline mode:', authError);
+        isAuthenticated = false;
       }
       
-      // User is authenticated, proceed with app initialization
-      console.log('✅ User authenticated, initializing app...');
+      if (!isAuthenticated) {
+        // Backend is not available or user not authenticated - proceed with offline mode
+        console.log('🔌 Starting in offline mode');
+      }
+      
+      // Initialize app (either authenticated online or offline mode)
+      console.log('✅ Initializing app...');
       await this.initializeServices();
       await this.initializeComponents();
       await this.loadUserData();
@@ -67,8 +72,12 @@ export class FantaAiutoApp {
       this.hideLoadingScreen();
       this.isInitialized = true;
       
-      const user = authManager.getUser();
-      this.services.notifications.show('success', 'Benvenuto!', `Ciao ${user.displayName}! FantaAiuto è pronto.`);
+      if (isAuthenticated) {
+        const user = authManager.getUser();
+        this.services.notifications.show('success', 'Benvenuto!', `Ciao ${user.displayName}! FantaAiuto è pronto.`);
+      } else {
+        this.services.notifications.show('info', 'Modalità Offline', 'FantaAiuto è stato caricato in modalità offline.');
+      }
     } catch (error) {
       this.services.notifications?.show('error', 'Errore', 'Errore durante l\'inizializzazione dell\'applicazione');
       console.error('App initialization error:', error);

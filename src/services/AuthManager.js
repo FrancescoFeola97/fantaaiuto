@@ -29,22 +29,38 @@ export class AuthManager {
     try {
       this.isLoading = true;
       
+      // First check if backend is available
+      try {
+        await apiClient.healthCheck();
+        console.log('🌐 Backend is available');
+      } catch (backendError) {
+        console.warn('🔌 Backend not available, skipping authentication');
+        this.isLoading = false;
+        return false; // Return false to indicate offline mode
+      }
+      
       // Check if we have a stored token
       const token = apiClient.getToken();
       if (token) {
         console.log('🔍 Found stored token, verifying...');
-        const isValid = await apiClient.verifyToken();
         
-        if (isValid) {
-          // Get user profile
-          const profileResponse = await apiClient.getUserProfile();
-          this.user = profileResponse.user;
-          this.isAuthenticated = true;
+        try {
+          const isValid = await apiClient.verifyToken();
           
-          console.log('✅ Authentication restored for user:', this.user.username);
-          this.notifyLoginCallbacks();
-        } else {
-          console.log('❌ Stored token is invalid');
+          if (isValid) {
+            // Get user profile
+            const profileResponse = await apiClient.getUserProfile();
+            this.user = profileResponse.user;
+            this.isAuthenticated = true;
+            
+            console.log('✅ Authentication restored for user:', this.user.username);
+            this.notifyLoginCallbacks();
+          } else {
+            console.log('❌ Stored token is invalid');
+            this.clearAuth();
+          }
+        } catch (tokenError) {
+          console.warn('⚠️ Token verification failed:', tokenError);
           this.clearAuth();
         }
       } else {
