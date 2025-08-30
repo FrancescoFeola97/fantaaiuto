@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadingScreen.style.display = 'none';
     }
     showEmergencyLoginForm();
-  }, 8000); // 8 second timeout
+  }, 5000); // 5 second timeout
   
   try {
     const app = new FantaAiutoApp();
@@ -70,14 +70,14 @@ function showEmergencyLoginForm() {
           <div style="margin-bottom: 15px;">
             <label style="display: block; margin-bottom: 5px; font-weight: 500;">Nome utente o Email</label>
             <input type="text" id="emergency-username" required 
-                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;"
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
                    placeholder="Inserisci nome utente o email" />
           </div>
           
           <div style="margin-bottom: 20px;">
             <label style="display: block; margin-bottom: 5px; font-weight: 500;">Password</label>
             <input type="password" id="emergency-password" required 
-                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;"
+                   style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
                    placeholder="Inserisci password" />
           </div>
           
