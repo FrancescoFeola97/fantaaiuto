@@ -133,8 +133,8 @@ export class FantaAiutoApp {
     console.log('📱 Showing loading screen...');
     const loadingScreen = document.getElementById('loading-screen');
     if (loadingScreen) {
-      loadingScreen.style.display = 'flex';
       loadingScreen.classList.remove('hidden');
+      loadingScreen.classList.add('flex');
       console.log('✅ Loading screen shown');
     } else {
       console.warn('⚠️ Loading screen element not found');
@@ -148,7 +148,7 @@ export class FantaAiutoApp {
       console.log('✅ Loading screen element found, hiding...');
       setTimeout(() => {
         loadingScreen.classList.add('hidden');
-        loadingScreen.style.display = 'none'; // Ensure it's hidden even if CSS fails
+        loadingScreen.classList.remove('flex');
         console.log('✅ Loading screen hidden');
       }, 100); // Reduced timeout for faster hiding
     } else {
@@ -671,16 +671,18 @@ export class FantaAiutoApp {
   }
 
   showMainApp() {
-    const appContainer = document.getElementById('app-container') || document.querySelector('.container');
+    const appContainer = document.getElementById('app-container');
     if (appContainer) {
-      appContainer.style.display = 'block';
+      appContainer.classList.remove('hidden');
+      appContainer.classList.add('block');
     }
   }
 
   hideMainApp() {
-    const appContainer = document.getElementById('app-container') || document.querySelector('.container');
+    const appContainer = document.getElementById('app-container');
     if (appContainer) {
-      appContainer.style.display = 'none';
+      appContainer.classList.add('hidden');
+      appContainer.classList.remove('block');
     }
   }
 

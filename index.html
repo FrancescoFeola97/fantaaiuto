@@ -6,6 +6,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FantaAiuto - Tracker Fantacalcio Mantra v2.0</title>
   <!-- 🤖 Test integrazione Claude - Deploy automatico attivo -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'sans': ['Inter', 'system-ui', 'sans-serif'],
+          },
+          screens: {
+            'xs': '475px',
+          }
+        }
+      }
+    }
+  </script>
   <link rel="stylesheet" href="css/style.css">
   <meta name="description" content="Tracker avanzato per Fantacalcio Mantra - Gestisci la tua squadra, formazioni e budget">
 
@@ -66,233 +81,307 @@
     </div>
 
     <!-- Authentication will be handled dynamically by JavaScript -->
-    <div id="app-container" style="display: none;">
+    <div id="app-container" class="hidden">
     <!-- Loading Screen -->
-    <div id="loading-screen" class="loading-screen">
-      <div class="loading-spinner"></div>
-      <h2>Caricamento FantaAiuto...</h2>
+    <div id="loading-screen" class="fixed inset-0 bg-gray-50 flex items-center justify-center z-50">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <h2 class="text-xl font-semibold text-gray-800">Caricamento FantaAiuto...</h2>
+      </div>
     </div>
 
-    <!-- Sidebar Navigation -->
-    <nav class="sidebar-nav" role="navigation" aria-label="Navigazione ruoli">
-      <div id="roleNavigation" role="list"></div>
-    </nav>
+    <!-- Main App Layout - Three Column Flexbox with Tailwind -->
+    <div class="flex h-screen bg-gray-50 overflow-hidden">
+      <!-- Left Sidebar Navigation -->
+      <nav class="w-64 bg-white border-r border-gray-200 flex-shrink-0 hidden lg:block" role="navigation" aria-label="Navigazione ruoli">
+        <div id="roleNavigation" class="p-4" role="list"></div>
+      </nav>
 
-
-    <!-- Main Content -->
-    <main class="main-content" role="main">
-        <h1 class="page-title">⚽ Tracker Fantacalcio Mantra</h1>
-        
-        <!-- Dashboard -->
-        <section class="dashboard">
-            <!-- Stats Card -->
-            <div class="card">
-                <div class="card__body">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-card__label">Crediti Totali</div>
-                            <div id="totalCredits" class="stat-card__value" aria-live="polite">500</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-card__label">Crediti Rimanenti</div>
-                            <div id="remainingCredits" class="stat-card__value" aria-live="polite">500</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-card__label">Giocatori Presi</div>
-                            <div id="playerCount" class="stat-card__value" aria-live="polite">0/30</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-card__label">Giocatori Disponibili</div>
-                            <div id="availablePlayersCount" class="stat-card__value" aria-live="polite">0</div>
-                        </div>
-                    </div>
-                    
-                    <div class="player-counts">
-                        <div class="player-counts__title">📊 Giocatori per Ruolo</div>
-                        <div id="playerCounts" class="player-counts__grid" role="list"></div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Controls Card -->
-            <div class="card">
-                <div class="card__body controls">
-                    <div class="controls__header">
-                        <div class="controls__search">
-                            <label for="mainSearchInput" class="visually-hidden">Cerca giocatori</label>
-                            <input 
-                                type="text" 
-                                id="mainSearchInput" 
-                                class="form-control" 
-                                placeholder="🔍 Cerca giocatori per cognome..."
-                                aria-describedby="search-help"
-                            />
-                            <div id="search-help" class="visually-hidden">
-                                Digita il cognome del giocatore per filtrare i risultati
-                            </div>
-                        </div>
-                        <div class="controls__filters">
-                            <button 
-                                id="interestFilter" 
-                                class="btn btn--secondary"
-                                aria-pressed="false"
-                                aria-describedby="interest-filter-help"
-                            >
-                                ⭐ Solo Interessanti
-                            </button>
-                            <div id="interest-filter-help" class="visually-hidden">
-                                Attiva o disattiva il filtro per mostrare solo i giocatori marcati come interessanti
-                            </div>
-                            <select 
-                                id="mainRoleFilter" 
-                                class="form-control"
-                                aria-label="Filtra per ruolo"
-                            >
-                                <option value="all">Tutti i ruoli</option>
-                                <option value="Por">🥅 Portieri</option>
-                                <option value="Ds">🛡️ Dif. Sx</option>
-                                <option value="Dd">🛡️ Dif. Dx</option>
-                                <option value="Dc">🛡️ Dif. Cen.</option>
-                                <option value="B">🛡️ Braccetto</option>
-                                <option value="E">⚽ Esterni</option>
-                                <option value="M">⚽ Mediani</option>
-                                <option value="C">⚽ Centrocamp.</option>
-                                <option value="W">💜 Ali</option>
-                                <option value="T">💜 Trequart.</option>
-                                <option value="A">🚀 Attaccanti</option>
-                                <option value="Pc">🚀 Punte Cen.</option>
-                            </select>
-                            <button 
-                                id="mainSearchClear" 
-                                class="btn btn--danger btn--sm"
-                                aria-label="Pulisci filtri"
-                            >
-                                🔄 Reset
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- Tracker -->
-        <section class="tracker" id="tracker" aria-live="polite" aria-label="Lista giocatori">
-            <div class="players-grid" id="players-grid">
-                <div class="empty-state">
-                    <h3>Nessun giocatore caricato</h3>
-                    <p>Importa un file Excel per iniziare</p>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Sidebar Actions -->
-    <aside class="sidebar-actions" role="complementary" aria-label="Azioni principali">
-        <div class="sidebar-section">
-            <h3 class="visually-hidden">Gestione</h3>
-            <button 
-                id="ownedPlayersBtn" 
-                class="btn btn--success"
-                aria-describedby="owned-players-help"
-            >
-                📊 Giocatori Presi
-            </button>
-            <div id="owned-players-help" class="visually-hidden">
-                Visualizza tutti i giocatori che hai acquistato
-            </div>
-            
-            <button 
-                id="formationBtn" 
-                class="btn btn--secondary"
-                aria-describedby="formation-help"
-            >
-                ⚽ Formazioni
-            </button>
-            <div id="formation-help" class="visually-hidden">
-                Crea e gestisci le tue formazioni tattiche
-            </div>
-            
-            <button 
-                id="participantsBtn" 
-                class="btn btn--info"
-                aria-describedby="participants-help"
-            >
-                👥 Altri Partecipanti
-            </button>
-            <div id="participants-help" class="visually-hidden">
-                Gestisci gli altri partecipanti alla lega
-            </div>
-            
-            <button 
-                id="showRemovedButton" 
-                class="btn btn--primary"
-                aria-describedby="removed-help"
-            >
-                👻 Giocatori Rimossi
-            </button>
-            <div id="removed-help" class="visually-hidden">
-                Visualizza i giocatori che hai rimosso dalla lista
-            </div>
+      <!-- Main Content -->
+      <main class="flex-1 flex flex-col min-w-0 overflow-y-auto" role="main">
+        <!-- Header -->
+        <div class="bg-white border-b border-gray-200 px-6 py-4">
+          <h1 class="text-2xl font-bold text-gray-900">⚽ Tracker Fantacalcio Mantra</h1>
         </div>
         
-        <div class="sidebar-section">
-            <h3 class="visually-hidden">Strumenti</h3>
-            <button 
-                id="loadExcelBtn" 
-                class="btn btn--warning"
-                aria-describedby="excel-help"
-            >
-                📋 Carica Excel
-            </button>
-            <div id="excel-help" class="visually-hidden">
-                Carica il listone giocatori da file Excel
+        <!-- Dashboard Content -->
+        <div class="flex-1 p-6 space-y-6">
+          <!-- Stats Cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div class="text-sm font-medium text-gray-500">Crediti Totali</div>
+              <div id="totalCredits" class="text-2xl font-bold text-gray-900" aria-live="polite">500</div>
             </div>
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div class="text-sm font-medium text-gray-500">Crediti Rimanenti</div>
+              <div id="remainingCredits" class="text-2xl font-bold text-green-600" aria-live="polite">500</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div class="text-sm font-medium text-gray-500">Giocatori Presi</div>
+              <div id="playerCount" class="text-2xl font-bold text-blue-600" aria-live="polite">0/30</div>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div class="text-sm font-medium text-gray-500">Giocatori Disponibili</div>
+              <div id="availablePlayersCount" class="text-2xl font-bold text-gray-900" aria-live="polite">0</div>
+            </div>
+          </div>
+          
+          <!-- Player Counts by Role -->
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">📊 Giocatori per Ruolo</h3>
+            <div id="playerCounts" class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3" role="list"></div>
+          </div>
             
-            <button 
-                id="formationImageBtn" 
-                class="btn btn--info"
-                aria-describedby="formation-image-help"
-            >
-                📸 Immagini Formazioni
-            </button>
-            <div id="formation-image-help" class="visually-hidden">
-                Carica e visualizza immagini delle formazioni
+          <!-- Search and Filters -->
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+              <!-- Search Input -->
+              <div class="flex-1 min-w-0">
+                <label for="mainSearchInput" class="sr-only">Cerca giocatori</label>
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    id="mainSearchInput" 
+                    class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                    placeholder="🔍 Cerca giocatori per cognome..."
+                    aria-describedby="search-help"
+                  />
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-gray-400">🔍</span>
+                  </div>
+                </div>
+                <div id="search-help" class="sr-only">
+                  Digita il cognome del giocatore per filtrare i risultati
+                </div>
+              </div>
+              
+              <!-- Filters -->
+              <div class="flex flex-wrap gap-3">
+                <button 
+                  id="interestFilter" 
+                  class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors"
+                  aria-pressed="false"
+                  aria-describedby="interest-filter-help"
+                >
+                  ⭐ Solo Interessanti
+                </button>
+                <div id="interest-filter-help" class="sr-only">
+                  Attiva o disattiva il filtro per mostrare solo i giocatori marcati come interessanti
+                </div>
+                
+                <select 
+                  id="mainRoleFilter" 
+                  class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  aria-label="Filtra per ruolo"
+                >
+                  <option value="all">Tutti i ruoli</option>
+                  <option value="Por">🥅 Portieri</option>
+                  <option value="Ds">🛡️ Dif. Sx</option>
+                  <option value="Dd">🛡️ Dif. Dx</option>
+                  <option value="Dc">🛡️ Dif. Cen.</option>
+                  <option value="B">🛡️ Braccetto</option>
+                  <option value="E">⚽ Esterni</option>
+                  <option value="M">⚽ Mediani</option>
+                  <option value="C">⚽ Centrocamp.</option>
+                  <option value="W">💜 Ali</option>
+                  <option value="T">💜 Trequart.</option>
+                  <option value="A">🚀 Attaccanti</option>
+                  <option value="Pc">🚀 Punte Cen.</option>
+                </select>
+                
+                <button 
+                  id="mainSearchClear" 
+                  class="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg border border-red-300 transition-colors"
+                  aria-label="Pulisci filtri"
+                >
+                  🔄 Reset
+                </button>
+              </div>
             </div>
-            
-            <button 
-                id="resetButton" 
-                class="btn btn--danger"
-                aria-describedby="reset-help"
-            >
-                🔄 Reset Dati
-            </button>
-            <div id="reset-help" class="visually-hidden">
-                Cancella tutti i dati salvati - attenzione: azione irreversibile
+          </div>
+          
+          <!-- Players Grid -->
+          <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div id="players-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div class="col-span-full text-center py-12">
+                <div class="text-gray-400 text-6xl mb-4">⚽</div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Nessun giocatore caricato</h3>
+                <p class="text-gray-500">Importa un file Excel per iniziare</p>
+              </div>
             </div>
+          </div>
         </div>
-    </aside>
+      </main>
+
+      <!-- Right Sidebar Actions -->
+      <aside class="w-64 bg-white border-l border-gray-200 flex-shrink-0 hidden xl:block" role="complementary" aria-label="Azioni principali">
+        <!-- Management Section -->
+        <div class="p-4 border-b border-gray-200">
+          <h3 class="text-sm font-semibold text-gray-900 mb-3">Gestione</h3>
+          <div class="space-y-2">
+            <button 
+              id="ownedPlayersBtn" 
+              class="w-full px-4 py-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg border border-green-200 transition-colors text-left"
+              aria-describedby="owned-players-help"
+            >
+              📊 Giocatori Presi
+            </button>
+            <div id="owned-players-help" class="sr-only">
+              Visualizza tutti i giocatori che hai acquistato
+            </div>
+            
+            <button 
+              id="formationBtn" 
+              class="w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-colors text-left"
+              aria-describedby="formation-help"
+            >
+              ⚽ Formazioni
+            </button>
+            <div id="formation-help" class="sr-only">
+              Crea e gestisci le tue formazioni tattiche
+            </div>
+            
+            <button 
+              id="participantsBtn" 
+              class="w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 transition-colors text-left"
+              aria-describedby="participants-help"
+            >
+              👥 Altri Partecipanti
+            </button>
+            <div id="participants-help" class="sr-only">
+              Gestisci gli altri partecipanti alla lega
+            </div>
+            
+            <button 
+              id="showRemovedButton" 
+              class="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg border border-gray-200 transition-colors text-left"
+              aria-describedby="removed-help"
+            >
+              👻 Giocatori Rimossi
+            </button>
+            <div id="removed-help" class="sr-only">
+              Visualizza i giocatori che hai rimosso dalla lista
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tools Section -->
+        <div class="p-4">
+          <h3 class="text-sm font-semibold text-gray-900 mb-3">Strumenti</h3>
+          <div class="space-y-2">
+            <button 
+              id="loadExcelBtn" 
+              class="w-full px-4 py-3 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-lg border border-yellow-200 transition-colors text-left"
+              aria-describedby="excel-help"
+            >
+              📋 Carica Excel
+            </button>
+            <div id="excel-help" class="sr-only">
+              Carica il listone giocatori da file Excel
+            </div>
+            
+            <button 
+              id="formationImageBtn" 
+              class="w-full px-4 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition-colors text-left"
+              aria-describedby="formation-image-help"
+            >
+              📸 Immagini Formazioni
+            </button>
+            <div id="formation-image-help" class="sr-only">
+              Carica e visualizza immagini delle formazioni
+            </div>
+            
+            <button 
+              id="resetButton" 
+              class="w-full px-4 py-3 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg border border-red-200 transition-colors text-left"
+              aria-describedby="reset-help"
+            >
+              🔄 Reset Dati
+            </button>
+            <div id="reset-help" class="sr-only">
+              Cancella tutti i dati salvati - attenzione: azione irreversibile
+            </div>
+          </div>
+        </div>
+      </aside>
+      
+      <!-- Mobile Menu Button (visible on smaller screens) -->
+      <button 
+        id="mobileMenuBtn" 
+        class="fixed bottom-4 right-4 xl:hidden bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg z-40"
+        aria-label="Menu azioni"
+      >
+        ⚙️
+      </button>
+    </div>
     
     <!-- Scroll to Top Button -->
     <button 
-        id="scrollTopBtn" 
-        class="scroll-top"
-        title="Torna in cima"
-        aria-label="Scorri all'inizio della pagina"
+      id="scrollTopBtn" 
+      class="fixed bottom-4 left-4 bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-full shadow-lg z-40 opacity-0 transition-opacity duration-300"
+      title="Torna in cima"
+      aria-label="Scorri all'inizio della pagina"
     >
-        ↑
+      ↑
     </button>
   </div>
 
   <!-- Toast Container -->
-  <div id="toast-container" class="toast-container"></div>
+  <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2 max-w-sm"></div>
 
   <!-- Modals Container -->
-  <div id="modals-container" class="modals-container"></div>
+  <div id="modals-container" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 invisible transition-all duration-300"></div>
 
   <!-- External Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
   <script type="module" src="js/app.js"></script>
+  
+  <!-- Mobile Menu Handler -->
+  <script>
+    // Mobile menu functionality
+    document.addEventListener('DOMContentLoaded', () => {
+      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+      if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', () => {
+          // Create mobile menu overlay
+          const overlay = document.createElement('div');
+          overlay.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 xl:hidden';
+          overlay.innerHTML = `
+            <div class="fixed right-0 top-0 h-full w-80 bg-white shadow-lg transform transition-transform duration-300">
+              <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold">Menu Azioni</h3>
+                <button class="close-mobile-menu text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+              <div class="p-4 space-y-3">
+                <button class="w-full px-4 py-3 bg-green-50 text-green-700 rounded-lg border border-green-200 text-left" onclick="document.getElementById('ownedPlayersBtn').click()">📊 Giocatori Presi</button>
+                <button class="w-full px-4 py-3 bg-blue-50 text-blue-700 rounded-lg border border-blue-200 text-left" onclick="document.getElementById('formationBtn').click()">⚽ Formazioni</button>
+                <button class="w-full px-4 py-3 bg-purple-50 text-purple-700 rounded-lg border border-purple-200 text-left" onclick="document.getElementById('participantsBtn').click()">👥 Altri Partecipanti</button>
+                <button class="w-full px-4 py-3 bg-gray-50 text-gray-700 rounded-lg border border-gray-200 text-left" onclick="document.getElementById('showRemovedButton').click()">👻 Giocatori Rimossi</button>
+                <hr class="my-4">
+                <button class="w-full px-4 py-3 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-200 text-left" onclick="document.getElementById('loadExcelBtn').click()">📋 Carica Excel</button>
+                <button class="w-full px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200 text-left" onclick="document.getElementById('formationImageBtn').click()">📸 Immagini Formazioni</button>
+                <button class="w-full px-4 py-3 bg-red-50 text-red-700 rounded-lg border border-red-200 text-left" onclick="document.getElementById('resetButton').click()">🔄 Reset Dati</button>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(overlay);
+          
+          // Close menu handlers
+          overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+              document.body.removeChild(overlay);
+            }
+          });
+          
+          overlay.querySelector('.close-mobile-menu').addEventListener('click', () => {
+            document.body.removeChild(overlay);
+          });
+        });
+      }
+    });
+  </script>
   
   <!-- Static Login Form Handler -->
   <script>
