@@ -334,16 +334,29 @@
               localStorage.setItem('fantaaiuto_token', result.token);
               console.log('✅ Static login successful');
               
-              // Hide static login and show main app
-              document.getElementById('static-login-container').style.display = 'none';
-              document.getElementById('app-container').style.display = 'block';
+              // Show success message briefly
+              const successDiv = document.createElement('div');
+              successDiv.style.cssText = 'margin-top: 15px; padding: 10px; background: #e8f5e8; border: 1px solid #4caf50; border-radius: 6px; color: #2e7d32; text-align: center;';
+              successDiv.textContent = '✅ Login successful! Loading application...';
+              errorDiv.parentNode.insertBefore(successDiv, errorDiv);
               
-              // Force app initialization with authentication
-              if (window.forceAppReload) {
-                window.forceAppReload();
-              } else {
-                location.reload();
-              }
+              // Hide login form and load app after brief delay
+              setTimeout(async () => {
+                document.getElementById('static-login-container').style.display = 'none';
+                document.getElementById('app-container').style.display = 'block';
+                
+                // Try to load the authenticated app
+                try {
+                  const { FantaAiutoApp } = await import('./src/components/App.js');
+                  const app = new FantaAiutoApp();
+                  await app.init();
+                  console.log('✅ App loaded after authentication');
+                } catch (appError) {
+                  console.error('❌ Failed to load app after login:', appError);
+                  alert('Errore durante il caricamento. La pagina verrà ricaricata.');
+                  location.reload();
+                }
+              }, 1500);
             } else {
               throw new Error(result.error || 'Credenziali non valide');
             }

@@ -4,39 +4,74 @@ import '../css/style.css';
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 DOM loaded, initializing FantaAiuto...');
   
-  // Create a timeout to force show login form if initialization fails or takes too long
-  const forceLoginTimeout = setTimeout(() => {
-    console.warn('⚠️ App initialization timeout, forcing login form display');
-    const loadingScreen = document.getElementById('loading-screen');
-    if (loadingScreen) {
-      loadingScreen.style.display = 'none';
-    }
-    showEmergencyLoginForm();
-  }, 5000); // 5 second timeout
-  
-  try {
-    const app = new FantaAiutoApp();
-    await app.init();
-    clearTimeout(forceLoginTimeout); // Cancel timeout if init succeeds
+  // Check if user is already authenticated
+  const token = localStorage.getItem('fantaaiuto_token');
+  if (token) {
+    console.log('🔐 Found authentication token, verifying...');
     
-    // Hide static login form if app initialized successfully
+    try {
+      const response = await fetch('https://fantaaiuto-backend.onrender.com/api/auth/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ token })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Token valid, loading authenticated app...');
+        await loadAuthenticatedApp();
+        return;
+      } else {
+        console.log('❌ Token invalid, clearing...');
+        localStorage.removeItem('fantaaiuto_token');
+      }
+    } catch (error) {
+      console.error('⚠️ Token verification failed:', error);
+      localStorage.removeItem('fantaaiuto_token');
+    }
+  }
+  
+  // If no valid token, keep login form visible
+  console.log('👤 No valid authentication, showing login form');
+});
+
+async function loadAuthenticatedApp() {
+  try {
+    // Hide static login form
     const staticLoginContainer = document.getElementById('static-login-container');
     if (staticLoginContainer) {
       staticLoginContainer.style.display = 'none';
     }
-  } catch (error) {
-    clearTimeout(forceLoginTimeout);
-    console.error('💥 Failed to initialize FantaAiuto:', error);
     
-    // Emergency fallback - hide loading screen and show login
-    const loadingScreen = document.getElementById('loading-screen');
-    if (loadingScreen) {
-      loadingScreen.style.display = 'none';
+    // Show main app container
+    const appContainer = document.getElementById('app-container');
+    if (appContainer) {
+      appContainer.style.display = 'block';
     }
     
-    showEmergencyLoginForm();
+    // Initialize the full app
+    console.log('📱 Creating FantaAiutoApp instance...');
+    const { FantaAiutoApp } = await import('../src/components/App.js');
+    const app = new FantaAiutoApp();
+    
+    console.log('🚀 Starting app initialization...');
+    await app.init();
+    
+    console.log('✅ Authenticated app loaded successfully');
+    
+  } catch (error) {
+    console.error('💥 Failed to load authenticated app:', error);
+    
+    // Show error and fallback to login
+    alert('Errore durante il caricamento dell\'applicazione. Riprova ad effettuare il login.');
+    
+    // Clear token and show login
+    localStorage.removeItem('fantaaiuto_token');
+    location.reload();
   }
-});
+}
 
 function showEmergencyLoginForm() {
   console.log('🚨 Showing emergency login form');

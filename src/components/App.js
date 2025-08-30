@@ -159,16 +159,81 @@ export class FantaAiutoApp {
   async initializeServices() {
     try {
       console.log('🏗️ Creating service instances...');
-      this.services.storage = new StorageManager('fantaaiuto_v2');
-      this.services.notifications = new NotificationManager();
-      this.services.modals = new ModalManager();
-      this.services.excel = new ExcelManager(this.services.modals);
-      this.services.players = new PlayerManager(this.appData);
-      this.services.views = new ViewManager();
-      this.services.formations = new FormationManager(this.appData);
-      this.services.participants = new ParticipantsManager(this.appData);
-      this.services.images = new ImageManager(this.services.modals, this.services.notifications);
-      console.log('✅ Service instances created');
+      
+      // Create services one by one with individual error handling
+      try {
+        this.services.storage = new StorageManager('fantaaiuto_v2');
+        console.log('✅ StorageManager created');
+      } catch (error) {
+        console.error('❌ Failed to create StorageManager:', error);
+        throw error;
+      }
+      
+      try {
+        this.services.notifications = new NotificationManager();
+        console.log('✅ NotificationManager created');
+      } catch (error) {
+        console.error('❌ Failed to create NotificationManager:', error);
+        throw error;
+      }
+      
+      try {
+        this.services.modals = new ModalManager();
+        console.log('✅ ModalManager created');
+      } catch (error) {
+        console.error('❌ Failed to create ModalManager:', error);
+        throw error;
+      }
+      
+      try {
+        this.services.excel = new ExcelManager(this.services.modals);
+        console.log('✅ ExcelManager created');
+      } catch (error) {
+        console.error('❌ Failed to create ExcelManager:', error);
+        throw error;
+      }
+      
+      try {
+        this.services.players = new PlayerManager(this.appData);
+        console.log('✅ PlayerManager created');
+      } catch (error) {
+        console.error('❌ Failed to create PlayerManager:', error);
+        throw error;
+      }
+      
+      try {
+        this.services.views = new ViewManager();
+        console.log('✅ ViewManager created');
+      } catch (error) {
+        console.error('❌ Failed to create ViewManager:', error);
+        throw error;
+      }
+      
+      try {
+        this.services.formations = new FormationManager(this.appData);
+        console.log('✅ FormationManager created');
+      } catch (error) {
+        console.error('❌ Failed to create FormationManager:', error);
+        throw error;
+      }
+      
+      try {
+        this.services.participants = new ParticipantsManager(this.appData);
+        console.log('✅ ParticipantsManager created');
+      } catch (error) {
+        console.error('❌ Failed to create ParticipantsManager:', error);
+        throw error;
+      }
+      
+      try {
+        this.services.images = new ImageManager(this.services.modals, this.services.notifications);
+        console.log('✅ ImageManager created');
+      } catch (error) {
+        console.error('❌ Failed to create ImageManager:', error);
+        throw error;
+      }
+      
+      console.log('✅ All service instances created successfully');
 
       // Initialize services sequentially with better error handling
       const services = [
