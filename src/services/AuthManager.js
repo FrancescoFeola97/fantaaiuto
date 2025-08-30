@@ -31,10 +31,12 @@ export class AuthManager {
       
       // First check if backend is available
       try {
-        await apiClient.healthCheck();
+        console.log('🔗 Checking backend connectivity...');
+        const healthResult = await apiClient.healthCheck();
+        console.log('✅ Backend health check result:', healthResult);
         console.log('🌐 Backend is available');
       } catch (backendError) {
-        console.warn('🔌 Backend not available, skipping authentication');
+        console.warn('🔌 Backend not available, skipping authentication:', backendError);
         this.isLoading = false;
         return false; // Return false to indicate offline mode
       }

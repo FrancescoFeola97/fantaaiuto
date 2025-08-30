@@ -62,17 +62,8 @@ export class FantaAiutoApp {
       }
       
       if (!isAuthenticated) {
-        // Check if backend is available for login
-        try {
-          await apiClient.healthCheck();
-          // Backend available but user not authenticated - show login after init
-          console.log('🌐 Backend available, will show login option');
-          this.shouldShowLoginOption = true;
-        } catch (backendError) {
-          // Backend not available - proceed with offline mode
-          console.log('🔌 Backend unavailable, starting in offline mode');
-          this.shouldShowLoginOption = false;
-        }
+        console.log('👤 User not authenticated, will show login form');
+        this.shouldShowLogin = true;
       }
       
       // Initialize app (either authenticated online or offline mode)
@@ -101,11 +92,14 @@ export class FantaAiutoApp {
       if (isAuthenticated) {
         const user = authManager.getUser();
         this.services.notifications.show('success', 'Benvenuto!', `Ciao ${user.displayName}! FantaAiuto è pronto.`);
-      } else if (this.shouldShowLoginOption) {
-        this.services.notifications.show('info', 'Login Disponibile', 'FantaAiuto è in modalità offline. Clicca il pulsante Login per accedere con il tuo account.');
-        this.addLoginButton();
+        this.showMainApp();
+      } else if (this.shouldShowLogin) {
+        console.log('🔐 Showing login form for authentication');
+        this.hideMainApp();
+        this.showLoginForm();
       } else {
         this.services.notifications.show('info', 'Modalità Offline', 'FantaAiuto è stato caricato in modalità offline.');
+        this.showMainApp();
       }
     } catch (error) {
       console.error('💥 App initialization error:', error);
@@ -501,6 +495,8 @@ export class FantaAiutoApp {
   }
 
   showLoginForm() {
+    console.log('🔐 Showing login form...');
+    
     let loginContainer = document.getElementById('login-container');
     
     if (!loginContainer) {
@@ -508,7 +504,23 @@ export class FantaAiutoApp {
       loginContainer = document.createElement('div');
       loginContainer.id = 'login-container';
       loginContainer.className = 'login-container';
+      
+      // Ensure login container covers the full screen
+      loginContainer.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: var(--color-gray-50);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      `;
+      
       document.body.appendChild(loginContainer);
+      console.log('✅ Login container created');
     }
 
     // Hide main app
@@ -522,6 +534,7 @@ export class FantaAiutoApp {
     
     this.loginForm.render();
     loginContainer.style.display = 'flex';
+    console.log('✅ Login form rendered and displayed');
   }
 
   hideLoginForm() {
@@ -551,8 +564,12 @@ export class FantaAiutoApp {
   }
 
   addLoginButton() {
+    console.log('🔐 Adding login button to interface...');
     // Add a login button to the main interface when backend is available
     const sidebar = document.querySelector('.sidebar-actions');
+    console.log('🔍 Sidebar found:', !!sidebar);
+    console.log('🔍 Login button already exists:', !!document.getElementById('login-btn'));
+    
     if (sidebar && !document.getElementById('login-btn')) {
       const loginButton = document.createElement('button');
       loginButton.id = 'login-btn';
@@ -561,6 +578,7 @@ export class FantaAiutoApp {
       loginButton.style.marginBottom = '10px';
       
       loginButton.addEventListener('click', () => {
+        console.log('🔐 Login button clicked');
         this.showLoginForm();
       });
       
@@ -568,6 +586,9 @@ export class FantaAiutoApp {
       const firstSection = sidebar.querySelector('.sidebar-section');
       if (firstSection) {
         firstSection.insertBefore(loginButton, firstSection.firstChild);
+        console.log('✅ Login button added to sidebar');
+      } else {
+        console.warn('⚠️ First sidebar section not found');
       }
     }
   }
