@@ -255,6 +255,27 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
   <script type="module" src="js/app.js"></script>
+  
+  <!-- Fallback script to hide loading screen if modules fail -->
+  <script>
+    // Hide loading screen after 10 seconds as a fallback
+    setTimeout(function() {
+      const loadingScreen = document.getElementById('loading-screen');
+      if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
+        console.warn('⚠️ Fallback: Hiding loading screen after timeout');
+        loadingScreen.style.display = 'none';
+      }
+    }, 10000);
+    
+    // Also hide on any unhandled promise rejection
+    window.addEventListener('unhandledrejection', function(event) {
+      console.error('❌ Unhandled promise rejection:', event.reason);
+      const loadingScreen = document.getElementById('loading-screen');
+      if (loadingScreen) {
+        loadingScreen.style.display = 'none';
+      }
+    });
+  </script>
 </body>
 
 </html>
