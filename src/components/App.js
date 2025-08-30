@@ -235,11 +235,14 @@ export class FantaAiutoApp {
       
       console.log('✅ All service instances created successfully');
 
-      // Initialize services sequentially with better error handling
-      const services = [
+      // Initialize critical services first, then optional ones
+      const criticalServices = [
         { name: 'storage', service: this.services.storage },
         { name: 'notifications', service: this.services.notifications },
-        { name: 'modals', service: this.services.modals },
+        { name: 'modals', service: this.services.modals }
+      ];
+      
+      const optionalServices = [
         { name: 'excel', service: this.services.excel },
         { name: 'players', service: this.services.players },
         { name: 'formations', service: this.services.formations },
@@ -247,16 +250,32 @@ export class FantaAiutoApp {
         { name: 'images', service: this.services.images }
       ];
 
-      for (const { name, service } of services) {
+      // Initialize critical services - fail if these don't work
+      for (const { name, service } of criticalServices) {
         try {
-          console.log(`🔧 Initializing ${name} service...`);
+          console.log(`🔧 Initializing critical ${name} service...`);
           if (service && typeof service.init === 'function') {
             await service.init();
           }
-          console.log(`✅ ${name} service initialized`);
+          console.log(`✅ Critical ${name} service initialized`);
         } catch (error) {
-          console.error(`❌ Failed to initialize ${name} service:`, error);
-          // Continue with other services - don't fail completely
+          console.error(`❌ Failed to initialize critical ${name} service:`, error);
+          throw new Error(`Critical service ${name} failed to initialize: ${error.message}`);
+        }
+      }
+      
+      // Initialize optional services - continue even if some fail
+      for (const { name, service } of optionalServices) {
+        try {
+          console.log(`🔧 Initializing optional ${name} service...`);
+          if (service && typeof service.init === 'function') {
+            await service.init();
+          }
+          console.log(`✅ Optional ${name} service initialized`);
+        } catch (error) {
+          console.error(`❌ Failed to initialize optional ${name} service:`, error);
+          // Mark service as unavailable but continue
+          this.services[`${name}_available`] = false;
         }
       }
       
@@ -268,26 +287,57 @@ export class FantaAiutoApp {
   }
 
   async initializeComponents() {
-    this.components.dashboard = new DashboardComponent(this.appData, this.services);
-    this.components.tracker = new TrackerComponent(this.appData, this.services);
-    this.components.formations = new FormationComponent(this.appData, this.services);
-    this.components.analytics = new AnalyticsComponent(this.appData, this.services);
-    this.components.roleNavigation = new RoleNavigationComponent(this.appData, this.services);
-    this.components.actionsPanel = new ActionsPanelComponent(this.appData, this.services);
-
-    await Promise.all([
-      this.components.dashboard.init(),
-      this.components.tracker.init(),
-      this.components.formations.init(),
-      this.components.analytics.init(),
-      this.components.roleNavigation.init(),
-      this.components.actionsPanel.init()
-    ]);
+    const componentDefs = [
+      { name: 'dashboard', Component: DashboardComponent },
+      { name: 'tracker', Component: TrackerComponent },
+      { name: 'formations', Component: FormationComponent },
+      { name: 'analytics', Component: AnalyticsComponent },
+      { name: 'roleNavigation', Component: RoleNavigationComponent },
+      { name: 'actionsPanel', Component: ActionsPanelComponent }
+    ];
+    
+    // Create components with error handling
+    for (const { name, Component } of componentDefs) {
+      try {
+        console.log(`🧩 Creating ${name} component...`);
+        this.components[name] = new Component(this.appData, this.services);
+        console.log(`✅ ${name} component created`);
+      } catch (error) {
+        console.error(`❌ Failed to create ${name} component:`, error);
+        // Continue without this component
+      }
+    }
+    
+    // Initialize components with error handling
+    const initPromises = [];
+    Object.entries(this.components).forEach(([name, component]) => {
+      if (component && typeof component.init === 'function') {
+        initPromises.push(
+          component.init()
+            .then(() => console.log(`✅ ${name} component initialized`))
+            .catch(error => {
+              console.error(`❌ Failed to initialize ${name} component:`, error);
+              // Remove failed component
+              delete this.components[name];
+            })
+        );
+      }
+    });
+    
+    await Promise.allSettled(initPromises);
+    console.log('🎯 Component initialization completed');
   }
 
   async loadUserData() {
     try {
       console.log('🔄 Loading saved data...');
+      
+      // Check if storage service is available
+      if (!this.services.storage || !this.services.storage.isAvailable) {
+        console.warn('⚠️ Storage service not available, skipping data load');
+        return;
+      }
+      
       console.log('🔧 Storage available:', this.services.storage.isAvailable);
       console.log('🔧 Current hostname:', window.location.hostname);
       
