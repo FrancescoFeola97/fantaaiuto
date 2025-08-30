@@ -62,8 +62,17 @@ export class FantaAiutoApp {
       }
       
       if (!isAuthenticated) {
-        // Backend is not available or user not authenticated - proceed with offline mode
-        console.log('🔌 Starting in offline mode');
+        // Check if backend is available for login
+        try {
+          await apiClient.healthCheck();
+          // Backend available but user not authenticated - show login after init
+          console.log('🌐 Backend available, will show login option');
+          this.shouldShowLoginOption = true;
+        } catch (backendError) {
+          // Backend not available - proceed with offline mode
+          console.log('🔌 Backend unavailable, starting in offline mode');
+          this.shouldShowLoginOption = false;
+        }
       }
       
       // Initialize app (either authenticated online or offline mode)
@@ -92,6 +101,9 @@ export class FantaAiutoApp {
       if (isAuthenticated) {
         const user = authManager.getUser();
         this.services.notifications.show('success', 'Benvenuto!', `Ciao ${user.displayName}! FantaAiuto è pronto.`);
+      } else if (this.shouldShowLoginOption) {
+        this.services.notifications.show('info', 'Login Disponibile', 'FantaAiuto è in modalità offline. Clicca il pulsante Login per accedere con il tuo account.');
+        this.addLoginButton();
       } else {
         this.services.notifications.show('info', 'Modalità Offline', 'FantaAiuto è stato caricato in modalità offline.');
       }
@@ -535,6 +547,28 @@ export class FantaAiutoApp {
     const appContainer = document.getElementById('app-container') || document.querySelector('.container');
     if (appContainer) {
       appContainer.style.display = 'none';
+    }
+  }
+
+  addLoginButton() {
+    // Add a login button to the main interface when backend is available
+    const sidebar = document.querySelector('.sidebar-actions');
+    if (sidebar && !document.getElementById('login-btn')) {
+      const loginButton = document.createElement('button');
+      loginButton.id = 'login-btn';
+      loginButton.className = 'btn btn--success';
+      loginButton.innerHTML = '🔐 Login';
+      loginButton.style.marginBottom = '10px';
+      
+      loginButton.addEventListener('click', () => {
+        this.showLoginForm();
+      });
+      
+      // Add at the top of the first sidebar section
+      const firstSection = sidebar.querySelector('.sidebar-section');
+      if (firstSection) {
+        firstSection.insertBefore(loginButton, firstSection.firstChild);
+      }
     }
   }
 
