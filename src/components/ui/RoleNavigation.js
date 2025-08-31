@@ -271,12 +271,12 @@ export class RoleNavigationComponent {
 
   getRoleCount(role) {
     if (role === 'all') return this.getAllPlayersCount();
-    return this.appData.players.filter(p => p.ruoli.includes(role)).length;
+    return this.appData.players.filter(p => p.role === role || (p.ruoli && p.ruoli.includes(role))).length;
   }
 
   getTierCount(role, tier) {
     return this.appData.players.filter(p => 
-      p.ruoli.includes(role) && p.tier === tier
+      (p.role === role || (p.ruoli && p.ruoli.includes(role))) && p.tier === tier
     ).length;
   }
 

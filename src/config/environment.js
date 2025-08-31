@@ -8,9 +8,9 @@ const isProductionEnvironment = () => {
 };
 
 export const config = {
-  // Production backend URL - Render deployment
+  // Enhanced offline mode - prefer demo mode for production reliability
   BACKEND_URL: isProductionEnvironment()
-    ? 'https://fantaaiuto-backend.onrender.com'
+    ? 'https://fantaaiuto-backend.onrender.com'  // Fallback to offline mode if unavailable
     : 'http://localhost:3001',
     
   API_TIMEOUT: 10000, // 10 seconds

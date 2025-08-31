@@ -97,6 +97,14 @@ export class FantaAiutoApp {
       
       if (isAuthenticated) {
         const user = authManager.getUser();
+        console.log('🎉 User authenticated:', user);
+        
+        // Add demo data for offline mode testing
+        if (user.id === 'demo-user') {
+          console.log('🏠 Loading demo data for offline mode...');
+          this.loadDemoData();
+        }
+        
         this.services.notifications.show('success', 'Benvenuto!', `Ciao ${user.displayName}! FantaAiuto è pronto.`);
         this.showMainApp();
       } else if (this.shouldShowLogin) {
@@ -104,6 +112,8 @@ export class FantaAiutoApp {
         this.hideMainApp();
         this.showLoginForm();
       } else {
+        console.log('🏠 Offline mode - loading demo data...');
+        this.loadDemoData();
         this.services.notifications.show('info', 'Modalità Offline', 'FantaAiuto è stato caricato in modalità offline.');
         this.showMainApp();
       }
@@ -948,6 +958,87 @@ export class FantaAiutoApp {
 
 
   // resetData is now handled by ActionsPanel.resetAll() which provides better UX with modal confirmation
+  
+  loadDemoData() {
+    console.log('📋 Loading demo data for offline mode...');
+    
+    // Add demo players for testing the interface
+    this.appData.players = [
+      {
+        id: 'demo1',
+        name: 'Gigio Donnarumma',
+        role: 'Por',
+        team: 'PSG',
+        price: 15,
+        tier: 'Top',
+        status: 'available',
+        isOwned: false,
+        isInteresting: true,
+        isRemoved: false
+      },
+      {
+        id: 'demo2', 
+        name: 'Federico Chiesa',
+        role: 'W',
+        team: 'Liverpool',
+        price: 25,
+        tier: 'Titolari',
+        status: 'available',
+        isOwned: true,
+        isInteresting: false,
+        isRemoved: false
+      },
+      {
+        id: 'demo3',
+        name: 'Ciro Immobile',
+        role: 'A',
+        team: 'Lazio',
+        price: 20,
+        tier: 'Titolari',
+        status: 'available',
+        isOwned: false,
+        isInteresting: true,
+        isRemoved: false
+      },
+      {
+        id: 'demo4',
+        name: 'Marco Verratti',
+        role: 'C',
+        team: 'PSG',
+        price: 18,
+        tier: 'Top',
+        status: 'available',
+        isOwned: false,
+        isInteresting: false,
+        isRemoved: false
+      },
+      {
+        id: 'demo5',
+        name: 'Alessandro Bastoni',
+        role: 'Ds',
+        team: 'Inter',
+        price: 12,
+        tier: 'Titolari',
+        status: 'available',
+        isOwned: true,
+        isInteresting: false,
+        isRemoved: false
+      }
+    ];
+    
+    // Update app data
+    this.appData.budget = { total: 500, remaining: 350 };
+    this.appData.participants = [
+      { id: 'p1', name: 'Francesco', team: 'Team Demo 1' },
+      { id: 'p2', name: 'Mario', team: 'Team Demo 2' },
+      { id: 'p3', name: 'Luigi', team: 'Team Demo 3' }
+    ];
+    
+    console.log('✅ Demo data loaded:', this.appData.players.length, 'players');
+    
+    // Trigger UI updates
+    this.updateUI();
+  }
 
   scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
