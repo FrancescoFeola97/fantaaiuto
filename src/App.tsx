@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { LoginForm } from './components/auth/LoginForm'
+import { RegisterForm } from './components/auth/RegisterForm'
 import { Dashboard } from './components/Dashboard'
 import { LoadingScreen } from './components/ui/LoadingScreen'
 
@@ -14,6 +15,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
   const [error, setError] = useState('')
+  const [showRegister, setShowRegister] = useState(false)
 
   useEffect(() => {
     checkAuthentication()
@@ -73,6 +75,15 @@ function App() {
   const handleLogin = (user: User) => {
     setUser(user)
     setIsAuthenticated(true)
+    setShowRegister(false)
+    setError('')
+  }
+
+  const handleRegister = (user: User) => {
+    setUser(user)
+    setIsAuthenticated(true)
+    setShowRegister(false)
+    setError('')
   }
 
   const handleLogout = async () => {
@@ -125,7 +136,17 @@ function App() {
   if (!isAuthenticated) {
     return (
       <>
-        <LoginForm onLogin={handleLogin} />
+        {showRegister ? (
+          <RegisterForm 
+            onRegister={handleRegister}
+            onBackToLogin={() => setShowRegister(false)}
+          />
+        ) : (
+          <LoginForm 
+            onLogin={handleLogin} 
+            onRegisterClick={() => setShowRegister(true)}
+          />
+        )}
         {error && (
           <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg max-w-md">
             <p className="text-sm font-medium">Errore di Connessione</p>

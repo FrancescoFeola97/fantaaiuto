@@ -27,24 +27,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ onImportExcel, playersCount })
       
       const data = await file.arrayBuffer()
       const workbook = XLSX.read(data, { type: 'array' })
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-      const jsonData = XLSX.utils.sheet_to_json(worksheet)
+      
+      // Use 'Tutti' sheet if available, otherwise first sheet
+      const sheetName = workbook.SheetNames.includes('Tutti') ? 'Tutti' : workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      
+      // Skip header rows and get data starting from row 2 (0-indexed = row 1)
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+        range: 1, // Skip first row (title)
+        header: ['Id', 'R', 'RM', 'Nome', 'Squadra', 'QtA', 'QtI', 'Diff', 'QtAM', 'QtIM', 'DiffM', 'FVM', 'FVMM']
+      })
 
       if (!jsonData || jsonData.length === 0) {
         throw new Error('File Excel vuoto o formato non valido')
       }
 
+      console.log('📋 Sample Excel row:', jsonData[0])
+
       const players: PlayerData[] = jsonData.map((row: any, index) => ({
         id: `player_${Date.now()}_${index}`,
-        nome: row.Nome || row.nome || '',
-        squadra: row.Squadra || row.squadra || '',
-        ruoli: parseRoles(row.Ruoli || row.ruoli || row.Ruolo || row.ruolo || ''),
-        fvm: parseFloat(row.FVM || row.fvm || '0') || 0,
-        prezzo: parseFloat(row.Prezzo || row.prezzo || '0') || 0,
+        nome: row.Nome?.toString().trim() || '',
+        squadra: row.Squadra?.toString().trim() || '',
+        ruoli: parseRoles(row.RM || row.R || ''), // Use RM (detailed role) or R (basic role)
+        fvm: parseFloat(row.FVM || '0') || 0,
+        prezzo: parseFloat(row.QtA || '0') || 0, // Qt.A = prezzo attuale
         status: 'available' as const,
         interessante: false,
         createdAt: new Date().toISOString()
-      })).filter(p => p.nome.trim().length > 0)
+      })).filter(p => p.nome.trim().length > 0 && p.nome !== 'Nome')
 
       if (players.length === 0) {
         throw new Error('Nessun giocatore valido trovato. Verifica le colonne (Nome, Squadra, Ruoli, FVM, Prezzo)')
@@ -70,11 +80,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ onImportExcel, playersCount })
 
   const parseRoles = (roleStr: string): string[] => {
     if (!roleStr) return []
-    return roleStr
-      .toString()
-      .split(/[,;\/]/)
-      .map(r => r.trim())
-      .filter(r => ['Por', 'Ds', 'Dd', 'Dc', 'B', 'E', 'M', 'C', 'W', 'T', 'A', 'Pc'].includes(r))
+    
+    // Handle single role from Excel file
+    const role = roleStr.toString().trim()
+    
+    // Map from Excel format to app format
+    const roleMapping: Record<string, string[]> = {
+      'P': ['Por'],
+      'Por': ['Por'],
+      'D': ['Ds', 'Dd', 'Dc', 'B'], // D include anche Braccetto
+      'B': ['B'], // Braccetto di difesa
+      'Ds': ['Ds'],
+      'Dd': ['Dd'], 
+      'Dc': ['Dc'],
+      'C': ['M', 'C'],
+      'M': ['M'],
+      'E': ['E'],
+      'W': ['W'],
+      'T': ['T'],
+      'A': ['A'],
+      'Pc': ['Pc']
+    }
+    
+    return roleMapping[role] || [role] || ['A'] // Default to Attaccante if unknown
   }
 
   const handleResetData = () => {

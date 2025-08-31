@@ -8,9 +8,10 @@ interface User {
 
 interface LoginFormProps {
   onLogin: (user: User) => void
+  onRegisterClick?: () => void
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }) => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -124,11 +125,25 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
           </div>
         )}
         
-        <div className="mt-6 bg-blue-50 p-4 rounded-lg text-center text-sm">
-          <p className="font-medium text-gray-900 mb-2">🌐 Backend Online</p>
-          <p className="text-gray-700"><strong>Username:</strong> admin</p>
-          <p className="text-gray-700"><strong>Password:</strong> password</p>
-          <p className="text-xs text-gray-500 mt-2">Connessione diretta al database</p>
+        <div className="mt-6 space-y-4">
+          <div className="bg-blue-50 p-4 rounded-lg text-center text-sm">
+            <p className="font-medium text-gray-900 mb-2">🌐 Account Demo</p>
+            <p className="text-gray-700"><strong>Username:</strong> admin</p>
+            <p className="text-gray-700"><strong>Password:</strong> password</p>
+            <p className="text-xs text-gray-500 mt-2">Backend SQLite</p>
+          </div>
+          
+          {onRegisterClick && (
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-2">Non hai un account?</p>
+              <button
+                onClick={onRegisterClick}
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+              >
+                🎯 Crea nuovo account
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
