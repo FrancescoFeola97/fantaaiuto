@@ -9,18 +9,30 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onImportExcel, playersCount }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isUploading, setIsUploading] = React.useState(false)
 
   const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
+    setIsUploading(true)
+    
     try {
       console.log('📋 Processing Excel file:', file.name)
+      
+      // Validate file type
+      if (!file.name.match(/\.(xlsx?|csv)$/i)) {
+        throw new Error('Formato file non supportato. Usa .xlsx, .xls o .csv')
+      }
       
       const data = await file.arrayBuffer()
       const workbook = XLSX.read(data, { type: 'array' })
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
       const jsonData = XLSX.utils.sheet_to_json(worksheet)
+
+      if (!jsonData || jsonData.length === 0) {
+        throw new Error('File Excel vuoto o formato non valido')
+      }
 
       const players: PlayerData[] = jsonData.map((row: any, index) => ({
         id: `player_${Date.now()}_${index}`,
@@ -34,16 +46,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ onImportExcel, playersCount })
         createdAt: new Date().toISOString()
       })).filter(p => p.nome.trim().length > 0)
 
+      if (players.length === 0) {
+        throw new Error('Nessun giocatore valido trovato. Verifica le colonne (Nome, Squadra, Ruoli, FVM, Prezzo)')
+      }
+
       console.log(`✅ Imported ${players.length} players from Excel`)
       onImportExcel(players)
+      
+      // Show success message
+      alert(`✅ Importati ${players.length} giocatori con successo!`)
       
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error processing Excel file:', error)
-      alert('Errore durante l\'importazione del file Excel. Verifica il formato.')
+      alert(`❌ Errore: ${error.message}`)
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -97,9 +118,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onImportExcel, playersCount })
           
           <button 
             onClick={() => fileInputRef.current?.click()}
-            className="w-full px-4 py-3 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-lg border border-yellow-200 transition-colors text-left"
+            disabled={isUploading}
+            className={`w-full px-4 py-3 rounded-lg border transition-colors text-left ${
+              isUploading 
+                ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200'
+            }`}
           >
-            📋 Carica Excel
+            {isUploading ? '⏳ Caricamento...' : '📋 Carica Excel'}
           </button>
           
           <button className="w-full px-4 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition-colors text-left">

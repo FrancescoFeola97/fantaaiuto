@@ -32,13 +32,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       let result: any
 
       try {
+        // Fast timeout for better UX
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 2000)
+        
         response = await fetch('https://fantaaiuto-backend.onrender.com/api/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ username: username.trim(), password })
+          body: JSON.stringify({ username: username.trim(), password }),
+          signal: controller.signal
         })
+        
+        clearTimeout(timeoutId)
         result = await response.json()
       } catch (backendError) {
         console.warn('⚠️ Backend unavailable, using offline mode for demo:', backendError)

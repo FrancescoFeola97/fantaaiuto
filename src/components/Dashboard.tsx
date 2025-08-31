@@ -123,10 +123,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <h2 className="text-lg font-semibold text-gray-900">FantaAiuto</h2>
             <button
               onClick={onLogout}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              className="px-3 py-1 text-sm bg-red-50 hover:bg-red-100 text-red-700 rounded-lg border border-red-200 transition-colors"
               title="Logout"
             >
-              👤 {user.username}
+              🚪 Esci
             </button>
           </div>
           <PlayerCounts players={filteredPlayers} />
@@ -136,8 +136,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-900">⚽ Tracker Fantacalcio Mantra</h1>
+          <span className="text-sm text-gray-500">👤 {user.username}</span>
         </div>
         
         {/* Dashboard Content */}
