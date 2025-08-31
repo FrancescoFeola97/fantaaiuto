@@ -17,35 +17,48 @@ export class RoleNavigationComponent {
   }
 
   async init() {
+    console.log('🧭 Initializing RoleNavigation component...');
     this.container = document.getElementById('roleNavigation');
     if (!this.container) {
-      console.warn('Role navigation container not found');
+      console.warn('❌ Role navigation container not found');
       return;
     }
+    console.log('✅ Role navigation container found:', this.container);
 
     this.render();
     this.setupEventListeners();
+    console.log('✅ RoleNavigation component initialized successfully');
     return Promise.resolve();
   }
 
   render() {
-    if (!this.container) return;
+    if (!this.container) {
+      console.warn('❌ No container to render RoleNavigation');
+      return;
+    }
 
+    console.log('🎨 Rendering RoleNavigation with', this.appData.players.length, 'players');
     Utils.emptyElement(this.container);
 
     // Add "All Players" option
-    const allItem = this.createRoleNavItem('all', '👥 Tutti i Giocatori', this.getAllPlayersCount());
+    const allCount = this.getAllPlayersCount();
+    console.log('📊 All players count:', allCount);
+    const allItem = this.createRoleNavItem('all', '👥 Tutti i Giocatori', allCount);
     this.container.appendChild(allItem);
 
     // Add role navigation
     this.roles.forEach(role => {
-      const roleItem = this.createRoleNavItem(role, this.getRoleLabel(role), this.getRoleCount(role));
+      const roleCount = this.getRoleCount(role);
+      console.log(`📊 ${role} players count:`, roleCount);
+      const roleItem = this.createRoleNavItem(role, this.getRoleLabel(role), roleCount);
       this.container.appendChild(roleItem);
 
       // Add tier sub-navigation for this role
       const tierContainer = this.createTierContainer(role);
       this.container.appendChild(tierContainer);
     });
+    
+    console.log('✅ RoleNavigation rendered with', this.container.children.length, 'items');
   }
 
   createRoleNavItem(role, label, count) {
