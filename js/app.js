@@ -30,8 +30,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.removeItem('fantaaiuto_token');
       }
     } catch (error) {
-      console.error('⚠️ Token verification failed:', error);
-      localStorage.removeItem('fantaaiuto_token');
+      console.error('⚠️ Token verification failed - backend may be unavailable:', error);
+      console.log('🔄 Attempting offline mode fallback...');
+      
+      // Try offline mode if backend is unavailable
+      if (token) {
+        try {
+          console.log('🏠 Loading app in offline mode...');
+          await loadAuthenticatedApp();
+          return;
+        } catch (offlineError) {
+          console.error('❌ Offline mode failed:', offlineError);
+          localStorage.removeItem('fantaaiuto_token');
+        }
+      }
     }
   }
   
