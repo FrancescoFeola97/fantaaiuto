@@ -36,9 +36,24 @@ export class AuthManager {
         console.log('✅ Backend health check result:', healthResult);
         console.log('🌐 Backend is available');
       } catch (backendError) {
-        console.warn('🔌 Backend not available, skipping authentication:', backendError);
+        console.warn('🔌 Backend not available, enabling offline mode:', backendError);
         this.isLoading = false;
-        return false; // Return false to indicate offline mode
+        
+        // Check if we have a demo token for offline mode
+        const token = localStorage.getItem('fantaaiuto_token');
+        if (token === 'demo-token-offline-mode') {
+          console.log('🏠 Offline mode: found demo token, creating offline user...');
+          this.user = {
+            id: 'demo-user',
+            username: 'admin',
+            displayName: 'Demo User',
+            email: 'demo@fantaiuto.app'
+          };
+          this.isAuthenticated = true;
+          return true; // Allow offline mode to proceed
+        }
+        
+        return false; // Return false to indicate offline mode without auth
       }
       
       // Check if we have a stored token
