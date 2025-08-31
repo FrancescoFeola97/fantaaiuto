@@ -28,14 +28,67 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const loadUserData = async () => {
     try {
-      console.log('🔄 Loading saved data...')
+      console.log('🔄 Loading players from backend...')
       
-      const savedData = localStorage.getItem('fantaaiuto_data')
-      if (savedData) {
-        const data = JSON.parse(savedData)
-        if (data.players && Array.isArray(data.players)) {
-          setPlayers(data.players)
-          console.log('📊 Loaded players:', data.players.length)
+      const token = localStorage.getItem('fantaaiuto_token')
+      if (!token) {
+        setIsLoading(false)
+        return
+      }
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+      
+      try {
+        const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          signal: controller.signal
+        })
+        
+        clearTimeout(timeoutId)
+        
+        if (response.ok) {
+          const data = await response.json()
+          const mappedPlayers = data.players.map((p: any) => ({
+            id: p.id.toString(),
+            nome: p.nome,
+            squadra: p.squadra,
+            ruoli: [p.ruolo], // Backend stores single role, frontend expects array
+            fvm: p.fvm,
+            prezzo: p.prezzo,
+            status: p.status,
+            interessante: p.interessante,
+            costoReale: p.costoReale,
+            note: p.note,
+            createdAt: new Date().toISOString()
+          }))
+          setPlayers(mappedPlayers)
+          console.log('📊 Loaded players from backend:', mappedPlayers.length)
+        } else {
+          console.warn('⚠️ Failed to load players from backend, using local storage fallback')
+          // Fallback to localStorage only if backend fails
+          const savedData = localStorage.getItem('fantaaiuto_data')
+          if (savedData) {
+            const localData = JSON.parse(savedData)
+            if (localData.players && Array.isArray(localData.players)) {
+              setPlayers(localData.players)
+              console.log('📊 Loaded players from localStorage:', localData.players.length)
+            }
+          }
+        }
+      } catch (error) {
+        clearTimeout(timeoutId)
+        console.error('❌ Backend connection failed, using localStorage:', error)
+        // Fallback to localStorage
+        const savedData = localStorage.getItem('fantaaiuto_data')
+        if (savedData) {
+          const localData = JSON.parse(savedData)
+          if (localData.players && Array.isArray(localData.players)) {
+            setPlayers(localData.players)
+            console.log('📊 Loaded players from localStorage:', localData.players.length)
+          }
         }
       }
     } catch (error) {
@@ -102,16 +155,90 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setInterestFilter(false)
   }
 
-  const updatePlayer = (playerId: string, updates: Partial<PlayerData>) => {
-    setPlayers(prev => prev.map(p => 
-      p.id === playerId ? { ...p, ...updates } : p
-    ))
+  const updatePlayer = async (playerId: string, updates: Partial<PlayerData>) => {
+    try {
+      // Update locally first for immediate UI feedback
+      setPlayers(prev => prev.map(p => 
+        p.id === playerId ? { ...p, ...updates } : p
+      ))
+
+      // Then sync with backend
+      const token = localStorage.getItem('fantaaiuto_token')
+      if (!token) return
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+      
+      await fetch(`https://fantaaiuto-backend.onrender.com/api/players/${playerId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: updates.status,
+          costoReale: updates.costoReale || 0,
+          note: updates.note || null
+        }),
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      console.log('✅ Player updated in backend')
+    } catch (error) {
+      console.error('❌ Failed to sync player update with backend:', error)
+      // Keep local change even if backend fails
+    }
+    
     saveData()
   }
 
-  const importPlayersFromExcel = (newPlayers: PlayerData[]) => {
-    setPlayers(newPlayers)
-    saveData()
+  const importPlayersFromExcel = async (newPlayers: PlayerData[]) => {
+    try {
+      console.log('📤 Uploading players to backend...')
+      
+      const token = localStorage.getItem('fantaaiuto_token')
+      if (!token) return
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s for large uploads
+      
+      const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players/import', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          players: newPlayers.map(p => ({
+            nome: p.nome,
+            squadra: p.squadra,
+            ruolo: Array.isArray(p.ruoli) ? p.ruoli[0] : p.ruoli || 'A',
+            prezzo: p.prezzo,
+            fvm: p.fvm
+          })),
+          mode: '1' // Mode 1 = replace all
+        }),
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (response.ok) {
+        await response.json()
+        setPlayers(newPlayers)
+        console.log('✅ Players imported to backend successfully')
+        alert(`✅ Importati ${newPlayers.length} giocatori nel database!`)
+      } else {
+        throw new Error('Errore durante l\'import nel database')
+      }
+    } catch (error: any) {
+      console.error('❌ Backend import failed:', error)
+      // Fallback to local storage
+      setPlayers(newPlayers)
+      saveData()
+      alert(`⚠️ Import locale completato (${newPlayers.length} giocatori). Errore database: ${error.message}`)
+    }
   }
 
   return (

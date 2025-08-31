@@ -31,43 +31,38 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
       let response: Response
       let result: any
 
-      try {
-        // Fast timeout for better UX
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 2000)
-        
-        response = await fetch('https://fantaaiuto-backend.onrender.com/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ username: username.trim(), password }),
-          signal: controller.signal
-        })
-        
-        clearTimeout(timeoutId)
+      // Backend-only authentication with proper timeout for Render cold starts
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s for Render cold start
+      
+      response = await fetch('https://fantaaiuto-backend.onrender.com/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: username.trim(), password }),
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (!response.ok) {
         result = await response.json()
-      } catch (backendError) {
-        console.warn('⚠️ Backend unavailable, using offline mode for demo:', backendError)
-        // Demo mode fallback
-        if (username === 'admin' && password === 'password') {
-          result = { token: 'demo-token-offline-mode', user: { id: 'demo', username: 'admin' } }
-          response = { ok: true } as Response
-        } else {
-          throw new Error('Demo mode: use admin/password')
-        }
+        throw new Error(result.error || `Errore ${response.status}: ${response.statusText}`)
       }
+      
+      result = await response.json()
 
-      if (response.ok && result.token) {
-        localStorage.setItem('fantaaiuto_token', result.token)
-        console.log('✅ Login successful')
-        onLogin(result.user || { id: 'demo', username: username })
-      } else {
-        throw new Error(result.error || 'Credenziali non valide')
-      }
+      localStorage.setItem('fantaaiuto_token', result.token)
+      console.log('✅ Backend login successful')
+      onLogin(result.user)
     } catch (error: any) {
-      console.error('Login error:', error)
-      setError(error.message || 'Errore di connessione. Verifica la connessione internet.')
+      console.error('❌ Login error:', error)
+      if (error.name === 'AbortError') {
+        setError('Timeout: Il server sta impiegando troppo tempo a rispondere. Riprova.')
+      } else {
+        setError(error.message || 'Errore di connessione al server. Verifica la tua connessione internet.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -130,9 +125,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
         )}
         
         <div className="mt-6 bg-blue-50 p-4 rounded-lg text-center text-sm">
-          <p className="font-medium text-gray-900 mb-2">🎮 Account Demo</p>
+          <p className="font-medium text-gray-900 mb-2">🌐 Backend Online</p>
           <p className="text-gray-700"><strong>Username:</strong> admin</p>
           <p className="text-gray-700"><strong>Password:</strong> password</p>
+          <p className="text-xs text-gray-500 mt-2">Connessione diretta al database</p>
         </div>
       </div>
     </div>

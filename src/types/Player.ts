@@ -8,6 +8,7 @@ export interface PlayerData {
   status: 'available' | 'owned' | 'removed'
   interessante: boolean
   rimosso?: boolean
+  costoReale?: number
   note?: string
   tier?: string
   createdAt?: string
