@@ -1,5 +1,9 @@
 /* FantaAiuto - Tailwind CSS Custom Overrides */
 
+@tailwind base;
+@tailwind components; 
+@tailwind utilities;
+
 /* Reset and base styles */
 * {
   box-sizing: border-box;

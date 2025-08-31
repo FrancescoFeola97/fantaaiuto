@@ -5,22 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FantaAiuto - Tracker Fantacalcio Mantra v2.0</title>
-  <!-- 🤖 Test integrazione Claude - Deploy automatico attivo -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            'sans': ['Inter', 'system-ui', 'sans-serif'],
-          },
-          screens: {
-            'xs': '475px',
-          }
-        }
-      }
-    }
-  </script>
+  <!-- 🤖 Production ready - Tailwind via PostCSS build -->
   <link rel="stylesheet" href="css/style.css">
   <meta name="description" content="Tracker avanzato per Fantacalcio Mantra - Gestisci la tua squadra, formazioni e budget">
 
@@ -53,14 +38,14 @@
         <form id="static-login-form" style="margin-bottom: 20px;">
           <div style="margin-bottom: 15px;">
             <label style="display: block; margin-bottom: 5px; font-weight: 500;">Nome utente o Email</label>
-            <input type="text" id="static-username" required 
+            <input type="text" id="static-username" required autocomplete="username" 
                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
                    placeholder="Inserisci nome utente o email" />
           </div>
           
           <div style="margin-bottom: 20px;">
             <label style="display: block; margin-bottom: 5px; font-weight: 500;">Password</label>
-            <input type="password" id="static-password" required 
+            <input type="password" id="static-password" required autocomplete="current-password" 
                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
                    placeholder="Inserisci password" />
           </div>

@@ -166,6 +166,23 @@ export class FantaAiutoApp {
     return legacyServices;
   }
 
+  /**
+   * Legacy services getter for backward compatibility
+   * Gradually replace this.services.* calls with container.get()
+   */
+  get services() {
+    return new Proxy({}, {
+      get: (target, prop) => {
+        try {
+          return this.container.get(prop);
+        } catch (error) {
+          console.warn(`Service '${prop}' not found in container`);
+          return null;
+        }
+      }
+    });
+  }
+
   async init() {
     console.log('🚀 Starting FantaAiuto initialization...');
     
@@ -426,16 +443,17 @@ export class FantaAiutoApp {
     try {
       console.log('🔄 Loading saved data...');
       
-      // Check if storage service is available
-      if (!this.services.storage || !this.services.storage.isAvailable) {
+      // Get storage service from container
+      const storage = this.container.get('storage');
+      if (!storage || !storage.isAvailable) {
         console.warn('⚠️ Storage service not available, skipping data load');
         return;
       }
       
-      console.log('🔧 Storage available:', this.services.storage.isAvailable);
+      console.log('🔧 Storage available:', storage.isAvailable);
       console.log('🔧 Current hostname:', window.location.hostname);
       
-      const savedData = await this.services.storage.load();
+      const savedData = await storage.load();
       if (savedData) {
         console.log('📊 Found saved data - Players:', savedData.players ? savedData.players.length : 0);
         
