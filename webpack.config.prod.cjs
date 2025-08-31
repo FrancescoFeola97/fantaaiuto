@@ -64,7 +64,8 @@ module.exports = {
         { from: 'site.webmanifest', to: 'site.webmanifest' },
         { from: 'icon.png', to: 'icon.png' },
         { from: 'icon.svg', to: 'icon.svg' },
-        { from: '_redirects', to: '_redirects', noErrorOnMissing: true }
+        { from: '_redirects', to: '_redirects', noErrorOnMissing: true },
+        { from: 'css/tailwind-overrides.css', to: 'css/style.css', noErrorOnMissing: true }
       ],
     }),
   ],
