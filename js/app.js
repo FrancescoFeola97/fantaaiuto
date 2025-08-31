@@ -1,5 +1,8 @@
 import { FantaAiutoApp } from '../src/components/App.js';
 
+// Make FantaAiutoApp globally available for static login form
+window.FantaAiutoApp = FantaAiutoApp;
+
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('🚀 DOM loaded, initializing FantaAiuto...');
   

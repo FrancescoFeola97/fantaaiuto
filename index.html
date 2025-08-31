@@ -429,22 +429,10 @@
               successDiv.textContent = '✅ Login successful! Loading application...';
               errorDiv.parentNode.insertBefore(successDiv, errorDiv);
               
-              // Hide login form and load app after brief delay
-              setTimeout(async () => {
-                document.getElementById('static-login-container').style.display = 'none';
-                document.getElementById('app-container').style.display = 'block';
-                
-                // Try to load the authenticated app
-                try {
-                  const { FantaAiutoApp } = await import('./src/components/App.js');
-                  const app = new FantaAiutoApp();
-                  await app.init();
-                  console.log('✅ App loaded after authentication');
-                } catch (appError) {
-                  console.error('❌ Failed to load app after login:', appError);
-                  alert('Errore durante il caricamento. La pagina verrà ricaricata.');
-                  location.reload();
-                }
+              // Hide login form and reload to let app.js handle authentication
+              setTimeout(() => {
+                console.log('✅ Login successful, reloading to load authenticated app...');
+                location.reload();
               }, 1500);
             } else {
               throw new Error(result.error || 'Credenziali non valide');
