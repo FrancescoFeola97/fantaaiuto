@@ -91,6 +91,9 @@ export class Utils {
   }
 
   static deepMerge(target, source) {
+    if (!source || typeof source !== 'object') {
+      return target;
+    }
     const output = Object.assign({}, target);
     if (this.isObject(target) && this.isObject(source)) {
       Object.keys(source).forEach(key => {

@@ -34,7 +34,11 @@ export class ServiceContainer {
   /**
    * Get a service instance
    */
-  get(name) {
+  get(name, resolutionStack = new Set()) {
+    // Check for circular dependencies
+    if (resolutionStack.has(name)) {
+      throw new Error('Circular dependency detected');
+    }
     // Return cached singleton if available
     if (this.singletons.has(name)) {
       return this.singletons.get(name);
@@ -49,8 +53,11 @@ export class ServiceContainer {
     if (this.factories.has(name)) {
       const { factory, singleton, dependencies } = this.factories.get(name);
       
+      // Add to resolution stack
+      resolutionStack.add(name);
+      
       // Resolve dependencies
-      const resolvedDependencies = dependencies.map(dep => this.get(dep));
+      const resolvedDependencies = dependencies.map(dep => this.get(dep, resolutionStack));
       
       // Create instance
       const instance = factory(...resolvedDependencies);
@@ -63,7 +70,7 @@ export class ServiceContainer {
       return instance;
     }
 
-    throw new Error(`Service '${name}' not found`);
+    throw new Error(`Service '${name}' not registered`);
   }
 
   /**
@@ -83,7 +90,7 @@ export class ServiceContainer {
   /**
    * Create a scoped container for specific component needs
    */
-  createScope(serviceNames) {
+  createScope(serviceNames = []) {
     const scopedContainer = new ServiceContainer();
     
     serviceNames.forEach(name => {
