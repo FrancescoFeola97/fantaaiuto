@@ -180,21 +180,53 @@ router.post('/login', validateLogin, async (req, res, next) => {
 // Verify token (for frontend to check if token is still valid)
 router.post('/verify', async (req, res, next) => {
   try {
-    const { token } = req.body;
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
     
     if (!token) {
-      return res.status(400).json({
+      return res.status(401).json({
         error: 'Token required',
         code: 'TOKEN_REQUIRED'
       });
     }
 
-    // The authentication middleware will handle token verification
-    // This endpoint just needs to exist to trigger the middleware
-    res.json({
-      valid: true,
-      message: 'Token is valid'
-    });
+    // Verify token manually
+    const jwt = await import('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-in-production';
+    
+    try {
+      const decoded = jwt.default.verify(token, JWT_SECRET);
+      const db = getDatabase();
+      
+      // Get user data
+      const user = await db.get(
+        'SELECT id, username, email, display_name, is_active FROM users WHERE id = ? AND is_active = ?',
+        [decoded.userId, true]
+      );
+
+      if (!user) {
+        return res.status(403).json({
+          error: 'User not found or inactive',
+          code: 'USER_INACTIVE'
+        });
+      }
+
+      res.json({
+        valid: true,
+        message: 'Token is valid',
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          displayName: user.display_name
+        }
+      });
+    } catch (jwtError) {
+      return res.status(403).json({
+        error: 'Invalid or expired token',
+        code: 'TOKEN_INVALID'
+      });
+    }
 
   } catch (error) {
     next(error);
