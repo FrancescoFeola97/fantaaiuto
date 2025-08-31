@@ -1,4 +1,7 @@
 import { Utils } from '../utils/Utils.js';
+import { ServiceContainer } from '../core/ServiceContainer.js';
+import { stateManager, actions } from '../core/StateManager.js';
+import { ErrorHandler } from '../core/ErrorHandler.js';
 import { StorageManager } from '../services/StorageManager.js';
 import { NotificationManager } from '../services/NotificationManager.js';
 import { ModalManager } from '../services/ModalManager.js';
@@ -21,25 +24,146 @@ import { LoginForm } from './auth/LoginForm.js';
 export class FantaAiutoApp {
   constructor() {
     this.version = '2.0.0';
-    this.appData = {
-      players: [],
-      formations: [],
-      formationImages: [],
+    
+    // Initialize core systems
+    this.container = new ServiceContainer();
+    this.stateManager = stateManager;
+    this.errorHandler = new ErrorHandler(stateManager);
+    
+    // Initialize state with default data
+    this.initializeDefaultState();
+    
+    this.components = {};
+    this.isInitialized = false;
+  }
+
+  initializeDefaultState() {
+    this.stateManager.setState({
+      players: {
+        list: [],
+        filters: { role: 'all', search: '', showInteresting: false },
+        selected: null
+      },
+      formations: {
+        current: null,
+        saved: [],
+        images: []
+      },
       settings: {
         totalBudget: 500,
         maxPlayers: 30,
         roles: { Por: 3, Ds: 2, Dd: 2, Dc: 2, B: 2, E: 2, M: 2, C: 2, W: 2, T: 2, A: 2, Pc: 2 }
       },
-      stats: {
-        budgetUsed: 0,
-        playersOwned: 0,
-        roleDistribution: { Por: 0, Ds: 0, Dd: 0, Dc: 0, B: 0, E: 0, M: 0, C: 0, W: 0, T: 0, A: 0, Pc: 0 }
+      budget: {
+        total: 500,
+        remaining: 500,
+        spent: 0
+      },
+      participants: {
+        list: [],
+        current: null
       }
-    };
+    }, 'app.init');
+  }
 
-    this.services = {};
-    this.components = {};
-    this.isInitialized = false;
+  /**
+   * Create AppData proxy for backward compatibility
+   * Bridges old appData access pattern with new state management
+   */
+  getAppDataProxy() {
+    return new Proxy({}, {
+      get: (target, prop) => {
+        const state = this.stateManager.getState();
+        
+        // Map old appData structure to new state structure
+        switch (prop) {
+          case 'players':
+            return state.players.list;
+          case 'formations':
+            return state.formations.saved;
+          case 'formationImages':
+            return state.formations.images;
+          case 'settings':
+            return state.settings;
+          case 'stats':
+            return {
+              budgetUsed: state.budget.spent,
+              playersOwned: state.players.list.filter(p => p.isOwned).length,
+              budgetRemaining: state.budget.remaining,
+              roleDistribution: this.calculateRoleDistribution(state.players.list)
+            };
+          default:
+            return state[prop];
+        }
+      },
+      
+      set: (target, prop, value) => {
+        // Update state instead of direct assignment
+        const updates = {};
+        
+        switch (prop) {
+          case 'players':
+            updates.players = { ...this.stateManager.getState('players'), list: value };
+            break;
+          case 'formations':
+            updates.formations = { ...this.stateManager.getState('formations'), saved: value };
+            break;
+          case 'formationImages':
+            updates.formations = { ...this.stateManager.getState('formations'), images: value };
+            break;
+          default:
+            updates[prop] = value;
+        }
+        
+        this.stateManager.setState(updates, 'appData.proxy');
+        return true;
+      }
+    });
+  }
+
+  calculateRoleDistribution(players) {
+    const distribution = { Por: 0, Ds: 0, Dd: 0, Dc: 0, B: 0, E: 0, M: 0, C: 0, W: 0, T: 0, A: 0, Pc: 0 };
+    
+    players.filter(p => p.isOwned).forEach(player => {
+      if (distribution.hasOwnProperty(player.role)) {
+        distribution[player.role]++;
+      }
+    });
+    
+    return distribution;
+  }
+
+  /**
+   * Create scoped service container for components
+   * Each component only gets the services it actually needs
+   */
+  createComponentScope(componentName) {
+    const serviceMap = {
+      dashboard: ['storage', 'notifications'],
+      tracker: ['storage', 'notifications', 'players'],
+      formation: ['storage', 'notifications', 'formations'],
+      analytics: ['storage', 'notifications'],
+      roleNavigation: ['stateManager'],
+      actionsPanel: ['storage', 'modals', 'notifications', 'excel', 'players', 'formations', 'participants', 'images']
+    };
+    
+    const requiredServices = serviceMap[componentName] || [];
+    const scopedContainer = this.container.createScope(requiredServices);
+    
+    // Create legacy services object for backward compatibility
+    const legacyServices = {};
+    requiredServices.forEach(serviceName => {
+      try {
+        legacyServices[serviceName] = this.container.get(serviceName);
+      } catch (error) {
+        this.errorHandler.handle(error, `app.scope.${componentName}.${serviceName}`, {
+          severity: 'warning',
+          recoverable: true
+        });
+      }
+    });
+    
+    return legacyServices;
   }
 
   async init() {
@@ -167,109 +291,64 @@ export class FantaAiutoApp {
 
   async initializeServices() {
     try {
-      console.log('🏗️ Creating service instances...');
+      console.log('🏗️ Registering services in dependency injection container...');
       
-      // Create services one by one with individual error handling
-      try {
-        this.services.storage = new StorageManager('fantaaiuto_v2');
-        console.log('✅ StorageManager created');
-      } catch (error) {
-        console.error('❌ Failed to create StorageManager:', error);
-        throw error;
-      }
+      // Register core services first
+      this.container.register('errorHandler', () => this.errorHandler);
+      this.container.register('stateManager', () => this.stateManager);
       
-      try {
-        this.services.notifications = new NotificationManager();
-        console.log('✅ NotificationManager created');
-      } catch (error) {
-        console.error('❌ Failed to create NotificationManager:', error);
-        throw error;
-      }
+      // Register services with dependency injection
+      this.container.register('storage', () => new StorageManager('fantaaiuto_v2'));
+      this.container.register('notifications', () => new NotificationManager());
+      this.container.register('modals', () => new ModalManager());
       
-      try {
-        this.services.modals = new ModalManager();
-        console.log('✅ ModalManager created');
-      } catch (error) {
-        console.error('❌ Failed to create ModalManager:', error);
-        throw error;
-      }
+      // Register services with dependencies
+      this.container.register('excel', () => new ExcelManager(this.container.get('modals')), {
+        dependencies: ['modals']
+      });
       
-      try {
-        this.services.excel = new ExcelManager(this.services.modals);
-        console.log('✅ ExcelManager created');
-      } catch (error) {
-        console.error('❌ Failed to create ExcelManager:', error);
-        throw error;
-      }
+      this.container.register('players', () => new PlayerManager(this.getAppDataProxy()), {
+        dependencies: ['stateManager']
+      });
       
-      try {
-        this.services.players = new PlayerManager(this.appData);
-        console.log('✅ PlayerManager created');
-      } catch (error) {
-        console.error('❌ Failed to create PlayerManager:', error);
-        throw error;
-      }
+      this.container.register('views', () => new ViewManager());
       
-      try {
-        this.services.views = new ViewManager();
-        console.log('✅ ViewManager created');
-      } catch (error) {
-        console.error('❌ Failed to create ViewManager:', error);
-        throw error;
-      }
+      this.container.register('formations', () => new FormationManager(this.getAppDataProxy()), {
+        dependencies: ['stateManager']
+      });
       
-      try {
-        this.services.formations = new FormationManager(this.appData);
-        console.log('✅ FormationManager created');
-      } catch (error) {
-        console.error('❌ Failed to create FormationManager:', error);
-        throw error;
-      }
+      this.container.register('participants', () => new ParticipantsManager(this.getAppDataProxy()), {
+        dependencies: ['stateManager']
+      });
       
-      try {
-        this.services.participants = new ParticipantsManager(this.appData);
-        console.log('✅ ParticipantsManager created');
-      } catch (error) {
-        console.error('❌ Failed to create ParticipantsManager:', error);
-        throw error;
-      }
+      this.container.register('images', () => new ImageManager(
+        this.container.get('modals'),
+        this.container.get('notifications')
+      ), {
+        dependencies: ['modals', 'notifications']
+      });
       
-      try {
-        this.services.images = new ImageManager(this.services.modals, this.services.notifications);
-        console.log('✅ ImageManager created');
-      } catch (error) {
-        console.error('❌ Failed to create ImageManager:', error);
-        throw error;
-      }
+      console.log('✅ All services registered in container');
       
-      console.log('✅ All service instances created successfully');
-
-      // Initialize critical services first, then optional ones
-      const criticalServices = [
-        { name: 'storage', service: this.services.storage },
-        { name: 'notifications', service: this.services.notifications },
-        { name: 'modals', service: this.services.modals }
-      ];
-      
-      const optionalServices = [
-        { name: 'excel', service: this.services.excel },
-        { name: 'players', service: this.services.players },
-        { name: 'formations', service: this.services.formations },
-        { name: 'participants', service: this.services.participants },
-        { name: 'images', service: this.services.images }
-      ];
+      // Initialize services using error handler
+      const criticalServices = ['storage', 'notifications', 'modals'];
+      const optionalServices = ['excel', 'players', 'formations', 'participants', 'images'];
 
       // Initialize critical services - fail if these don't work
-      for (const { name, service } of criticalServices) {
+      for (const serviceName of criticalServices) {
         try {
-          console.log(`🔧 Initializing critical ${name} service...`);
+          console.log(`🔧 Initializing critical ${serviceName} service...`);
+          const service = this.container.get(serviceName);
           if (service && typeof service.init === 'function') {
             await service.init();
           }
-          console.log(`✅ Critical ${name} service initialized`);
+          console.log(`✅ Critical ${serviceName} service initialized`);
         } catch (error) {
-          console.error(`❌ Failed to initialize critical ${name} service:`, error);
-          throw new Error(`Critical service ${name} failed to initialize: ${error.message}`);
+          this.errorHandler.handle(error, `app.init.critical.${serviceName}`, { 
+            severity: 'error', 
+            recoverable: false 
+          });
+          throw new Error(`Critical service ${serviceName} failed to initialize: ${error.message}`);
         }
       }
       
@@ -305,15 +384,21 @@ export class FantaAiutoApp {
       { name: 'actionsPanel', Component: ActionsPanelComponent }
     ];
     
-    // Create components with error handling
+    // Create components with dependency injection
     for (const { name, Component } of componentDefs) {
       try {
         console.log(`🧩 Creating ${name} component...`);
-        this.components[name] = new Component(this.appData, this.services);
+        
+        // Create scoped container with only needed services for each component
+        const scopedServices = this.createComponentScope(name);
+        
+        this.components[name] = new Component(this.getAppDataProxy(), scopedServices);
         console.log(`✅ ${name} component created`);
       } catch (error) {
-        console.error(`❌ Failed to create ${name} component:`, error);
-        // Continue without this component
+        this.errorHandler.handle(error, `app.components.create.${name}`, {
+          severity: 'warning',
+          recoverable: true
+        });
       }
     }
     
