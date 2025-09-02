@@ -5,9 +5,20 @@ import * as XLSX from 'xlsx'
 interface SidebarProps {
   onImportExcel: (players: PlayerData[]) => void
   playersCount: number
+  onShowOwnedPlayers: () => void
+  onShowFormations: () => void
+  onShowParticipants: () => void
+  onShowFormationImages: () => void
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onImportExcel, playersCount }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  onImportExcel, 
+  playersCount, 
+  onShowOwnedPlayers, 
+  onShowFormations, 
+  onShowParticipants, 
+  onShowFormationImages 
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = React.useState(false)
 
@@ -130,15 +141,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ onImportExcel, playersCount })
       <div className="p-4 border-b border-gray-200">
         <h3 className="text-sm font-semibold text-gray-900 mb-3">Gestione</h3>
         <div className="space-y-2">
-          <button className="w-full px-4 py-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg border border-green-200 transition-colors text-left">
+          <button 
+            onClick={onShowOwnedPlayers}
+            className="w-full px-4 py-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg border border-green-200 transition-colors text-left">
             📊 Giocatori Presi
           </button>
           
-          <button className="w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-colors text-left">
+          <button 
+            onClick={onShowFormations}
+            className="w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-colors text-left">
             ⚽ Formazioni
           </button>
           
-          <button className="w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 transition-colors text-left">
+          <button 
+            onClick={onShowParticipants}
+            className="w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 transition-colors text-left">
             👥 Altri Partecipanti
           </button>
         </div>
@@ -168,7 +185,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onImportExcel, playersCount })
             {isUploading ? '⏳ Caricamento...' : '📋 Carica Excel'}
           </button>
           
-          <button className="w-full px-4 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition-colors text-left">
+          <button 
+            onClick={onShowFormationImages}
+            className="w-full px-4 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition-colors text-left">
             📸 Immagini Formazioni
           </button>
           

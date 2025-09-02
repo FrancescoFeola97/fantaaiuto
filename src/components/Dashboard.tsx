@@ -4,6 +4,10 @@ import { PlayerCounts } from './dashboard/PlayerCounts'
 import { SearchFilters } from './dashboard/SearchFilters'
 import { PlayersGrid } from './dashboard/PlayersGrid'
 import { Sidebar } from './dashboard/Sidebar'
+import { OwnedPlayers } from './dashboard/OwnedPlayers'
+import { Formations } from './dashboard/Formations'
+import { Participants } from './dashboard/Participants'
+import { FormationImages } from './dashboard/FormationImages'
 import { PlayerData } from '../types/Player'
 
 interface DashboardProps {
@@ -21,6 +25,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [roleFilter, setRoleFilter] = useState('all')
   const [interestFilter, setInterestFilter] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'images'>('players')
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -254,6 +259,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
   }
 
+  // View handlers
+  const handleShowOwnedPlayers = () => {
+    setCurrentView('owned')
+    setRoleFilter('all')
+    setSearchQuery('')
+    setInterestFilter(false)
+  }
+
+  const handleShowFormations = () => {
+    setCurrentView('formations')
+  }
+
+  const handleShowParticipants = () => {
+    setCurrentView('participants')
+  }
+
+  const handleShowFormationImages = () => {
+    setCurrentView('images')
+  }
+
+  const handleBackToPlayers = () => {
+    setCurrentView('players')
+  }
+
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gray-50 overflow-hidden">
       {/* Mobile Header */}
@@ -319,21 +348,52 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <div className="flex-1 p-6 space-y-6">
           <StatsCards players={players} />
           
-          <SearchFilters
-            searchQuery={searchQuery}
-            roleFilter={roleFilter}
-            interestFilter={interestFilter}
-            onSearchChange={handleSearchChange}
-            onRoleFilterChange={handleRoleFilterChange}
-            onInterestFilterToggle={handleInterestFilterToggle}
-            onClearFilters={handleClearFilters}
-          />
-          
-          <PlayersGrid 
-            players={filteredPlayers}
-            isLoading={isLoading}
-            onUpdatePlayer={updatePlayer}
-          />
+{currentView === 'players' && (
+            <>
+              <SearchFilters
+                searchQuery={searchQuery}
+                roleFilter={roleFilter}
+                interestFilter={interestFilter}
+                onSearchChange={handleSearchChange}
+                onRoleFilterChange={handleRoleFilterChange}
+                onInterestFilterToggle={handleInterestFilterToggle}
+                onClearFilters={handleClearFilters}
+              />
+              
+              <PlayersGrid 
+                players={filteredPlayers}
+                isLoading={isLoading}
+                onUpdatePlayer={updatePlayer}
+              />
+            </>
+          )}
+
+          {currentView === 'owned' && (
+            <OwnedPlayers 
+              players={players}
+              onUpdatePlayer={updatePlayer}
+              onBackToPlayers={handleBackToPlayers}
+            />
+          )}
+
+          {currentView === 'formations' && (
+            <Formations 
+              players={players}
+              onBackToPlayers={handleBackToPlayers}
+            />
+          )}
+
+          {currentView === 'participants' && (
+            <Participants 
+              onBackToPlayers={handleBackToPlayers}
+            />
+          )}
+
+          {currentView === 'images' && (
+            <FormationImages 
+              onBackToPlayers={handleBackToPlayers}
+            />
+          )}
         </div>
       </main>
 
@@ -341,6 +401,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       <Sidebar 
         onImportExcel={importPlayersFromExcel}
         playersCount={players.length}
+        onShowOwnedPlayers={handleShowOwnedPlayers}
+        onShowFormations={handleShowFormations}
+        onShowParticipants={handleShowParticipants}
+        onShowFormationImages={handleShowFormationImages}
       />
     </div>
   )

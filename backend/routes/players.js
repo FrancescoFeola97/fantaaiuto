@@ -5,10 +5,47 @@ import { getDatabase } from '../database/init.js';
 const router = express.Router();
 
 // Get all players for the authenticated user
-router.get('/', async (req, res, next) => {
+router.get('/', [
+  query('status').optional().isIn(['available', 'owned', 'removed', 'interesting']),
+  query('role').optional().isString(),
+  query('search').optional().isString()
+], async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
     const db = getDatabase();
     const userId = req.user.id;
+    const { status, role, search } = req.query;
+
+    let whereClause = 'WHERE 1=1';
+    const params = [userId, userId];
+
+    // Add status filtering
+    if (status === 'interesting') {
+      whereClause += ' AND up.interessante = 1';
+    } else if (status) {
+      whereClause += ' AND COALESCE(up.status, "available") = ?';
+      params.push(status);
+    }
+
+    // Add role filtering
+    if (role) {
+      whereClause += ' AND mp.ruolo = ?';
+      params.push(role);
+    }
+
+    // Add search filtering
+    if (search) {
+      whereClause += ' AND (LOWER(mp.nome) LIKE ? OR LOWER(mp.squadra) LIKE ?)';
+      const searchTerm = `%${search.toLowerCase()}%`;
+      params.push(searchTerm, searchTerm);
+    }
 
     const players = await db.all(`
       SELECT 
@@ -34,8 +71,9 @@ router.get('/', async (req, res, next) => {
       LEFT JOIN user_players up ON mp.id = up.master_player_id AND up.user_id = ?
       LEFT JOIN participant_players pp ON mp.id = pp.master_player_id AND pp.user_id = ?
       LEFT JOIN participants p ON pp.participant_id = p.id
+      ${whereClause}
       ORDER BY mp.ruolo, mp.nome
-    `, [userId, userId]);
+    `, params);
 
     res.json({
       players: players.map(player => ({
