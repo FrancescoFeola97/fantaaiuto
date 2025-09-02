@@ -32,9 +32,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onImportExcel, playersCount })
       const sheetName = workbook.SheetNames.includes('Tutti') ? 'Tutti' : workbook.SheetNames[0]
       const worksheet = workbook.Sheets[sheetName]
       
-      // Skip header rows and get data starting from row 2 (0-indexed = row 1)
+      // Skip header rows and get data starting from row 3 (skip title and headers)
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
-        range: 1, // Skip first row (title)
+        range: 2, // Skip first two rows (title + headers)
         header: ['Id', 'R', 'RM', 'Nome', 'Squadra', 'QtA', 'QtI', 'Diff', 'QtAM', 'QtIM', 'DiffM', 'FVM', 'FVMM']
       })
 
@@ -81,28 +81,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ onImportExcel, playersCount })
   const parseRoles = (roleStr: string): string[] => {
     if (!roleStr) return []
     
-    // Handle single role from Excel file
-    const role = roleStr.toString().trim()
+    const roleString = roleStr.toString().trim()
+    if (!roleString) return ['A'] // Default fallback
     
-    // Map from Excel format to app format
-    const roleMapping: Record<string, string[]> = {
-      'P': ['Por'],
-      'Por': ['Por'],
-      'D': ['Ds', 'Dd', 'Dc', 'B'], // D include anche Braccetto
-      'B': ['B'], // Braccetto di difesa
-      'Ds': ['Ds'],
-      'Dd': ['Dd'], 
-      'Dc': ['Dc'],
-      'C': ['M', 'C'],
-      'M': ['M'],
-      'E': ['E'],
-      'W': ['W'],
-      'T': ['T'],
-      'A': ['A'],
-      'Pc': ['Pc']
-    }
+    // Handle multiple roles separated by semicolon
+    const roles = roleString.split(';').map(r => r.trim()).filter(r => r.length > 0)
     
-    return roleMapping[role] || [role] || ['A'] // Default to Attaccante if unknown
+    // Map each role and flatten the results
+    const mappedRoles: string[] = []
+    
+    roles.forEach(role => {
+      // Direct role mapping
+      const roleMapping: Record<string, string[]> = {
+        'P': ['Por'],
+        'Por': ['Por'],
+        'D': ['Ds', 'Dd', 'Dc'],
+        'B': ['B'], // Braccetto di difesa
+        'Ds': ['Ds'],
+        'Dd': ['Dd'], 
+        'Dc': ['Dc'],
+        'E': ['E'], // Esterno
+        'C': ['C'],
+        'M': ['M'],
+        'W': ['W'], // Wing
+        'T': ['T'], // Trequartista
+        'A': ['A'],
+        'Pc': ['Pc'] // Prima Punta Centrale
+      }
+      
+      const mapped = roleMapping[role] || [role]
+      mappedRoles.push(...mapped)
+    })
+    
+    // Remove duplicates and return
+    return [...new Set(mappedRoles)].filter(r => r.length > 0) || ['A']
   }
 
   const handleResetData = () => {

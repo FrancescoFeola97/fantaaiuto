@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { StatsCards } from './dashboard/StatsCards'
 import { PlayerCounts } from './dashboard/PlayerCounts'
 import { SearchFilters } from './dashboard/SearchFilters'
@@ -21,6 +21,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [roleFilter, setRoleFilter] = useState('all')
   const [interestFilter, setInterestFilter] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const mobileFileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadUserData()
@@ -201,7 +202,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       if (!token) return
 
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s for large uploads
+      const timeoutId = setTimeout(() => controller.abort(), 60000) // 60s for large uploads
       
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players/import', {
         method: 'POST',
@@ -230,19 +231,65 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         console.log('✅ Players imported to backend successfully')
         alert(`✅ Importati ${newPlayers.length} giocatori nel database!`)
       } else {
-        throw new Error('Errore durante l\'import nel database')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Errore HTTP ${response.status}: ${response.statusText}`)
       }
     } catch (error: any) {
       console.error('❌ Backend import failed:', error)
+      
+      let errorMessage = 'Errore sconosciuto'
+      if (error.name === 'AbortError') {
+        errorMessage = 'Timeout: Il server sta impiegando troppo tempo (>60s). Il database potrebbe essere occupato.'
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = 'Impossibile connettersi al server. Verifica la connessione internet.'
+      } else {
+        errorMessage = error.message
+      }
+      
       // Fallback to local storage
       setPlayers(newPlayers)
       saveData()
-      alert(`⚠️ Import locale completato (${newPlayers.length} giocatori). Errore database: ${error.message}`)
+      alert(`⚠️ Import locale completato (${newPlayers.length} giocatori). Errore database: ${errorMessage}`)
+      console.log(`📊 Import locale completato (${newPlayers.length} giocatori). Errore database: ${errorMessage}`)
     }
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen bg-gray-50 overflow-hidden">
+      {/* Mobile Header */}
+      <div className="md:hidden bg-white border-b border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">FantaAiuto</h2>
+          <div className="flex items-center space-x-2">
+            <input
+              ref={mobileFileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  console.log('📱 Mobile Excel upload triggered')
+                  alert('📱 Per caricare file Excel su mobile, usa un dispositivo desktop o ruota in modalità landscape.')
+                }
+              }}
+              className="hidden"
+            />
+            <button
+              onClick={() => mobileFileInputRef.current?.click()}
+              className="px-3 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-lg border border-yellow-200 text-sm"
+            >
+              📋 Excel
+            </button>
+            <button
+              onClick={onLogout}
+              className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg border border-red-200 text-sm"
+            >
+              🚪
+            </button>
+          </div>
+        </div>
+      </div>
+      
       {/* Left Sidebar Navigation */}
       <nav className="w-64 bg-white border-r border-gray-200 flex-shrink-0 hidden md:block">
         <div className="p-4">
