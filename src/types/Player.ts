@@ -5,10 +5,12 @@ export interface PlayerData {
   ruoli: string[]
   fvm: number
   prezzo: number
+  prezzoAtteso?: number
   status: 'available' | 'owned' | 'removed'
   interessante: boolean
   rimosso?: boolean
   costoReale?: number
+  acquistatore?: string
   note?: string
   tier?: string
   createdAt?: string

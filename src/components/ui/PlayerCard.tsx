@@ -7,6 +7,11 @@ interface PlayerCardProps {
 }
 
 export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
+  const [prezzoAtteso, setPrezzoAtteso] = React.useState(player.prezzoAtteso || player.prezzo || 0)
+  const [acquistatore, setAcquistatore] = React.useState(player.acquistatore || '')
+  const [isEditingPrice, setIsEditingPrice] = React.useState(false)
+  const [isEditingAcquistatore, setIsEditingAcquistatore] = React.useState(false)
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('it-IT', {
       minimumFractionDigits: 0,
@@ -26,13 +31,30 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
     onUpdate(player.id, { interessante: !player.interessante })
   }
 
-  const handleToggleOwned = () => {
-    const newStatus = player.status === 'owned' ? 'available' : 'owned'
-    onUpdate(player.id, { status: newStatus })
-  }
-
   const handleRemove = () => {
     onUpdate(player.id, { status: 'removed', rimosso: true })
+  }
+
+  const handlePrezzoAttesoSave = () => {
+    onUpdate(player.id, { prezzoAtteso })
+    setIsEditingPrice(false)
+  }
+
+  const handleAcquistatoreSave = () => {
+    onUpdate(player.id, { acquistatore: acquistatore.trim() || undefined })
+    setIsEditingAcquistatore(false)
+  }
+
+  const handleToggleOwned = () => {
+    const newStatus = player.status === 'owned' ? 'available' : 'owned'
+    const updates: Partial<PlayerData> = { status: newStatus }
+    
+    if (newStatus === 'owned' && !acquistatore.trim()) {
+      updates.acquistatore = 'Me'
+      setAcquistatore('Me')
+    }
+    
+    onUpdate(player.id, updates)
   }
 
   return (
@@ -73,11 +95,67 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
         </div>
         
         <div className="flex justify-between items-center">
-          <span className="text-xs font-medium text-gray-500">Prezzo</span>
-          <span className="text-sm font-bold text-green-600">
-            {formatCurrency(player.prezzo || 0)}
-          </span>
+          <span className="text-xs font-medium text-gray-500">Prezzo Atteso</span>
+          {isEditingPrice ? (
+            <div className="flex items-center space-x-1">
+              <input
+                type="number"
+                value={prezzoAtteso}
+                onChange={(e) => setPrezzoAtteso(Number(e.target.value))}
+                className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                onBlur={handlePrezzoAttesoSave}
+                onKeyDown={(e) => e.key === 'Enter' && handlePrezzoAttesoSave()}
+                autoFocus
+              />
+              <button
+                onClick={handlePrezzoAttesoSave}
+                className="text-green-600 hover:text-green-700 text-xs"
+              >
+                ✓
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsEditingPrice(true)}
+              className="text-sm font-bold text-green-600 hover:text-green-700 transition-colors"
+            >
+              {formatCurrency(prezzoAtteso)}
+            </button>
+          )}
         </div>
+
+        {player.status === 'owned' && (
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-medium text-gray-500">Acquistatore</span>
+            {isEditingAcquistatore ? (
+              <div className="flex items-center space-x-1">
+                <input
+                  type="text"
+                  value={acquistatore}
+                  onChange={(e) => setAcquistatore(e.target.value)}
+                  className="w-20 px-1 py-0.5 text-xs border border-gray-300 rounded"
+                  onBlur={handleAcquistatoreSave}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAcquistatoreSave()}
+                  autoFocus
+                  placeholder="Me"
+                />
+                <button
+                  onClick={handleAcquistatoreSave}
+                  className="text-green-600 hover:text-green-700 text-xs"
+                >
+                  ✓
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsEditingAcquistatore(true)}
+                className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
+              >
+                {acquistatore || 'Me'}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Actions */}

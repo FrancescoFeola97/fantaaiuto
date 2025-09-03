@@ -9,6 +9,7 @@ interface SidebarProps {
   onShowFormations: () => void
   onShowParticipants: () => void
   onShowFormationImages: () => void
+  onShowRemovedPlayers: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -17,7 +18,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onShowOwnedPlayers, 
   onShowFormations, 
   onShowParticipants, 
-  onShowFormationImages 
+  onShowFormationImages,
+  onShowRemovedPlayers 
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = React.useState(false)
@@ -130,7 +132,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const handleResetData = () => {
     if (confirm('⚠️ Sei sicuro di voler cancellare tutti i dati? Questa azione è irreversibile.')) {
+      const token = localStorage.getItem('fantaaiuto_token')
       localStorage.clear()
+      if (token) {
+        localStorage.setItem('fantaaiuto_token', token)
+      }
       location.reload()
     }
   }
@@ -157,6 +163,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={onShowParticipants}
             className="w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 transition-colors text-left">
             👥 Altri Partecipanti
+          </button>
+          
+          <button 
+            onClick={onShowRemovedPlayers}
+            className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg border border-gray-200 transition-colors text-left">
+            👻 Giocatori Rimossi
           </button>
         </div>
       </div>

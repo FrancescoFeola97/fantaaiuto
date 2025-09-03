@@ -3,9 +3,11 @@ import { PlayerData } from '../../types/Player'
 
 interface PlayerCountsProps {
   players: PlayerData[]
+  currentRoleFilter?: string
+  onRoleFilterChange?: (role: string) => void
 }
 
-export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players }) => {
+export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRoleFilter, onRoleFilterChange }) => {
   const roles = [
     { key: 'Por', label: '🥅 Portieri', emoji: '🥅' },
     { key: 'Ds', label: '🛡️ Dif. Sx', emoji: '🛡️' },
@@ -30,22 +32,34 @@ export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players }) => {
       <h3 className="text-sm font-semibold text-gray-900 mb-3">📊 Giocatori per Ruolo</h3>
       
       {/* All Players */}
-      <div className="flex items-center justify-between p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-        <span className="text-sm font-medium text-gray-700">⚽ Tutti</span>
+      <button 
+        onClick={() => onRoleFilterChange?.('all')}
+        className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
+          currentRoleFilter === 'all' || !currentRoleFilter 
+            ? 'bg-blue-100 border border-blue-200' 
+            : 'bg-gray-50 hover:bg-gray-100'
+        }`}
+      >
+        <span className="text-sm font-medium text-gray-700">🏠 Tutti</span>
         <span className="text-sm font-bold text-gray-900">{players.length}</span>
-      </div>
+      </button>
       
       {/* Role Counts */}
       {roles.map(role => {
         const count = getCountByRole(role.key)
         return (
-          <div 
+          <button 
             key={role.key}
-            className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            onClick={() => onRoleFilterChange?.(role.key)}
+            className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
+              currentRoleFilter === role.key 
+                ? 'bg-blue-100 border border-blue-200' 
+                : 'hover:bg-gray-50'
+            }`}
           >
             <span className="text-sm text-gray-600">{role.label}</span>
             <span className="text-sm font-medium text-gray-900">{count}</span>
-          </div>
+          </button>
         )
       })}
     </div>

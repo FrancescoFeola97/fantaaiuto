@@ -25,7 +25,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [roleFilter, setRoleFilter] = useState('all')
   const [interestFilter, setInterestFilter] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'images'>('players')
+  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'images' | 'removed'>('players')
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -119,6 +119,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   }
 
   const filteredPlayers = players.filter(player => {
+    // Exclude removed players from main view
+    if (player.status === 'removed') {
+      return false
+    }
+
     // Search filter
     if (searchQuery) {
       const search = searchQuery.toLowerCase()
@@ -279,6 +284,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setCurrentView('images')
   }
 
+  const handleShowRemovedPlayers = () => {
+    setCurrentView('removed')
+  }
+
   const handleBackToPlayers = () => {
     setCurrentView('players')
   }
@@ -332,7 +341,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               🚪 Esci
             </button>
           </div>
-          <PlayerCounts players={filteredPlayers} />
+          <PlayerCounts 
+            players={players.filter(p => p.status !== 'removed')} 
+            currentRoleFilter={roleFilter}
+            onRoleFilterChange={handleRoleFilterChange}
+          />
         </div>
       </nav>
 
@@ -348,6 +361,65 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         <div className="flex-1 p-6 space-y-6">
           <StatsCards players={players} />
           
+          {/* Taken Players Summary */}
+          {currentView === 'players' && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">🏆 Riassunto Giocatori Presi</h3>
+              {(() => {
+                const takenPlayers = players.filter(p => p.status === 'owned')
+                
+                if (takenPlayers.length === 0) {
+                  return (
+                    <div className="text-center py-8">
+                      <div className="text-gray-400 text-4xl mb-2">⚽</div>
+                      <p className="text-gray-500">Nessun giocatore preso ancora</p>
+                    </div>
+                  )
+                }
+
+                const roleGroups = takenPlayers.reduce((acc: Record<string, any[]>, player) => {
+                  const roleKey = player.ruoli?.join('/') || 'Sconosciuto'
+                  if (!acc[roleKey]) acc[roleKey] = []
+                  acc[roleKey].push(player)
+                  return acc
+                }, {})
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Object.entries(roleGroups).map(([roles, groupPlayers]) => (
+                      <div key={roles} className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-2">{roles}</h4>
+                        <div className="space-y-1">
+                          {groupPlayers.map(player => (
+                            <div key={player.id} className="flex justify-between items-center text-sm">
+                              <span className="text-gray-700">{player.nome}</span>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-gray-500">{player.acquistatore || 'Me'}</span>
+                                <span className="font-medium text-green-600">
+                                  {new Intl.NumberFormat('it-IT').format(player.prezzoAtteso || player.prezzo || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <div className="flex justify-between items-center text-sm font-medium">
+                            <span className="text-gray-600">Totale ({groupPlayers.length})</span>
+                            <span className="text-green-600">
+                              {new Intl.NumberFormat('it-IT').format(
+                                groupPlayers.reduce((sum, p) => sum + (p.prezzoAtteso || p.prezzo || 0), 0)
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+
 {currentView === 'players' && (
             <>
               <SearchFilters
@@ -394,6 +466,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               onBackToPlayers={handleBackToPlayers}
             />
           )}
+
+          {currentView === 'removed' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">👻 Giocatori Rimossi</h2>
+                <button
+                  onClick={handleBackToPlayers}
+                  className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-colors"
+                >
+                  🏠 Torna alla Home
+                </button>
+              </div>
+              
+              <PlayersGrid 
+                players={players.filter(p => p.status === 'removed')}
+                isLoading={isLoading}
+                onUpdatePlayer={updatePlayer}
+              />
+            </div>
+          )}
         </div>
       </main>
 
@@ -405,6 +497,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         onShowFormations={handleShowFormations}
         onShowParticipants={handleShowParticipants}
         onShowFormationImages={handleShowFormationImages}
+        onShowRemovedPlayers={handleShowRemovedPlayers}
       />
     </div>
   )

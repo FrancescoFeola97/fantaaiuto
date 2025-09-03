@@ -42,6 +42,15 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         
         {/* Filters */}
         <div className="flex flex-wrap gap-3">
+          {(roleFilter !== 'all' || interestFilter || searchQuery) && (
+            <button 
+              onClick={onClearFilters}
+              className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg border border-blue-300 transition-colors"
+            >
+              🏠 Home
+            </button>
+          )}
+          
           <button 
             onClick={onInterestFilterToggle}
             className={`px-4 py-2 rounded-lg border transition-colors ${
