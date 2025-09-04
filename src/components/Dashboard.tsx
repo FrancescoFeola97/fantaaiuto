@@ -21,6 +21,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [players, setPlayers] = useState<PlayerData[]>([])
+  const [participants, setParticipants] = useState<Array<{ id: string; name: string; squadra: string }>>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [interestFilter, setInterestFilter] = useState(false)
@@ -31,6 +32,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   useEffect(() => {
     loadUserData()
+    loadParticipants()
   }, [])
 
   const loadUserData = async () => {
@@ -105,6 +107,38 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       console.error('❌ Error loading user data:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadParticipants = async () => {
+    try {
+      const token = localStorage.getItem('fantaaiuto_token')
+      if (!token) return
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+      
+      const response = await fetch('https://fantaaiuto-backend.onrender.com/api/participants', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (response.ok) {
+        const data = await response.json()
+        const mappedParticipants = (data.participants || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          squadra: p.squadra
+        }))
+        setParticipants(mappedParticipants)
+        console.log('📊 Loaded participants:', mappedParticipants.length)
+      }
+    } catch (error) {
+      console.error('❌ Failed to load participants:', error)
     }
   }
 
@@ -478,6 +512,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 players={filteredPlayers}
                 isLoading={isLoading}
                 onUpdatePlayer={updatePlayer}
+                participants={participants}
               />
             </>
           )}
@@ -525,6 +560,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 players={players.filter(p => p.status === 'removed')}
                 isLoading={isLoading}
                 onUpdatePlayer={updatePlayer}
+                participants={participants}
               />
             </div>
           )}

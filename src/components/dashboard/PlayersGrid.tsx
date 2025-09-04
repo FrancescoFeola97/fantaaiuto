@@ -6,12 +6,14 @@ interface PlayersGridProps {
   players: PlayerData[]
   isLoading: boolean
   onUpdatePlayer: (playerId: string, updates: Partial<PlayerData>) => void
+  participants?: Array<{ id: string; name: string; squadra: string }>
 }
 
 export const PlayersGrid: React.FC<PlayersGridProps> = ({ 
   players, 
   isLoading, 
-  onUpdatePlayer 
+  onUpdatePlayer,
+  participants = []
 }) => {
   if (isLoading) {
     return (
@@ -44,6 +46,7 @@ export const PlayersGrid: React.FC<PlayersGridProps> = ({
             key={player.id} 
             player={player} 
             onUpdate={onUpdatePlayer}
+            participants={participants}
           />
         ))}
       </div>

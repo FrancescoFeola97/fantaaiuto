@@ -4,14 +4,17 @@ import { PlayerData } from '../../types/Player'
 interface PlayerCardProps {
   player: PlayerData
   onUpdate: (playerId: string, updates: Partial<PlayerData>) => void
+  participants?: Array<{ id: string; name: string; squadra: string }>
 }
 
-export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
+export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate, participants = [] }) => {
   const [prezzoAtteso, setPrezzoAtteso] = React.useState(player.prezzoAtteso || player.prezzo || '')
   const [acquistatore, setAcquistatore] = React.useState(player.acquistatore || '')
   const [prezzoEffettivo, setPrezzoEffettivo] = React.useState(player.prezzoEffettivo || 0)
+  const [prezzoEffettivoEdit, setPrezzoEffettivoEdit] = React.useState(player.prezzoEffettivo?.toString() || '')
   const [isEditingPrezzoAtteso, setIsEditingPrezzoAtteso] = React.useState(false)
   const [isEditingAcquistatore, setIsEditingAcquistatore] = React.useState(false)
+  const [isEditingPrezzoEffettivo, setIsEditingPrezzoEffettivo] = React.useState(false)
   const [showPurchaseModal, setShowPurchaseModal] = React.useState(false)
   const [purchaseType, setPurchaseType] = React.useState<'me' | 'other'>('me')
 
@@ -58,6 +61,17 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
   const handleAcquistatoreSave = () => {
     onUpdate(player.id, { acquistatore: acquistatore.trim() || undefined })
     setIsEditingAcquistatore(false)
+  }
+
+  const handlePrezzoEffettivoSave = () => {
+    const price = prezzoEffettivoEdit === '' ? 0 : Number(prezzoEffettivoEdit)
+    onUpdate(player.id, { prezzoEffettivo: price, costoReale: price })
+    setIsEditingPrezzoEffettivo(false)
+  }
+
+  const handlePrezzoEffettivoCancel = () => {
+    setPrezzoEffettivoEdit(player.prezzoEffettivo?.toString() || '')
+    setIsEditingPrezzoEffettivo(false)
   }
 
   const handleRemove = () => {
@@ -219,9 +233,47 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
               
               <div className="flex justify-between items-center">
                 <span className="text-xs font-medium text-gray-500">Prezzo Effettivo</span>
-                <span className="text-sm font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded">
-                  {formatCurrency(player.prezzoEffettivo || 0)}
-                </span>
+                {isEditingPrezzoEffettivo ? (
+                  <div className="flex items-center space-x-1">
+                    <input
+                      type="text"
+                      value={prezzoEffettivoEdit}
+                      onChange={(e) => setPrezzoEffettivoEdit(e.target.value)}
+                      className="w-16 px-2 py-1 text-xs border border-purple-300 rounded focus:ring-2 focus:ring-purple-200"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handlePrezzoEffettivoSave()
+                        if (e.key === 'Escape') handlePrezzoEffettivoCancel()
+                      }}
+                      autoFocus
+                      placeholder="0"
+                    />
+                    <button
+                      onClick={handlePrezzoEffettivoSave}
+                      className="text-green-600 hover:text-green-700 text-xs p-1"
+                      title="Salva"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={handlePrezzoEffettivoCancel}
+                      className="text-red-600 hover:text-red-700 text-xs p-1"
+                      title="Annulla"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setPrezzoEffettivoEdit(player.prezzoEffettivo?.toString() || '')
+                      setIsEditingPrezzoEffettivo(true)
+                    }}
+                    className="text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors bg-purple-50 px-2 py-1 rounded"
+                    title="Clicca per modificare"
+                  >
+                    {formatCurrency(player.prezzoEffettivo || 0)}
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -235,7 +287,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
                 onClick={() => handlePurchase('me')}
                 className="py-2 px-3 bg-green-100 hover:bg-green-200 text-green-700 border border-green-300 rounded-lg text-sm font-medium transition-colors"
               >
-                ✅ Prendo io
+                ✅ Preso
               </button>
               <button
                 onClick={() => handlePurchase('other')}
@@ -297,13 +349,28 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Acquistatore
                   </label>
-                  <input
-                    type="text"
-                    value={acquistatore}
-                    onChange={(e) => setAcquistatore(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
-                    placeholder="Nome partecipante"
-                  />
+                  {participants.length > 0 ? (
+                    <select
+                      value={acquistatore}
+                      onChange={(e) => setAcquistatore(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
+                    >
+                      <option value="">Seleziona partecipante...</option>
+                      {participants.map((participant) => (
+                        <option key={participant.id} value={participant.name}>
+                          {participant.name} ({participant.squadra})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={acquistatore}
+                      onChange={(e) => setAcquistatore(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
+                      placeholder="Nome partecipante (aggiungi partecipanti dalla sidebar)"
+                    />
+                  )}
                 </div>
               )}
 
