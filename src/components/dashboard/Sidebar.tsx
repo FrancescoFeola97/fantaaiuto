@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'
 interface SidebarProps {
   onImportExcel: (players: PlayerData[]) => void
   playersCount: number
+  isImporting?: boolean
   onShowOwnedPlayers: () => void
   onShowFormations: () => void
   onShowParticipants: () => void
@@ -15,6 +16,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ 
   onImportExcel, 
   playersCount, 
+  isImporting,
   onShowOwnedPlayers, 
   onShowFormations, 
   onShowParticipants, 
@@ -97,7 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }
     } catch (error: any) {
       console.error('❌ Error processing Excel file:', error)
-      alert(`❌ Errore: ${error.message}`)
+      alert(`❌ Errore parsing Excel: ${error.message}`)
     } finally {
       setIsUploading(false)
     }
@@ -199,14 +201,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           
           <button 
             onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
+            disabled={isUploading || isImporting}
             className={`w-full px-4 py-3 rounded-lg border transition-colors text-left ${
-              isUploading 
+              isUploading || isImporting
                 ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
                 : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200'
             }`}
           >
-            {isUploading ? '⏳ Caricamento...' : '📋 Carica Excel'}
+            {isUploading ? '⏳ Parsing Excel...' : isImporting ? '☁️ Caricamento server...' : '📋 Carica Excel'}
           </button>
           
           <button 
@@ -223,10 +225,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
         
-        {playersCount > 0 && (
+        {(playersCount > 0 || isImporting) && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
             <p className="text-xs text-gray-600 text-center">
-              {playersCount} giocatori caricati
+              {isImporting ? '☁️ Sincronizzando...' : `${playersCount} giocatori caricati`}
             </p>
           </div>
         )}

@@ -25,6 +25,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [roleFilter, setRoleFilter] = useState('all')
   const [interestFilter, setInterestFilter] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isImporting, setIsImporting] = useState(false)
   const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'images' | 'removed'>('players')
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
 
@@ -209,14 +210,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   }
 
   const importPlayersFromExcel = async (newPlayers: PlayerData[]) => {
+    setIsImporting(true)
+    
+    // Show players immediately for better UX (optimistic UI)
+    setPlayers(newPlayers)
+    saveData()
+    
     try {
       console.log('📤 Uploading players to backend...')
       
       const token = localStorage.getItem('fantaaiuto_token')
-      if (!token) return
+      if (!token) {
+        console.log('📊 No token found, using local mode only')
+        return
+      }
 
+      // Try backend sync with longer timeout for Render cold starts
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 60000) // 60s for large uploads
+      const timeoutId = setTimeout(() => controller.abort(), 180000) // 3 minutes
       
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players/import', {
         method: 'POST',
@@ -241,34 +252,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       
       if (response.ok) {
         const result = await response.json()
-        console.log('✅ Players imported to backend successfully:', result)
+        console.log('✅ Players synced to backend successfully:', result)
         
-        // Reload data from backend to get the complete state
+        // Reload data from backend to get any server-side updates
         await loadUserData()
         
-        alert(`✅ Importati ${newPlayers.length} giocatori nel database! Ricaricati dal server: ${players.length} giocatori.`)
+        // Success notification (no alert popup)
+        console.log(`✅ Sincronizzazione completata! ${newPlayers.length} giocatori caricati.`)
       } else {
         const errorData = await response.json().catch(() => ({}))
-        console.error('❌ Backend import error:', errorData)
-        throw new Error(errorData.error || `Errore HTTP ${response.status}: ${response.statusText}`)
+        console.error('❌ Backend sync error:', errorData)
+        console.log(`⚠️ Giocatori caricati localmente. Sync database fallito: ${errorData.error || 'Errore server'}`)
       }
     } catch (error: any) {
-      console.error('❌ Backend import failed:', error)
+      console.error('❌ Backend sync failed:', error)
       
-      let errorMessage = 'Errore sconosciuto'
       if (error.name === 'AbortError') {
-        errorMessage = 'Timeout: Il server sta impiegando troppo tempo (>60s). Il database potrebbe essere occupato.'
+        console.log(`⚠️ Sync timeout (server lento). Giocatori disponibili localmente.`)
       } else if (error.message.includes('Failed to fetch')) {
-        errorMessage = 'Impossibile connettersi al server. Verifica la connessione internet.'
+        console.log(`⚠️ Server non raggiungibile. Giocatori disponibili localmente.`)
       } else {
-        errorMessage = error.message
+        console.log(`⚠️ Errore sync: ${error.message}. Giocatori disponibili localmente.`)
       }
-      
-      // Fallback to local storage
-      setPlayers(newPlayers)
-      saveData()
-      alert(`⚠️ Import locale completato (${newPlayers.length} giocatori). Errore database: ${errorMessage}`)
-      console.log(`📊 Import locale completato (${newPlayers.length} giocatori). Errore database: ${errorMessage}`)
+    } finally {
+      setIsImporting(false)
     }
   }
 
@@ -501,6 +508,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       <Sidebar 
         onImportExcel={importPlayersFromExcel}
         playersCount={players.length}
+        isImporting={isImporting}
         onShowOwnedPlayers={handleShowOwnedPlayers}
         onShowFormations={handleShowFormations}
         onShowParticipants={handleShowParticipants}
