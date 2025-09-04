@@ -6,7 +6,8 @@ export interface PlayerData {
   fvm: number
   prezzo: number
   prezzoAtteso?: number
-  status: 'available' | 'owned' | 'removed'
+  prezzoEffettivo?: number
+  status: 'available' | 'owned' | 'removed' | 'taken_by_other'
   interessante: boolean
   rimosso?: boolean
   costoReale?: number

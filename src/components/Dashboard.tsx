@@ -66,6 +66,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             fvm: p.fvm,
             prezzo: p.prezzo,
             prezzoAtteso: p.prezzoAtteso || p.prezzo,
+            prezzoEffettivo: p.costoReale,
             status: p.status,
             interessante: p.interessante,
             costoReale: p.costoReale,
@@ -149,6 +150,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
 
     return true
+  }).sort((a, b) => {
+    // Define role priority order
+    const roleOrder = ['Por', 'Ds', 'Dd', 'Dc', 'B', 'E', 'M', 'C', 'W', 'T', 'A', 'Pc']
+    
+    // Get primary role for sorting (first role in array)
+    const roleA = a.ruoli?.[0] || 'A'
+    const roleB = b.ruoli?.[0] || 'A'
+    
+    // First sort by role
+    const roleIndexA = roleOrder.indexOf(roleA)
+    const roleIndexB = roleOrder.indexOf(roleB)
+    
+    if (roleIndexA !== roleIndexB) {
+      return (roleIndexA === -1 ? 999 : roleIndexA) - (roleIndexB === -1 ? 999 : roleIndexB)
+    }
+    
+    // Then sort by FVM (highest first)
+    return (b.fvm || 0) - (a.fvm || 0)
   })
 
   const handleSearchChange = (query: string) => {
@@ -191,7 +210,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         },
         body: JSON.stringify({
           status: updates.status,
-          costoReale: updates.costoReale || 0,
+          costoReale: updates.prezzoEffettivo || updates.costoReale || 0,
           note: updates.note || null,
           prezzoAtteso: updates.prezzoAtteso,
           acquistatore: updates.acquistatore
@@ -381,7 +400,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">🏆 Riassunto Giocatori Presi</h3>
               {(() => {
-                const takenPlayers = players.filter(p => p.status === 'owned')
+                const takenPlayers = players.filter(p => p.status === 'owned' || p.status === 'taken_by_other')
                 
                 if (takenPlayers.length === 0) {
                   return (
@@ -407,11 +426,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                         <div className="space-y-1">
                           {groupPlayers.map(player => (
                             <div key={player.id} className="flex justify-between items-center text-sm">
-                              <span className="text-gray-700">{player.nome}</span>
                               <div className="flex items-center space-x-2">
-                                <span className="text-gray-500">{player.acquistatore || 'Me'}</span>
-                                <span className="font-medium text-green-600">
-                                  {new Intl.NumberFormat('it-IT').format(player.prezzoAtteso || player.prezzo || 0)}
+                                <span className="text-gray-700">{player.nome}</span>
+                                {player.status === 'taken_by_other' && (
+                                  <span className="text-xs px-1 py-0.5 bg-orange-100 text-orange-600 rounded">
+                                    👤
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-gray-500 text-xs">{player.acquistatore || 'Me'}</span>
+                                <span className="font-medium text-purple-600">
+                                  {new Intl.NumberFormat('it-IT').format(player.prezzoEffettivo || player.prezzoAtteso || player.prezzo || 0)}
                                 </span>
                               </div>
                             </div>
@@ -420,9 +446,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                         <div className="mt-2 pt-2 border-t border-gray-200">
                           <div className="flex justify-between items-center text-sm font-medium">
                             <span className="text-gray-600">Totale ({groupPlayers.length})</span>
-                            <span className="text-green-600">
+                            <span className="text-purple-600">
                               {new Intl.NumberFormat('it-IT').format(
-                                groupPlayers.reduce((sum, p) => sum + (p.prezzoAtteso || p.prezzo || 0), 0)
+                                groupPlayers.reduce((sum, p) => sum + (p.prezzoEffettivo || p.prezzoAtteso || p.prezzo || 0), 0)
                               )}
                             </span>
                           </div>

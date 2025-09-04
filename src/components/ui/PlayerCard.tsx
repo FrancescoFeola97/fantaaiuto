@@ -7,10 +7,13 @@ interface PlayerCardProps {
 }
 
 export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
-  const [prezzoAtteso, setPrezzoAtteso] = React.useState(player.prezzoAtteso || player.prezzo || 0)
+  const [prezzoAtteso, setPrezzoAtteso] = React.useState(player.prezzoAtteso || player.prezzo || '')
   const [acquistatore, setAcquistatore] = React.useState(player.acquistatore || '')
-  const [isEditingPrice, setIsEditingPrice] = React.useState(false)
+  const [prezzoEffettivo, setPrezzoEffettivo] = React.useState(player.prezzoEffettivo || 0)
+  const [isEditingPrezzoAtteso, setIsEditingPrezzoAtteso] = React.useState(false)
   const [isEditingAcquistatore, setIsEditingAcquistatore] = React.useState(false)
+  const [showPurchaseModal, setShowPurchaseModal] = React.useState(false)
+  const [purchaseType, setPurchaseType] = React.useState<'me' | 'other'>('me')
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('it-IT', {
@@ -22,8 +25,18 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'owned': return 'bg-green-50 border-green-200'
+      case 'taken_by_other': return 'bg-orange-50 border-orange-200'
       case 'removed': return 'bg-red-50 border-red-200 opacity-60'
       default: return 'bg-white border-gray-200'
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'owned': return '✅'
+      case 'taken_by_other': return '👤'
+      case 'removed': return '❌'
+      default: return ''
     }
   }
 
@@ -31,13 +44,15 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
     onUpdate(player.id, { interessante: !player.interessante })
   }
 
-  const handleRemove = () => {
-    onUpdate(player.id, { status: 'removed', rimosso: true })
+  const handlePrezzoAttesoSave = () => {
+    const price = prezzoAtteso === '' ? 0 : Number(prezzoAtteso)
+    onUpdate(player.id, { prezzoAtteso: price })
+    setIsEditingPrezzoAtteso(false)
   }
 
-  const handlePrezzoAttesoSave = () => {
-    onUpdate(player.id, { prezzoAtteso })
-    setIsEditingPrice(false)
+  const handlePrezzoAttesoCancel = () => {
+    setPrezzoAtteso(player.prezzoAtteso || player.prezzo || '')
+    setIsEditingPrezzoAtteso(false)
   }
 
   const handleAcquistatoreSave = () => {
@@ -45,153 +60,284 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate }) => {
     setIsEditingAcquistatore(false)
   }
 
-  const handleToggleOwned = () => {
-    const newStatus = player.status === 'owned' ? 'available' : 'owned'
-    const updates: Partial<PlayerData> = { status: newStatus }
+  const handleRemove = () => {
+    onUpdate(player.id, { status: 'removed', rimosso: true })
+  }
+
+  const handlePurchase = (type: 'me' | 'other') => {
+    setPurchaseType(type)
+    setPrezzoEffettivo(Number(prezzoAtteso) || player.prezzo || 0)
+    setShowPurchaseModal(true)
+  }
+
+  const handleConfirmPurchase = () => {
+    const updates: Partial<PlayerData> = {
+      status: purchaseType === 'me' ? 'owned' : 'taken_by_other',
+      prezzoEffettivo,
+      costoReale: prezzoEffettivo
+    }
     
-    if (newStatus === 'owned' && !acquistatore.trim()) {
+    if (purchaseType === 'me') {
       updates.acquistatore = 'Me'
-      setAcquistatore('Me')
+    } else if (acquistatore.trim()) {
+      updates.acquistatore = acquistatore.trim()
     }
     
     onUpdate(player.id, updates)
+    setShowPurchaseModal(false)
+  }
+
+  const handleMakeAvailable = () => {
+    onUpdate(player.id, { 
+      status: 'available',
+      prezzoEffettivo: undefined,
+      costoReale: undefined,
+      acquistatore: undefined
+    })
   }
 
   return (
-    <div className={`player-card rounded-lg border p-4 hover:shadow-md transition-all ${getStatusColor(player.status)} ${player.interessante ? 'ring-2 ring-yellow-300' : ''}`}>
-      {/* Player Header */}
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-gray-900 truncate">{player.nome}</h4>
-          <p className="text-sm text-gray-600">{player.squadra}</p>
-        </div>
-        <div className="flex space-x-1 ml-2">
+    <>
+      <div className={`player-card rounded-lg border p-4 hover:shadow-lg transition-all relative ${getStatusColor(player.status)} ${player.interessante ? 'ring-2 ring-yellow-300' : ''}`}>
+        {/* Status Badge */}
+        {player.status !== 'available' && (
+          <div className="absolute -top-2 -right-2 bg-white border border-gray-300 rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-sm">
+            {getStatusIcon(player.status)}
+          </div>
+        )}
+
+        {/* Player Header */}
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-gray-900 truncate text-base">{player.nome}</h4>
+            <div className="flex items-center space-x-2 mt-1">
+              <p className="text-sm text-gray-600">{player.squadra}</p>
+              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                {player.ruoli?.join('/') || 'N/A'}
+              </span>
+            </div>
+          </div>
           <button
             onClick={handleToggleInterest}
-            className={`p-1 rounded transition-colors ${
+            className={`p-1.5 rounded-full transition-all ${
               player.interessante 
-                ? 'text-yellow-600 hover:text-yellow-700' 
-                : 'text-gray-400 hover:text-yellow-600'
+                ? 'text-yellow-600 bg-yellow-100 hover:bg-yellow-200' 
+                : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50'
             }`}
             title={player.interessante ? 'Rimuovi interesse' : 'Aggiungi interesse'}
           >
             ⭐
           </button>
         </div>
-      </div>
 
-      {/* Player Stats */}
-      <div className="space-y-2 mb-4">
-        <div className="flex justify-between items-center">
-          <span className="text-xs font-medium text-gray-500">Ruoli</span>
-          <span className="text-sm font-medium text-gray-900">
-            {player.ruoli?.join('/') || 'N/A'}
-          </span>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-xs font-medium text-gray-500">FVM</span>
-          <span className="text-sm font-bold text-blue-600">{player.fvm || 0}</span>
-        </div>
-        
-        <div className="flex justify-between items-center">
-          <span className="text-xs font-medium text-gray-500">Prezzo Atteso</span>
-          {isEditingPrice ? (
-            <div className="flex items-center space-x-1">
-              <input
-                type="number"
-                value={prezzoAtteso}
-                onChange={(e) => setPrezzoAtteso(Number(e.target.value))}
-                className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded"
-                onBlur={handlePrezzoAttesoSave}
-                onKeyDown={(e) => e.key === 'Enter' && handlePrezzoAttesoSave()}
-                autoFocus
-              />
-              <button
-                onClick={handlePrezzoAttesoSave}
-                className="text-green-600 hover:text-green-700 text-xs"
-              >
-                ✓
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsEditingPrice(true)}
-              className="text-sm font-bold text-green-600 hover:text-green-700 transition-colors"
-            >
-              {formatCurrency(prezzoAtteso)}
-            </button>
-          )}
-        </div>
-
-        {player.status === 'owned' && (
+        {/* Player Stats */}
+        <div className="space-y-3 mb-4">
+          {/* FVM */}
           <div className="flex justify-between items-center">
-            <span className="text-xs font-medium text-gray-500">Acquistatore</span>
-            {isEditingAcquistatore ? (
+            <span className="text-xs font-medium text-gray-500">FVM</span>
+            <span className="text-sm font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+              {player.fvm || 0}
+            </span>
+          </div>
+          
+          {/* Expected Price */}
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-medium text-gray-500">Prezzo Atteso</span>
+            {isEditingPrezzoAtteso ? (
               <div className="flex items-center space-x-1">
                 <input
                   type="text"
-                  value={acquistatore}
-                  onChange={(e) => setAcquistatore(e.target.value)}
-                  className="w-20 px-1 py-0.5 text-xs border border-gray-300 rounded"
-                  onBlur={handleAcquistatoreSave}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAcquistatoreSave()}
+                  value={prezzoAtteso}
+                  onChange={(e) => setPrezzoAtteso(e.target.value)}
+                  className="w-16 px-2 py-1 text-xs border border-blue-300 rounded focus:ring-2 focus:ring-blue-200"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handlePrezzoAttesoSave()
+                    if (e.key === 'Escape') handlePrezzoAttesoCancel()
+                  }}
                   autoFocus
-                  placeholder="Me"
+                  placeholder="0"
                 />
                 <button
-                  onClick={handleAcquistatoreSave}
-                  className="text-green-600 hover:text-green-700 text-xs"
+                  onClick={handlePrezzoAttesoSave}
+                  className="text-green-600 hover:text-green-700 text-xs p-1"
+                  title="Salva"
                 >
                   ✓
+                </button>
+                <button
+                  onClick={handlePrezzoAttesoCancel}
+                  className="text-red-600 hover:text-red-700 text-xs p-1"
+                  title="Annulla"
+                >
+                  ✕
                 </button>
               </div>
             ) : (
               <button
-                onClick={() => setIsEditingAcquistatore(true)}
-                className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
+                onClick={() => setIsEditingPrezzoAtteso(true)}
+                className="text-sm font-bold text-green-600 hover:text-green-700 transition-colors bg-green-50 px-2 py-1 rounded"
+                title="Clicca per modificare"
               >
-                {acquistatore || 'Me'}
+                {formatCurrency(Number(prezzoAtteso) || 0)}
               </button>
             )}
           </div>
-        )}
+
+          {/* Purchase Info for Owned/Taken Players */}
+          {(player.status === 'owned' || player.status === 'taken_by_other') && (
+            <>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-medium text-gray-500">Acquistato da</span>
+                {isEditingAcquistatore ? (
+                  <div className="flex items-center space-x-1">
+                    <input
+                      type="text"
+                      value={acquistatore}
+                      onChange={(e) => setAcquistatore(e.target.value)}
+                      className="w-20 px-2 py-1 text-xs border border-blue-300 rounded focus:ring-2 focus:ring-blue-200"
+                      onBlur={handleAcquistatoreSave}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAcquistatoreSave()}
+                      autoFocus
+                      placeholder="Nome"
+                    />
+                    <button
+                      onClick={handleAcquistatoreSave}
+                      className="text-green-600 hover:text-green-700 text-xs p-1"
+                    >
+                      ✓
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsEditingAcquistatore(true)}
+                    className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors bg-gray-50 px-2 py-1 rounded"
+                  >
+                    {acquistatore || (player.status === 'owned' ? 'Me' : 'Altro')}
+                  </button>
+                )}
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-medium text-gray-500">Prezzo Effettivo</span>
+                <span className="text-sm font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded">
+                  {formatCurrency(player.prezzoEffettivo || 0)}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-2">
+          {player.status === 'available' && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handlePurchase('me')}
+                className="py-2 px-3 bg-green-100 hover:bg-green-200 text-green-700 border border-green-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                ✅ Prendo io
+              </button>
+              <button
+                onClick={() => handlePurchase('other')}
+                className="py-2 px-3 bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                👤 Altri
+              </button>
+            </div>
+          )}
+
+          {(player.status === 'owned' || player.status === 'taken_by_other') && (
+            <button
+              onClick={handleMakeAvailable}
+              className="w-full py-2 px-3 bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 rounded-lg text-sm font-medium transition-colors"
+            >
+              🔄 Rilascia
+            </button>
+          )}
+
+          <div className="flex space-x-2">
+            {player.status !== 'removed' && (
+              <button
+                onClick={handleRemove}
+                className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-lg text-sm transition-colors"
+                title="Rimuovi giocatore"
+              >
+                🗑️ Rimuovi
+              </button>
+            )}
+            
+            {player.status === 'removed' && (
+              <button
+                onClick={() => onUpdate(player.id, { status: 'available', rimosso: false })}
+                className="flex-1 py-2 px-3 bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                🔄 Ripristina
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex space-x-2">
-        {player.status !== 'removed' && (
-          <>
-            <button
-              onClick={handleToggleOwned}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-                player.status === 'owned'
-                  ? 'bg-red-100 hover:bg-red-200 text-red-700 border border-red-300'
-                  : 'bg-green-100 hover:bg-green-200 text-green-700 border border-green-300'
-              }`}
-            >
-              {player.status === 'owned' ? '❌ Rilascia' : '✅ Prendi'}
-            </button>
+      {/* Purchase Modal */}
+      {showPurchaseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              {purchaseType === 'me' ? '✅ Acquista giocatore' : '👤 Giocatore preso da altri'}
+            </h3>
             
-            <button
-              onClick={handleRemove}
-              className="py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-lg text-sm transition-colors"
-              title="Rimuovi giocatore"
-            >
-              🗑️
-            </button>
-          </>
-        )}
-        
-        {player.status === 'removed' && (
-          <button
-            onClick={() => onUpdate(player.id, { status: 'available', rimosso: false })}
-            className="flex-1 py-2 px-3 bg-blue-100 hover:bg-blue-200 text-blue-700 border border-blue-300 rounded-lg text-sm font-medium transition-colors"
-          >
-            🔄 Ripristina
-          </button>
-        )}
-      </div>
-    </div>
+            <div className="space-y-4">
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <p className="font-medium text-gray-900">{player.nome}</p>
+                <p className="text-sm text-gray-600">{player.squadra} • {player.ruoli?.join('/')}</p>
+              </div>
+
+              {purchaseType === 'other' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Acquistatore
+                  </label>
+                  <input
+                    type="text"
+                    value={acquistatore}
+                    onChange={(e) => setAcquistatore(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
+                    placeholder="Nome partecipante"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Prezzo di acquisto
+                </label>
+                <input
+                  type="number"
+                  value={prezzoEffettivo}
+                  onChange={(e) => setPrezzoEffettivo(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
+                  placeholder="Prezzo effettivo"
+                />
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleConfirmPurchase}
+                  className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Conferma
+                </button>
+                <button
+                  onClick={() => setShowPurchaseModal(false)}
+                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                >
+                  Annulla
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
