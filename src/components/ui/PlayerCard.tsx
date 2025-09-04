@@ -12,6 +12,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate, partic
   const [acquistatore, setAcquistatore] = React.useState(player.acquistatore || '')
   const [prezzoEffettivo, setPrezzoEffettivo] = React.useState(player.prezzoEffettivo || 0)
   const [prezzoEffettivoEdit, setPrezzoEffettivoEdit] = React.useState(player.prezzoEffettivo?.toString() || '')
+  const [prezzoEffettivoModal, setPrezzoEffettivoModal] = React.useState('')
   const [isEditingPrezzoAtteso, setIsEditingPrezzoAtteso] = React.useState(false)
   const [isEditingAcquistatore, setIsEditingAcquistatore] = React.useState(false)
   const [isEditingPrezzoEffettivo, setIsEditingPrezzoEffettivo] = React.useState(false)
@@ -80,15 +81,17 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate, partic
 
   const handlePurchase = (type: 'me' | 'other') => {
     setPurchaseType(type)
-    setPrezzoEffettivo(Number(prezzoAtteso) || player.prezzo || 0)
+    const initialPrice = Number(prezzoAtteso) || player.prezzo || 0
+    setPrezzoEffettivoModal(initialPrice.toString())
     setShowPurchaseModal(true)
   }
 
   const handleConfirmPurchase = () => {
+    const finalPrice = prezzoEffettivoModal === '' ? 0 : Number(prezzoEffettivoModal)
     const updates: Partial<PlayerData> = {
       status: purchaseType === 'me' ? 'owned' : 'taken_by_other',
-      prezzoEffettivo,
-      costoReale: prezzoEffettivo
+      prezzoEffettivo: finalPrice,
+      costoReale: finalPrice
     }
     
     if (purchaseType === 'me') {
@@ -308,7 +311,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate, partic
           )}
 
           <div className="flex space-x-2">
-            {player.status !== 'removed' && (
+            {player.status === 'available' && (
               <button
                 onClick={handleRemove}
                 className="flex-1 py-2 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-lg text-sm transition-colors"
@@ -379,9 +382,9 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate, partic
                   Prezzo di acquisto
                 </label>
                 <input
-                  type="number"
-                  value={prezzoEffettivo}
-                  onChange={(e) => setPrezzoEffettivo(Number(e.target.value))}
+                  type="text"
+                  value={prezzoEffettivoModal}
+                  onChange={(e) => setPrezzoEffettivoModal(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
                   placeholder="Prezzo effettivo"
                 />
