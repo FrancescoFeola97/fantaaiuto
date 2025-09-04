@@ -136,7 +136,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
       })
 
       if (response.ok) {
-        const data = await response.json()
         setParticipants(prev => prev.map(p => 
           p.id === participant.id ? { ...p, name: newName, squadra: newSquadra, budget: newBudget } : p
         ))
