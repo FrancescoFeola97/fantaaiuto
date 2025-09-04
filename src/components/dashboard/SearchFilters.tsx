@@ -32,7 +32,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-              placeholder="🔍 Cerca giocatori per cognome..."
+              placeholder="Cerca giocatori per cognome..."
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <span className="text-gray-400">🔍</span>

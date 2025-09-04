@@ -58,7 +58,8 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
     if (!name) return
 
     const squadra = prompt('Nome squadra:') || name
-    const budget = parseInt(prompt('Budget iniziale:') || '500')
+    const defaultBudget = 500 // Always set to initial user budget
+    const budget = parseInt(prompt('Budget iniziale:', defaultBudget.toString()) || defaultBudget.toString())
 
     try {
       const token = localStorage.getItem('fantaaiuto_token')
@@ -108,6 +109,50 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
     } catch (error: any) {
       alert(`❌ Errore: ${error.message}`)
     }
+  }
+
+  const editParticipant = async (participant: Participant) => {
+    const newName = prompt('Nome del partecipante:', participant.name)
+    if (!newName) return
+
+    const newSquadra = prompt('Nome squadra:', participant.squadra) || newName
+    const newBudget = parseInt(prompt('Budget:', participant.budget.toString()) || participant.budget.toString())
+
+    try {
+      const token = localStorage.getItem('fantaaiuto_token')
+      if (!token) return
+
+      const response = await fetch(`https://fantaaiuto-backend.onrender.com/api/participants/${participant.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          name: newName, 
+          squadra: newSquadra, 
+          budget: newBudget 
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setParticipants(prev => prev.map(p => 
+          p.id === participant.id ? { ...p, name: newName, squadra: newSquadra, budget: newBudget } : p
+        ))
+        alert('✅ Partecipante modificato con successo!')
+      } else {
+        throw new Error('Errore modifica partecipante')
+      }
+    } catch (error: any) {
+      alert(`❌ Errore: ${error.message}`)
+    }
+  }
+
+  const viewParticipantPlayers = (participant: Participant) => {
+    // For now, show a simple alert with participant info
+    // This could be expanded to show a modal or navigate to a detailed view
+    alert(`👁️ Giocatori di ${participant.name}:\n\nSquadra: ${participant.squadra}\nBudget: €${participant.budget}\nGiocatori: ${participant.playersCount || 0}\n\n(Funzionalità dettagliata in sviluppo)`)
   }
 
   if (isLoading) {
@@ -199,10 +244,16 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
               </div>
 
               <div className="flex space-x-2">
-                <button className="flex-1 py-2 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 text-sm transition-colors">
+                <button 
+                  onClick={() => editParticipant(participant)}
+                  className="flex-1 py-2 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 text-sm transition-colors"
+                >
                   ✏️ Modifica
                 </button>
-                <button className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 text-sm transition-colors">
+                <button 
+                  onClick={() => viewParticipantPlayers(participant)}
+                  className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 text-sm transition-colors"
+                >
                   👁️ Giocatori
                 </button>
               </div>

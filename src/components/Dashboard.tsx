@@ -379,6 +379,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             players={players.filter(p => p.status !== 'removed')} 
             currentRoleFilter={roleFilter}
             onRoleFilterChange={handleRoleFilterChange}
+            onBackToPlayers={handleBackToPlayers}
           />
         </div>
       </nav>
