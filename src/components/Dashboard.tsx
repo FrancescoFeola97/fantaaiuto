@@ -64,9 +64,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             ruoli: [p.ruolo], // Backend stores single role, frontend expects array
             fvm: p.fvm,
             prezzo: p.prezzo,
+            prezzoAtteso: p.prezzoAtteso || p.prezzo,
             status: p.status,
             interessante: p.interessante,
             costoReale: p.costoReale,
+            acquistatore: p.proprietario || p.acquistatore,
             note: p.note,
             createdAt: new Date().toISOString()
           }))
@@ -189,7 +191,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         body: JSON.stringify({
           status: updates.status,
           costoReale: updates.costoReale || 0,
-          note: updates.note || null
+          note: updates.note || null,
+          prezzoAtteso: updates.prezzoAtteso,
+          acquistatore: updates.acquistatore
         }),
         signal: controller.signal
       })
@@ -236,12 +240,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       clearTimeout(timeoutId)
       
       if (response.ok) {
-        await response.json()
-        setPlayers(newPlayers)
-        console.log('✅ Players imported to backend successfully')
-        alert(`✅ Importati ${newPlayers.length} giocatori nel database!`)
+        const result = await response.json()
+        console.log('✅ Players imported to backend successfully:', result)
+        
+        // Reload data from backend to get the complete state
+        await loadUserData()
+        
+        alert(`✅ Importati ${newPlayers.length} giocatori nel database! Ricaricati dal server: ${players.length} giocatori.`)
       } else {
         const errorData = await response.json().catch(() => ({}))
+        console.error('❌ Backend import error:', errorData)
         throw new Error(errorData.error || `Errore HTTP ${response.status}: ${response.statusText}`)
       }
     } catch (error: any) {

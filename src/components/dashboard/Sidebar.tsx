@@ -55,9 +55,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         throw new Error('File Excel vuoto o formato non valido')
       }
 
+      console.log('📋 Total Excel rows:', jsonData.length)
       console.log('📋 Sample Excel row:', jsonData[0])
 
-      const players: PlayerData[] = jsonData.map((row: any, index) => ({
+      const rawPlayers = jsonData.map((row: any, index) => ({
         id: `player_${Date.now()}_${index}`,
         nome: row.Nome?.toString().trim() || '',
         squadra: row.Squadra?.toString().trim() || '',
@@ -67,17 +68,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
         status: 'available' as const,
         interessante: false,
         createdAt: new Date().toISOString()
-      })).filter(p => p.nome.trim().length > 0 && p.nome !== 'Nome')
+      }))
+
+      console.log('📋 Raw players before filtering:', rawPlayers.length)
+      
+      const players: PlayerData[] = rawPlayers.filter(p => {
+        const isValid = p.nome.trim().length > 0 && p.nome !== 'Nome' && p.nome !== '' && p.nome !== 'undefined'
+        if (!isValid) {
+          console.log('📋 Filtering out invalid player:', p)
+        }
+        return isValid
+      })
 
       if (players.length === 0) {
         throw new Error('Nessun giocatore valido trovato. Verifica le colonne (Nome, Squadra, Ruoli, FVM, Prezzo)')
       }
 
       console.log(`✅ Imported ${players.length} players from Excel`)
+      console.log(`📋 Filtered out ${rawPlayers.length - players.length} invalid entries`)
+      
       onImportExcel(players)
       
-      // Show success message
-      alert(`✅ Importati ${players.length} giocatori con successo!`)
+      // Don't show alert here - let the parent component handle success messaging after backend sync
       
       // Reset file input
       if (fileInputRef.current) {

@@ -60,6 +60,8 @@ router.get('/', [
         COALESCE(up.interessante, 0) as interessante,
         COALESCE(up.rimosso, 0) as rimosso,
         up.costo_reale,
+        up.prezzo_atteso,
+        up.acquistatore,
         up.data_acquisto,
         up.data_rimozione,
         up.tier,
@@ -88,6 +90,8 @@ router.get('/', [
         interessante: Boolean(player.interessante),
         rimosso: Boolean(player.rimosso),
         costoReale: player.costo_reale || 0,
+        prezzoAtteso: player.prezzo_atteso || player.prezzo || 0,
+        acquistatore: player.acquistatore,
         dataAcquisto: player.data_acquisto,
         dataRimozione: player.data_rimozione,
         tier: player.tier,
@@ -130,7 +134,7 @@ router.post('/import', [
         // Insert or update master player
         const existingPlayer = await db.get(
           'SELECT id FROM master_players WHERE nome = ? AND squadra = ? AND season = ?',
-          [playerData.nome, playerData.squadra || '', '2024-25']
+          [playerData.nome, playerData.squadra || '', '2025-26']
         );
 
         let masterId;
@@ -154,7 +158,7 @@ router.post('/import', [
             playerData.ruolo,
             playerData.prezzo || 0,
             playerData.fvm || 0,
-            '2024-25'
+            '2025-26'
           ]);
           masterId = result.lastID;
           importedCount++;
@@ -170,6 +174,7 @@ router.post('/import', [
         let interessante = false;
         let rimosso = false;
         let tier = null;
+        let prezzoAtteso = playerData.prezzo || 0;
 
         // Apply import mode logic
         switch (mode) {
@@ -210,14 +215,14 @@ router.post('/import', [
         if (existingUserPlayer) {
           await db.run(`
             UPDATE user_players 
-            SET status = ?, interessante = ?, rimosso = ?, tier = ?, updated_at = CURRENT_TIMESTAMP
+            SET status = ?, interessante = ?, rimosso = ?, tier = ?, prezzo_atteso = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-          `, [status, interessante, rimosso, tier, existingUserPlayer.id]);
+          `, [status, interessante, rimosso, tier, prezzoAtteso, existingUserPlayer.id]);
         } else {
           await db.run(`
-            INSERT INTO user_players (user_id, master_player_id, status, interessante, rimosso, tier)
-            VALUES (?, ?, ?, ?, ?, ?)
-          `, [userId, masterId, status, interessante, rimosso, tier]);
+            INSERT INTO user_players (user_id, master_player_id, status, interessante, rimosso, tier, prezzo_atteso)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `, [userId, masterId, status, interessante, rimosso, tier, prezzoAtteso]);
         }
 
       } catch (playerError) {
@@ -245,6 +250,8 @@ router.post('/import', [
 router.patch('/:playerId/status', [
   body('status').isIn(['available', 'owned', 'removed', 'interesting']).withMessage('Invalid status'),
   body('costoReale').optional().isNumeric().withMessage('Cost must be numeric'),
+  body('prezzoAtteso').optional().isNumeric().withMessage('Expected price must be numeric'),
+  body('acquistatore').optional().isString().withMessage('Acquistatore must be string'),
   body('note').optional().isLength({ max: 500 }).withMessage('Note too long')
 ], async (req, res, next) => {
   try {
@@ -257,7 +264,7 @@ router.patch('/:playerId/status', [
     }
 
     const { playerId } = req.params;
-    const { status, costoReale, note } = req.body;
+    const { status, costoReale, note, prezzoAtteso, acquistatore } = req.body;
     const userId = req.user.id;
     const db = getDatabase();
 
@@ -281,6 +288,8 @@ router.patch('/:playerId/status', [
       interessante: status === 'interesting' ? 1 : 0,
       rimosso: status === 'removed' ? 1 : 0,
       costo_reale: costoReale || 0,
+      prezzo_atteso: prezzoAtteso || 0,
+      acquistatore: acquistatore || null,
       note: note || null,
       data_acquisto: status === 'owned' ? new Date().toISOString() : null,
       data_rimozione: status === 'removed' ? new Date().toISOString() : null,
@@ -291,23 +300,25 @@ router.patch('/:playerId/status', [
       // Update existing record
       await db.run(`
         UPDATE user_players 
-        SET status = ?, interessante = ?, rimosso = ?, costo_reale = ?, note = ?, 
-            data_acquisto = ?, data_rimozione = ?, updated_at = ?
+        SET status = ?, interessante = ?, rimosso = ?, costo_reale = ?, prezzo_atteso = ?, 
+            acquistatore = ?, note = ?, data_acquisto = ?, data_rimozione = ?, updated_at = ?
         WHERE id = ?
       `, [
         updateData.status, updateData.interessante, updateData.rimosso,
-        updateData.costo_reale, updateData.note, updateData.data_acquisto,
-        updateData.data_rimozione, updateData.updated_at, userPlayer.id
+        updateData.costo_reale, updateData.prezzo_atteso, updateData.acquistatore,
+        updateData.note, updateData.data_acquisto, updateData.data_rimozione, 
+        updateData.updated_at, userPlayer.id
       ]);
     } else {
       // Create new record
       await db.run(`
         INSERT INTO user_players (user_id, master_player_id, status, interessante, rimosso, 
-                                 costo_reale, note, data_acquisto, data_rimozione)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 costo_reale, prezzo_atteso, acquistatore, note, data_acquisto, data_rimozione)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         userId, playerId, updateData.status, updateData.interessante, updateData.rimosso,
-        updateData.costo_reale, updateData.note, updateData.data_acquisto, updateData.data_rimozione
+        updateData.costo_reale, updateData.prezzo_atteso, updateData.acquistatore,
+        updateData.note, updateData.data_acquisto, updateData.data_rimozione
       ]);
     }
 
@@ -315,7 +326,9 @@ router.patch('/:playerId/status', [
       message: 'Player status updated successfully',
       playerId: parseInt(playerId),
       status,
-      costoReale: updateData.costo_reale
+      costoReale: updateData.costo_reale,
+      prezzoAtteso: updateData.prezzo_atteso,
+      acquistatore: updateData.acquistatore
     });
 
   } catch (error) {

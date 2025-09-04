@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS user_players (
     interessante BOOLEAN DEFAULT FALSE,
     rimosso BOOLEAN DEFAULT FALSE,
     costo_reale INTEGER DEFAULT 0,
+    prezzo_atteso INTEGER DEFAULT 0,
+    acquistatore VARCHAR(100),
     data_acquisto DATETIME,
     data_rimozione DATETIME,
     tier VARCHAR(20), -- 'Top', 'Titolari', 'Low cost', etc.

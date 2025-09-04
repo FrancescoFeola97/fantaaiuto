@@ -82,6 +82,37 @@ class Database {
     }
   }
 
+  async runMigrations() {
+    try {
+      console.log('🔄 Running database migrations...');
+      
+      // Check if new columns exist
+      const columnCheck = await getOneRow(this.db, `
+        PRAGMA table_info(user_players)
+      `).then(() => {
+        return getAllRows(this.db, 'PRAGMA table_info(user_players)');
+      }).catch(() => []);
+      
+      const hasAtteso = columnCheck.some(col => col.name === 'prezzo_atteso');
+      const hasAcquistatore = columnCheck.some(col => col.name === 'acquistatore');
+      
+      if (!hasAtteso) {
+        await runQuery(this.db, 'ALTER TABLE user_players ADD COLUMN prezzo_atteso INTEGER DEFAULT 0');
+        console.log('✅ Added prezzo_atteso column');
+      }
+      
+      if (!hasAcquistatore) {
+        await runQuery(this.db, 'ALTER TABLE user_players ADD COLUMN acquistatore VARCHAR(100)');
+        console.log('✅ Added acquistatore column');
+      }
+      
+      console.log('✅ Database migrations completed');
+    } catch (error) {
+      console.error('❌ Error running migrations:', error);
+      throw error;
+    }
+  }
+
   async seedDefaultData() {
     try {
       // Check if we need to seed default data
@@ -160,6 +191,7 @@ const database = new Database();
 export async function initDatabase() {
   await database.connect();
   await database.initSchema();
+  await database.runMigrations();
   await database.seedDefaultData();
   return database;
 }
