@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { PlayerData } from '../../types/Player'
 
 interface Participant {
   id: string
@@ -11,16 +12,32 @@ interface Participant {
 
 interface ParticipantsProps {
   onBackToPlayers: () => void
+  players: PlayerData[]
 }
 
-export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) => {
+export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, players }) => {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newParticipantName, setNewParticipantName] = useState('')
 
   useEffect(() => {
     loadParticipants()
   }, [])
+
+  // Calculate spent budget for a participant
+  const getParticipantSpending = (participantName: string): number => {
+    return players
+      .filter(p => p.status === 'taken_by_other' && p.acquistatore === participantName)
+      .reduce((sum, p) => sum + (p.prezzoEffettivo || p.prezzoAtteso || p.prezzo || 0), 0)
+  }
+
+  // Calculate remaining budget for a participant
+  const getParticipantRemainingBudget = (participant: Participant): number => {
+    const spent = getParticipantSpending(participant.name)
+    return participant.budget - spent
+  }
 
   const loadParticipants = async () => {
     try {
@@ -53,13 +70,17 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
     }
   }
 
-  const createNewParticipant = async () => {
-    const name = prompt('Nome del partecipante:')
-    if (!name) return
+  const openCreateModal = () => {
+    setNewParticipantName('')
+    setShowCreateModal(true)
+  }
 
-    const squadra = prompt('Nome squadra:') || name
-    const defaultBudget = 500 // Always set to initial user budget
-    const budget = parseInt(prompt('Budget iniziale:', defaultBudget.toString()) || defaultBudget.toString())
+  const createNewParticipant = async () => {
+    if (!newParticipantName.trim()) return
+
+    const name = newParticipantName.trim()
+    const squadra = name // Use name as team name
+    const budget = 500 // Always set to initial user budget
 
     try {
       const token = localStorage.getItem('fantaaiuto_token')
@@ -77,12 +98,14 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
       if (response.ok) {
         const data = await response.json()
         setParticipants(prev => [...prev, data.participant])
-        alert('✅ Partecipante aggiunto con successo!')
+        setShowCreateModal(false)
+        setNewParticipantName('')
       } else {
         throw new Error('Errore creazione partecipante')
       }
     } catch (error: any) {
-      alert(`❌ Errore: ${error.message}`)
+      console.error('❌ Errore creazione partecipante:', error)
+      setError(error.message)
     }
   }
 
@@ -175,7 +198,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
         </div>
         <div className="flex space-x-2">
           <button
-            onClick={createNewParticipant}
+            onClick={openCreateModal}
             className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
           >
             ➕ Aggiungi Partecipante
@@ -201,7 +224,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
           <h3 className="text-lg font-medium text-gray-900 mb-2">Nessun partecipante aggiunto</h3>
           <p className="text-gray-600 mb-4">Aggiungi altri partecipanti al tuo fantacalcio per tracciare le loro squadre.</p>
           <button
-            onClick={createNewParticipant}
+            onClick={openCreateModal}
             className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
           >
             ➕ Aggiungi Primo Partecipante
@@ -210,7 +233,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {participants.map(participant => (
-            <div key={participant.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div key={participant.id} className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-lg hover:border-purple-200 transition-all duration-200">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h3 className="font-semibold text-gray-900">{participant.name}</h3>
@@ -227,17 +250,21 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
               
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-medium text-gray-500">Budget</span>
+                  <span className="text-xs font-medium text-gray-500">Budget Iniziale</span>
                   <span className="text-sm font-bold text-green-600">€{participant.budget}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-medium text-gray-500">Giocatori</span>
-                  <span className="text-sm font-medium text-gray-900">{participant.playersCount || 0}</span>
+                  <span className="text-xs font-medium text-gray-500">Speso</span>
+                  <span className="text-sm font-medium text-orange-600">€{getParticipantSpending(participant.name)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-medium text-gray-500">Aggiunto</span>
-                  <span className="text-xs text-gray-500">
-                    {new Date(participant.createdAt).toLocaleDateString('it-IT')}
+                  <span className="text-xs font-medium text-gray-500">Rimanente</span>
+                  <span className="text-sm font-bold text-indigo-600">€{getParticipantRemainingBudget(participant)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-medium text-gray-500">Giocatori</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {players.filter(p => p.status === 'taken_by_other' && p.acquistatore === participant.name).length}
                   </span>
                 </div>
               </div>
@@ -245,19 +272,72 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers }) =
               <div className="flex space-x-2">
                 <button 
                   onClick={() => editParticipant(participant)}
-                  className="flex-1 py-2 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 text-sm transition-colors"
+                  className="flex-1 py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 text-sm transition-colors"
                 >
                   ✏️ Modifica
                 </button>
                 <button 
                   onClick={() => viewParticipantPlayers(participant)}
-                  className="flex-1 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 text-sm transition-colors"
+                  className="flex-1 py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200 text-sm transition-colors"
                 >
                   👁️ Giocatori
                 </button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+      
+      {/* Create Participant Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              ➕ Nuovo Partecipante
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nome Partecipante
+                </label>
+                <input
+                  type="text"
+                  value={newParticipantName}
+                  onChange={(e) => setNewParticipantName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-200"
+                  placeholder="Inserisci il nome"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && createNewParticipant()}
+                />
+              </div>
+              
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  💰 Budget iniziale: <strong>€500</strong>
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Il budget sarà uguale al tuo iniziale
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={createNewParticipant}
+                  disabled={!newParticipantName.trim()}
+                  className="flex-1 py-2 px-4 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white rounded-lg font-medium transition-colors"
+                >
+                  Crea
+                </button>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                >
+                  Annulla
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

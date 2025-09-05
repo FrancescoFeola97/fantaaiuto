@@ -535,6 +535,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           {currentView === 'participants' && (
             <Participants 
               onBackToPlayers={handleBackToPlayers}
+              players={players}
             />
           )}
 
