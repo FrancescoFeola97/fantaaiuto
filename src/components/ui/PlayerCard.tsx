@@ -10,7 +10,6 @@ interface PlayerCardProps {
 export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate, participants = [] }) => {
   const [prezzoAtteso, setPrezzoAtteso] = React.useState(player.prezzoAtteso || player.prezzo || '')
   const [acquistatore, setAcquistatore] = React.useState(player.acquistatore || '')
-  const [prezzoEffettivo, setPrezzoEffettivo] = React.useState(player.prezzoEffettivo || 0)
   const [prezzoEffettivoEdit, setPrezzoEffettivoEdit] = React.useState(player.prezzoEffettivo?.toString() || '')
   const [prezzoEffettivoModal, setPrezzoEffettivoModal] = React.useState('')
   const [isEditingPrezzoAtteso, setIsEditingPrezzoAtteso] = React.useState(false)
