@@ -1,0 +1,740 @@
+import React, { useState, useEffect } from 'react'
+import { useNotifications } from '../../hooks/useNotifications'
+
+export interface AppSettings {
+  // Budget e crediti
+  defaultBudget: number
+  maxBudget: number
+  minBudget: number
+  
+  // Limiti squadra
+  maxPlayersPerTeam: number
+  minPlayersPerTeam: number
+  maxPlayersByRole: {
+    Por: number
+    Ds: number
+    Dd: number
+    Dc: number
+    B: number
+    E: number
+    M: number
+    C: number
+    W: number
+    T: number
+    A: number
+    Pc: number
+  }
+  
+  // Asta e mercato
+  auctionDuration: number // minuti
+  marketDeadline: string // data ISO
+  enableAutoBid: boolean
+  maxAutoBidAmount: number
+  
+  // Visualizzazione
+  showFVM: boolean
+  showPriceHistory: boolean
+  compactView: boolean
+  darkMode: boolean
+  
+  // Notifiche
+  enableNotifications: boolean
+  notifyPlayerTaken: boolean
+  notifyBudgetLow: boolean
+  budgetWarningThreshold: number // %
+  
+  // Esportazione e backup
+  autoBackup: boolean
+  backupFrequency: 'daily' | 'weekly' | 'monthly'
+  exportFormat: 'json' | 'excel' | 'csv'
+  
+  // Avanzate
+  allowNegativeBudget: boolean
+  enableMultiRole: boolean
+  customRoles: string[]
+  leagueName: string
+  season: string
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  defaultBudget: 500,
+  maxBudget: 1000,
+  minBudget: 100,
+  
+  maxPlayersPerTeam: 25,
+  minPlayersPerTeam: 11,
+  maxPlayersByRole: {
+    Por: 3,
+    Ds: 4,
+    Dd: 4, 
+    Dc: 4,
+    B: 3,
+    E: 4,
+    M: 6,
+    C: 6,
+    W: 4,
+    T: 3,
+    A: 6,
+    Pc: 3
+  },
+  
+  auctionDuration: 120,
+  marketDeadline: '',
+  enableAutoBid: false,
+  maxAutoBidAmount: 50,
+  
+  showFVM: true,
+  showPriceHistory: true,
+  compactView: false,
+  darkMode: false,
+  
+  enableNotifications: true,
+  notifyPlayerTaken: true,
+  notifyBudgetLow: true,
+  budgetWarningThreshold: 20,
+  
+  autoBackup: true,
+  backupFrequency: 'weekly',
+  exportFormat: 'excel',
+  
+  allowNegativeBudget: false,
+  enableMultiRole: true,
+  customRoles: [],
+  leagueName: 'La Mia Lega',
+  season: '2024/25'
+}
+
+interface SettingsProps {
+  onBackToPlayers: () => void
+}
+
+export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
+  const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'general' | 'limits' | 'auction' | 'display' | 'notifications' | 'advanced'>('general')
+  const [isDirty, setIsDirty] = useState(false)
+  const { success, error } = useNotifications()
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = () => {
+    try {
+      const savedSettings = localStorage.getItem('fantaaiuto_settings')
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings)
+        setSettings({ ...DEFAULT_SETTINGS, ...parsed })
+      }
+    } catch (err) {
+      console.error('Error loading settings:', err)
+      error('Errore caricamento impostazioni')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const saveSettings = async () => {
+    try {
+      localStorage.setItem('fantaaiuto_settings', JSON.stringify(settings))
+      
+      // Update all existing participants' budgets if budget changed
+      if (isDirty) {
+        await updateParticipantBudgets()
+      }
+      
+      success('✅ Impostazioni salvate con successo!')
+      setIsDirty(false)
+    } catch (err) {
+      console.error('Error saving settings:', err)
+      error('Errore salvataggio impostazioni')
+    }
+  }
+
+  const updateParticipantBudgets = async () => {
+    try {
+      const token = localStorage.getItem('fantaaiuto_token')
+      if (!token) return
+
+      await fetch('https://fantaaiuto-backend.onrender.com/api/participants/update-budgets', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ newBudget: settings.defaultBudget })
+      })
+    } catch (err) {
+      console.warn('Failed to update participant budgets on server:', err)
+    }
+  }
+
+  const resetSettings = () => {
+    if (confirm('⚠️ Sei sicuro di voler ripristinare tutte le impostazioni predefinite?')) {
+      setSettings(DEFAULT_SETTINGS)
+      setIsDirty(true)
+      success('🔄 Impostazioni ripristinate')
+    }
+  }
+
+  const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    setSettings(prev => ({ ...prev, [key]: value }))
+    setIsDirty(true)
+  }
+
+  const updateRoleSetting = (role: keyof AppSettings['maxPlayersByRole'], value: number) => {
+    setSettings(prev => ({
+      ...prev,
+      maxPlayersByRole: { ...prev.maxPlayersByRole, [role]: value }
+    }))
+    setIsDirty(true)
+  }
+
+  const exportSettings = () => {
+    const dataStr = JSON.stringify(settings, null, 2)
+    const blob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `fantaaiuto-settings-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    success('📥 Impostazioni esportate!')
+  }
+
+  const importSettings = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target?.result as string)
+        setSettings({ ...DEFAULT_SETTINGS, ...imported })
+        setIsDirty(true)
+        success('📤 Impostazioni importate!')
+      } catch (err) {
+        error('❌ File impostazioni non valido')
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-500">Caricamento impostazioni...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">⚙️ Impostazioni</h2>
+          <p className="text-sm text-gray-600">Configura l'applicazione secondo le tue preferenze</p>
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={saveSettings}
+            disabled={!isDirty}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              isDirty 
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            💾 Salva
+          </button>
+          <button
+            onClick={onBackToPlayers}
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors"
+          >
+            ← Torna ai Giocatori
+          </button>
+        </div>
+      </div>
+
+      {/* Dirty Changes Warning */}
+      {isDirty && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <div className="text-amber-600 mr-2">⚠️</div>
+            <div>
+              <p className="text-sm font-medium text-amber-800">Modifiche non salvate</p>
+              <p className="text-xs text-amber-700">Ricordati di salvare le impostazioni prima di uscire</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="flex space-x-8 overflow-x-auto">
+          {[
+            { id: 'general', label: '🏠 Generale', icon: '🏠' },
+            { id: 'limits', label: '📊 Limiti', icon: '📊' },
+            { id: 'auction', label: '🔨 Asta', icon: '🔨' },
+            { id: 'display', label: '🎨 Vista', icon: '🎨' },
+            { id: 'notifications', label: '🔔 Notifiche', icon: '🔔' },
+            { id: 'advanced', label: '🚀 Avanzate', icon: '🚀' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      <div className="space-y-6">
+        {/* General Settings */}
+        {activeTab === 'general' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nome Lega
+                </label>
+                <input
+                  type="text"
+                  value={settings.leagueName}
+                  onChange={(e) => updateSetting('leagueName', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Es: Lega Serie A"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Stagione
+                </label>
+                <input
+                  type="text"
+                  value={settings.season}
+                  onChange={(e) => updateSetting('season', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Es: 2024/25"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Budget Predefinito (€)
+                </label>
+                <input
+                  type="number"
+                  value={settings.defaultBudget}
+                  onChange={(e) => updateSetting('defaultBudget', parseInt(e.target.value) || 500)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min="0"
+                  step="50"
+                />
+                <p className="text-xs text-gray-500 mt-1">Budget iniziale per nuovi partecipanti</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Scadenza Mercato
+                </label>
+                <input
+                  type="datetime-local"
+                  value={settings.marketDeadline}
+                  onChange={(e) => updateSetting('marketDeadline', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={exportSettings}
+                className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-colors"
+              >
+                📥 Esporta Impostazioni
+              </button>
+              <label className="px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg border border-green-200 transition-colors cursor-pointer">
+                📤 Importa Impostazioni
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={importSettings}
+                  className="hidden"
+                />
+              </label>
+              <button
+                onClick={resetSettings}
+                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg border border-red-200 transition-colors"
+              >
+                🔄 Ripristina Default
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Limits Settings */}
+        {activeTab === 'limits' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Budget Minimo (€)
+                </label>
+                <input
+                  type="number"
+                  value={settings.minBudget}
+                  onChange={(e) => updateSetting('minBudget', parseInt(e.target.value) || 100)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min="0"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Budget Massimo (€)
+                </label>
+                <input
+                  type="number"
+                  value={settings.maxBudget}
+                  onChange={(e) => updateSetting('maxBudget', parseInt(e.target.value) || 1000)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max Giocatori per Squadra
+                </label>
+                <input
+                  type="number"
+                  value={settings.maxPlayersPerTeam}
+                  onChange={(e) => updateSetting('maxPlayersPerTeam', parseInt(e.target.value) || 25)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min="11"
+                  max="50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Limiti per Ruolo</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {Object.entries(settings.maxPlayersByRole).map(([role, max]) => (
+                  <div key={role}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {role}
+                    </label>
+                    <input
+                      type="number"
+                      value={max}
+                      onChange={(e) => updateRoleSetting(role as keyof AppSettings['maxPlayersByRole'], parseInt(e.target.value) || 1)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      min="1"
+                      max="10"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Auction Settings */}
+        {activeTab === 'auction' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Durata Asta (minuti)
+                </label>
+                <input
+                  type="number"
+                  value={settings.auctionDuration}
+                  onChange={(e) => updateSetting('auctionDuration', parseInt(e.target.value) || 120)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min="30"
+                  max="300"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Rilancio Automatico Max (€)
+                </label>
+                <input
+                  type="number"
+                  value={settings.maxAutoBidAmount}
+                  onChange={(e) => updateSetting('maxAutoBidAmount', parseInt(e.target.value) || 50)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min="0"
+                  disabled={!settings.enableAutoBid}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.enableAutoBid}
+                  onChange={(e) => updateSetting('enableAutoBid', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Abilita rilanci automatici</span>
+              </label>
+
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.allowNegativeBudget}
+                  onChange={(e) => updateSetting('allowNegativeBudget', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Permetti budget negativo</span>
+              </label>
+            </div>
+          </div>
+        )}
+
+        {/* Display Settings */}
+        {activeTab === 'display' && (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.showFVM}
+                  onChange={(e) => updateSetting('showFVM', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Mostra valori FVM</span>
+              </label>
+
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.showPriceHistory}
+                  onChange={(e) => updateSetting('showPriceHistory', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Mostra storico prezzi</span>
+              </label>
+
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.compactView}
+                  onChange={(e) => updateSetting('compactView', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Vista compatta</span>
+              </label>
+
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.darkMode}
+                  onChange={(e) => updateSetting('darkMode', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Modalità scura (prossimamente)</span>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Formato Esportazione Predefinito
+              </label>
+              <select
+                value={settings.exportFormat}
+                onChange={(e) => updateSetting('exportFormat', e.target.value as 'json' | 'excel' | 'csv')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="excel">Excel (.xlsx)</option>
+                <option value="csv">CSV</option>
+                <option value="json">JSON</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* Notifications Settings */}
+        {activeTab === 'notifications' && (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.enableNotifications}
+                  onChange={(e) => updateSetting('enableNotifications', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Abilita notifiche</span>
+              </label>
+
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.notifyPlayerTaken}
+                  onChange={(e) => updateSetting('notifyPlayerTaken', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  disabled={!settings.enableNotifications}
+                />
+                <span className="ml-2 text-sm text-gray-700">Notifica quando un giocatore viene preso</span>
+              </label>
+
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.notifyBudgetLow}
+                  onChange={(e) => updateSetting('notifyBudgetLow', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  disabled={!settings.enableNotifications}
+                />
+                <span className="ml-2 text-sm text-gray-700">Notifica quando il budget è basso</span>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Soglia Avviso Budget (%)
+              </label>
+              <input
+                type="number"
+                value={settings.budgetWarningThreshold}
+                onChange={(e) => updateSetting('budgetWarningThreshold', parseInt(e.target.value) || 20)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                min="0"
+                max="50"
+                disabled={!settings.notifyBudgetLow}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Avvisa quando il budget rimanente scende sotto questa percentuale
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Advanced Settings */}
+        {activeTab === 'advanced' && (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.enableMultiRole}
+                  onChange={(e) => updateSetting('enableMultiRole', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Abilita giocatori multi-ruolo</span>
+              </label>
+
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={settings.autoBackup}
+                  onChange={(e) => updateSetting('autoBackup', e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">Backup automatico dati</span>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Frequenza Backup
+              </label>
+              <select
+                value={settings.backupFrequency}
+                onChange={(e) => updateSetting('backupFrequency', e.target.value as 'daily' | 'weekly' | 'monthly')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={!settings.autoBackup}
+              >
+                <option value="daily">Giornaliero</option>
+                <option value="weekly">Settimanale</option>
+                <option value="monthly">Mensile</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ruoli Personalizzati (separati da virgola)
+              </label>
+              <input
+                type="text"
+                value={settings.customRoles.join(', ')}
+                onChange={(e) => updateSetting('customRoles', e.target.value.split(',').map(r => r.trim()).filter(r => r))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Es: SS, CAM, CDM"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Aggiungi ruoli personalizzati oltre a quelli standard
+              </p>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex">
+                <div className="text-yellow-600 mr-2">⚠️</div>
+                <div>
+                  <p className="text-sm font-medium text-yellow-800">Zona Pericolosa</p>
+                  <div className="mt-2 space-y-2">
+                    <button
+                      onClick={() => {
+                        if (confirm('⚠️ Questo eliminerà TUTTI i dati dell\'applicazione. Sei sicuro?')) {
+                          localStorage.clear()
+                          success('🗑️ Tutti i dati eliminati')
+                          setTimeout(() => window.location.reload(), 1000)
+                        }
+                      }}
+                      className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded transition-colors"
+                    >
+                      🗑️ Elimina Tutti i Dati
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Export default settings for use in other components
+export { DEFAULT_SETTINGS }
+
+// Hook for accessing settings
+export const useAppSettings = () => {
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
+  
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('fantaaiuto_settings')
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings)
+        setSettings({ ...DEFAULT_SETTINGS, ...parsed })
+      } catch (err) {
+        console.error('Error loading settings:', err)
+      }
+    }
+  }, [])
+  
+  return settings
+}

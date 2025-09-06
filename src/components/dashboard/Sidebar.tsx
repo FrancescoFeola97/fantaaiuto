@@ -11,6 +11,7 @@ interface SidebarProps {
   onShowParticipants: () => void
   onShowFormationImages: () => void
   onShowRemovedPlayers: () => void
+  onShowSettings: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -21,7 +22,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onShowFormations, 
   onShowParticipants, 
   onShowFormationImages,
-  onShowRemovedPlayers 
+  onShowRemovedPlayers,
+  onShowSettings
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = React.useState(false)
@@ -196,6 +198,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={onShowRemovedPlayers}
             className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg border border-gray-200 transition-colors text-left">
             👻 Giocatori Rimossi
+          </button>
+          
+          <button 
+            onClick={onShowSettings}
+            className="w-full px-4 py-3 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg border border-orange-200 transition-colors text-left">
+            ⚙️ Impostazioni
           </button>
         </div>
       </div>

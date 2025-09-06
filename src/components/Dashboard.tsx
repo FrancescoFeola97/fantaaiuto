@@ -8,6 +8,7 @@ import { OwnedPlayers } from './dashboard/OwnedPlayers'
 import { Formations } from './dashboard/Formations'
 import { Participants } from './dashboard/Participants'
 import { FormationImages } from './dashboard/FormationImages'
+import { Settings } from './dashboard/Settings'
 import { PlayerData } from '../types/Player'
 import { useNotifications } from '../hooks/useNotifications'
 import { useDebounce } from '../hooks/useDebounce'
@@ -29,7 +30,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [interestFilter, setInterestFilter] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isImporting, setIsImporting] = useState(false)
-  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'images' | 'removed'>('players')
+  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'images' | 'removed' | 'settings'>('players')
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
   const { success, error } = useNotifications()
   
@@ -368,6 +369,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setCurrentView('removed')
   }
 
+  const handleShowSettings = () => {
+    setCurrentView('settings')
+  }
+
   const handleBackToPlayers = () => {
     setCurrentView('players')
   }
@@ -596,6 +601,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               />
             </div>
           )}
+
+          {currentView === 'settings' && (
+            <Settings 
+              onBackToPlayers={handleBackToPlayers}
+            />
+          )}
         </div>
       </main>
 
@@ -609,6 +620,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         onShowParticipants={handleShowParticipants}
         onShowFormationImages={handleShowFormationImages}
         onShowRemovedPlayers={handleShowRemovedPlayers}
+        onShowSettings={handleShowSettings}
       />
     </div>
   )

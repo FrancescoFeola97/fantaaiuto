@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { PlayerData } from '../../types/Player'
 import { useNotifications } from '../../hooks/useNotifications'
+import { useAppSettings } from './Settings'
 
 interface Participant {
   id: string
@@ -25,6 +26,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   const [showPlayersModal, setShowPlayersModal] = useState(false)
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null)
   const { success, error: showError } = useNotifications()
+  const settings = useAppSettings()
 
   useEffect(() => {
     loadParticipants()
@@ -84,7 +86,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
 
     const name = newParticipantName.trim()
     const squadra = name // Use name as team name
-    const budget = 500 // Always set to initial user budget
+    const budget = settings.defaultBudget // Use settings budget
 
     try {
       const token = localStorage.getItem('fantaaiuto_token')
@@ -292,7 +294,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-500">Budget Iniziale</span>
                   <span className="text-sm font-bold text-green-600">
-                    €{new Intl.NumberFormat('it-IT').format(participant.budget || 500)}
+                    €{new Intl.NumberFormat('it-IT').format(participant.budget || settings.defaultBudget)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -360,10 +362,10 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
               
               <div className="bg-blue-50 p-3 rounded-lg">
                 <p className="text-sm text-blue-700">
-                  💰 Budget iniziale: <strong>€500</strong>
+                  💰 Budget iniziale: <strong>€{new Intl.NumberFormat('it-IT').format(settings.defaultBudget)}</strong>
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  Il budget sarà uguale al tuo iniziale
+                  Il budget sarà quello impostato nelle preferenze
                 </p>
               </div>
 
@@ -425,7 +427,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                   <div>
                     <p className="text-xs text-gray-500">Budget Iniziale</p>
                     <p className="text-lg font-bold text-green-600">
-                      €{new Intl.NumberFormat('it-IT').format(selectedParticipant.budget || 500)}
+                      €{new Intl.NumberFormat('it-IT').format(selectedParticipant.budget || settings.defaultBudget)}
                     </p>
                   </div>
                   <div>
