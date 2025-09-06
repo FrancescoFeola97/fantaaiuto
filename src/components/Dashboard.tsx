@@ -185,6 +185,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
     return true
   }).sort((a, b) => {
+    // If a role filter is applied, sort primarily by FVM (highest first)
+    if (roleFilter !== 'all') {
+      return (b.fvm || 0) - (a.fvm || 0)
+    }
+    
+    // For unfiltered view, sort by role first, then FVM
     // Define role priority order
     const roleOrder = ['Por', 'Ds', 'Dd', 'Dc', 'B', 'E', 'M', 'C', 'W', 'T', 'A', 'Pc']
     
