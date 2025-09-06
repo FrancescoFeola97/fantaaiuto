@@ -21,6 +21,8 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   const [error, setError] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newParticipantName, setNewParticipantName] = useState('')
+  const [showPlayersModal, setShowPlayersModal] = useState(false)
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null)
 
   useEffect(() => {
     loadParticipants()
@@ -172,9 +174,12 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   }
 
   const viewParticipantPlayers = (participant: Participant) => {
-    // For now, show a simple alert with participant info
-    // This could be expanded to show a modal or navigate to a detailed view
-    alert(`👁️ Giocatori di ${participant.name}:\n\nSquadra: ${participant.squadra}\nBudget: €${participant.budget}\nGiocatori: ${participant.playersCount || 0}\n\n(Funzionalità dettagliata in sviluppo)`)
+    setSelectedParticipant(participant)
+    setShowPlayersModal(true)
+  }
+
+  const getParticipantPlayers = (participantName: string) => {
+    return players.filter(p => p.status === 'taken_by_other' && p.acquistatore === participantName)
   }
 
   if (isLoading) {
@@ -340,6 +345,111 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
           </div>
         </div>
       )}
+
+      {/* View Participant Players Modal */}
+      {showPlayersModal && selectedParticipant && (() => {
+        const participantPlayers = getParticipantPlayers(selectedParticipant.name)
+        const totalSpent = getParticipantSpending(selectedParticipant.name)
+        const remaining = getParticipantRemainingBudget(selectedParticipant)
+        
+        // Group players by role
+        const playersByRole = participantPlayers.reduce((acc: Record<string, typeof participantPlayers>, player) => {
+          const role = player.ruoli?.[0] || 'Sconosciuto'
+          if (!acc[role]) acc[role] = []
+          acc[role].push(player)
+          return acc
+        }, {})
+
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    👤 {selectedParticipant.name}
+                  </h3>
+                  <p className="text-sm text-gray-600">{selectedParticipant.squadra}</p>
+                </div>
+                <button
+                  onClick={() => setShowPlayersModal(false)}
+                  className="text-gray-400 hover:text-gray-600 p-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Budget Summary */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-xs text-gray-500">Budget Iniziale</p>
+                    <p className="text-lg font-bold text-green-600">€{selectedParticipant.budget}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Speso</p>
+                    <p className="text-lg font-bold text-orange-600">€{totalSpent}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Rimanente</p>
+                    <p className="text-lg font-bold text-indigo-600">€{remaining}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Players List */}
+              {participantPlayers.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-gray-400 text-4xl mb-2">⚽</div>
+                  <p className="text-gray-500">Nessun giocatore acquisito</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900">
+                    Giocatori ({participantPlayers.length})
+                  </h4>
+                  
+                  {Object.entries(playersByRole).map(([role, rolePlayers]) => (
+                    <div key={role} className="border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-700 mb-3 flex items-center">
+                        <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                        {role} ({rolePlayers.length})
+                      </h5>
+                      <div className="grid grid-cols-1 gap-2">
+                        {rolePlayers.map(player => (
+                          <div key={player.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900">{player.nome}</p>
+                              <p className="text-xs text-gray-600">{player.squadra} • FVM: {player.fvm || 0}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-purple-600">
+                                €{player.prezzoEffettivo || player.prezzoAtteso || player.prezzo || 0}
+                              </p>
+                              {player.prezzoAtteso !== (player.prezzoEffettivo || player.prezzo) && (
+                                <p className="text-xs text-gray-500">
+                                  (atteso: €{player.prezzoAtteso || player.prezzo || 0})
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Total Summary */}
+                  <div className="border-t border-gray-200 pt-4 mt-4">
+                    <div className="flex justify-between items-center text-lg font-bold">
+                      <span className="text-gray-700">Totale Speso</span>
+                      <span className="text-purple-600">€{totalSpent}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
