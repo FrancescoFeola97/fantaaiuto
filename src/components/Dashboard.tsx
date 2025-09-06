@@ -64,7 +64,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             id: p.id.toString(),
             nome: p.nome,
             squadra: p.squadra,
-            ruoli: [p.ruolo], // Backend stores single role, frontend expects array
+            ruoli: p.ruolo ? p.ruolo.split(';').map((r: string) => r.trim()).filter((r: string) => r.length > 0) : ['A'], // Parse multiple roles from backend
             fvm: p.fvm,
             prezzo: p.prezzo,
             prezzoAtteso: p.prezzoAtteso || p.prezzo,
@@ -292,7 +292,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           players: newPlayers.map(p => ({
             nome: p.nome,
             squadra: p.squadra,
-            ruolo: Array.isArray(p.ruoli) ? p.ruoli[0] : p.ruoli || 'A',
+            ruolo: Array.isArray(p.ruoli) ? p.ruoli.join(';') : p.ruoli || 'A',
             prezzo: p.prezzo,
             fvm: p.fvm
           })),
@@ -453,9 +453,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   return acc
                 }, {})
 
+                // Define role priority order for proper sorting
+                const roleOrder = ['Por', 'Ds', 'Dd', 'Dc', 'B', 'E', 'M', 'C', 'W', 'T', 'A', 'Pc']
+                
+                const sortedRoleGroups = Object.entries(roleGroups).sort(([roleA], [roleB]) => {
+                  // Get first role from each role combination for sorting
+                  const firstRoleA = roleA.split('/')[0]
+                  const firstRoleB = roleB.split('/')[0]
+                  
+                  const indexA = roleOrder.indexOf(firstRoleA)
+                  const indexB = roleOrder.indexOf(firstRoleB)
+                  
+                  // If role not found in order, put it at the end
+                  const priorityA = indexA === -1 ? 999 : indexA
+                  const priorityB = indexB === -1 ? 999 : indexB
+                  
+                  return priorityA - priorityB
+                })
+
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Object.entries(roleGroups).map(([roles, groupPlayers]) => (
+                    {sortedRoleGroups.map(([roles, groupPlayers]) => (
                       <div key={roles} className="bg-gray-50 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-2">{roles}</h4>
                         <div className="space-y-1">

@@ -274,24 +274,31 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
                   top: `${position.y}%`
                 }}
               >
-                <div className="relative">
-                  {assignedPlayer ? (
-                    <div className="bg-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg border-2 border-blue-500 cursor-pointer hover:scale-110 transition-transform">
-                      <span className="text-xs font-bold text-gray-800 text-center leading-none">
-                        {assignedPlayer.nome.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="bg-white/80 rounded-full w-12 h-12 flex items-center justify-center shadow-lg border-2 border-dashed border-gray-400 cursor-pointer hover:bg-white hover:scale-110 transition-all">
-                      <span className="text-xs font-bold text-gray-600">
-                        {position.name}
+                <div className="relative flex flex-col items-center">
+                  {/* Position Circle - Always shows role */}
+                  <div className="bg-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg border-2 border-blue-500 cursor-pointer hover:scale-110 transition-transform">
+                    <span className="text-xs font-bold text-gray-800 text-center leading-none">
+                      {position.name}
+                    </span>
+                  </div>
+                  
+                  {/* Player Name Rectangle - Only shows if player assigned */}
+                  {assignedPlayer && (
+                    <div className="mt-1 bg-white/90 rounded px-2 py-1 shadow-md border border-gray-300 min-w-max">
+                      <span className="text-xs font-medium text-gray-800 whitespace-nowrap">
+                        {assignedPlayer.nome.length > 12 
+                          ? `${assignedPlayer.nome.substring(0, 12)}...` 
+                          : assignedPlayer.nome}
                       </span>
                     </div>
                   )}
                   
                   {/* Tooltip */}
-                  <div className="absolute bottom-14 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    {assignedPlayer ? assignedPlayer.nome : `${position.name} (${position.allowedRoles.join('/')})`}
+                  <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                    {assignedPlayer 
+                      ? `${assignedPlayer.nome} (${assignedPlayer.ruoli?.join('/')})` 
+                      : `${position.name} (${position.allowedRoles.join('/')})`
+                    }
                   </div>
                 </div>
               </div>
