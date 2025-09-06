@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { PlayerData } from '../../types/Player'
+import { useNotifications } from '../../hooks/useNotifications'
 
 interface Participant {
   id: string
@@ -23,6 +24,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   const [newParticipantName, setNewParticipantName] = useState('')
   const [showPlayersModal, setShowPlayersModal] = useState(false)
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null)
+  const { success, error: showError } = useNotifications()
 
   useEffect(() => {
     loadParticipants()
@@ -127,12 +129,12 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
 
       if (response.ok) {
         setParticipants(prev => prev.filter(p => p.id !== participantId))
-        alert('✅ Partecipante eliminato!')
+        success('✅ Partecipante eliminato!')
       } else {
         throw new Error('Errore eliminazione partecipante')
       }
     } catch (error: any) {
-      alert(`❌ Errore: ${error.message}`)
+      showError(`❌ Errore: ${error.message}`)
     }
   }
 
@@ -140,7 +142,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
     const newName = prompt('Nome del partecipante:', participant.name)
     if (!newName) return
 
-    const newSquadra = prompt('Nome squadra:', participant.squadra) || newName
+    const newSquadra = newName // Use name as team name (no prompt needed)
     const newBudget = parseInt(prompt('Budget:', participant.budget.toString()) || participant.budget.toString())
 
     try {
@@ -164,12 +166,12 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
         setParticipants(prev => prev.map(p => 
           p.id === participant.id ? { ...p, name: newName, squadra: newSquadra, budget: newBudget } : p
         ))
-        alert('✅ Partecipante modificato con successo!')
+        success('✅ Partecipante modificato con successo!')
       } else {
         throw new Error('Errore modifica partecipante')
       }
     } catch (error: any) {
-      alert(`❌ Errore: ${error.message}`)
+      showError(`❌ Errore: ${error.message}`)
     }
   }
 
@@ -217,6 +219,39 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
         </div>
       </div>
 
+      {/* Global Statistics */}
+      {participants.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">📊 Statistiche Globali</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <p className="text-xs text-gray-500">Giocatori Totali</p>
+              <p className="text-lg font-bold text-blue-600">{players.length}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Presi da Altri</p>
+              <p className="text-lg font-bold text-orange-600">
+                {players.filter(p => p.status === 'taken_by_other').length}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Ancora Liberi</p>
+              <p className="text-lg font-bold text-green-600">
+                {players.filter(p => p.status === 'available').length}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Budget Totale Speso</p>
+              <p className="text-lg font-bold text-purple-600">
+                €{new Intl.NumberFormat('it-IT').format(
+                  participants.reduce((sum, p) => sum + getParticipantSpending(p.name), 0)
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-50 p-4 rounded-lg border border-red-200 mb-6">
           <p className="text-sm text-red-700">❌ {error}</p>
@@ -256,20 +291,26 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-500">Budget Iniziale</span>
-                  <span className="text-sm font-bold text-green-600">€{participant.budget}</span>
+                  <span className="text-sm font-bold text-green-600">
+                    €{new Intl.NumberFormat('it-IT').format(participant.budget || 500)}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-500">Speso</span>
-                  <span className="text-sm font-medium text-orange-600">€{getParticipantSpending(participant.name)}</span>
+                  <span className="text-sm font-medium text-orange-600">
+                    €{new Intl.NumberFormat('it-IT').format(getParticipantSpending(participant.name))}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-500">Rimanente</span>
-                  <span className="text-sm font-bold text-indigo-600">€{getParticipantRemainingBudget(participant)}</span>
+                  <span className="text-sm font-bold text-indigo-600">
+                    €{new Intl.NumberFormat('it-IT').format(getParticipantRemainingBudget(participant))}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-medium text-gray-500">Giocatori</span>
+                  <span className="text-xs font-medium text-gray-500">Giocatori Presi</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {players.filter(p => p.status === 'taken_by_other' && p.acquistatore === participant.name).length}
+                    {players.filter(p => p.status === 'taken_by_other' && p.acquistatore === participant.name).length} / {players.length}
                   </span>
                 </div>
               </div>
@@ -380,18 +421,30 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
 
               {/* Budget Summary */}
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6">
-                <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="grid grid-cols-4 gap-4 text-center">
                   <div>
                     <p className="text-xs text-gray-500">Budget Iniziale</p>
-                    <p className="text-lg font-bold text-green-600">€{selectedParticipant.budget}</p>
+                    <p className="text-lg font-bold text-green-600">
+                      €{new Intl.NumberFormat('it-IT').format(selectedParticipant.budget || 500)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Speso</p>
-                    <p className="text-lg font-bold text-orange-600">€{totalSpent}</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      €{new Intl.NumberFormat('it-IT').format(totalSpent)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Rimanente</p>
-                    <p className="text-lg font-bold text-indigo-600">€{remaining}</p>
+                    <p className="text-lg font-bold text-indigo-600">
+                      €{new Intl.NumberFormat('it-IT').format(remaining)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Giocatori</p>
+                    <p className="text-lg font-bold text-purple-600">
+                      {participantPlayers.length} / {players.length}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -423,11 +476,11 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                             </div>
                             <div className="text-right">
                               <p className="font-bold text-purple-600">
-                                €{player.prezzoEffettivo || player.prezzoAtteso || player.prezzo || 0}
+                                €{new Intl.NumberFormat('it-IT').format(player.prezzoEffettivo || player.prezzoAtteso || player.prezzo || 0)}
                               </p>
                               {player.prezzoAtteso !== (player.prezzoEffettivo || player.prezzo) && (
                                 <p className="text-xs text-gray-500">
-                                  (atteso: €{player.prezzoAtteso || player.prezzo || 0})
+                                  (atteso: €{new Intl.NumberFormat('it-IT').format(player.prezzoAtteso || player.prezzo || 0)})
                                 </p>
                               )}
                             </div>
@@ -441,7 +494,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                   <div className="border-t border-gray-200 pt-4 mt-4">
                     <div className="flex justify-between items-center text-lg font-bold">
                       <span className="text-gray-700">Totale Speso</span>
-                      <span className="text-purple-600">€{totalSpent}</span>
+                      <span className="text-purple-600">€{new Intl.NumberFormat('it-IT').format(totalSpent)}</span>
                     </div>
                   </div>
                 </div>
