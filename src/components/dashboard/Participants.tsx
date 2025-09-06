@@ -42,7 +42,8 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   // Calculate remaining budget for a participant
   const getParticipantRemainingBudget = (participant: Participant): number => {
     const spent = getParticipantSpending(participant.name)
-    return participant.budget - spent
+    const budget = participant.budget || settings.defaultBudget || 0
+    return budget - spent
   }
 
   const loadParticipants = async () => {
@@ -294,25 +295,25 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-500">Budget Iniziale</span>
                   <span className="text-sm font-bold text-green-600">
-                    €{new Intl.NumberFormat('it-IT').format(participant.budget || settings.defaultBudget)}
+                    {new Intl.NumberFormat('it-IT').format(participant.budget || settings.defaultBudget)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-500">Speso</span>
                   <span className="text-sm font-medium text-orange-600">
-                    €{new Intl.NumberFormat('it-IT').format(getParticipantSpending(participant.name))}
+                    {new Intl.NumberFormat('it-IT').format(getParticipantSpending(participant.name))}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-medium text-gray-500">Rimanente</span>
+                  <span className="text-xs font-medium text-gray-500">Budget Rimanente</span>
                   <span className="text-sm font-bold text-indigo-600">
-                    €{new Intl.NumberFormat('it-IT').format(getParticipantRemainingBudget(participant))}
+                    {new Intl.NumberFormat('it-IT').format(getParticipantRemainingBudget(participant))}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-500">Giocatori Presi</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {players.filter(p => p.status === 'taken_by_other' && p.acquistatore === participant.name).length} / {players.length}
+                    {players.filter(p => p.status === 'taken_by_other' && p.acquistatore === participant.name).length} / {settings.maxPlayersPerTeam}
                   </span>
                 </div>
               </div>
@@ -427,25 +428,25 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                   <div>
                     <p className="text-xs text-gray-500">Budget Iniziale</p>
                     <p className="text-lg font-bold text-green-600">
-                      €{new Intl.NumberFormat('it-IT').format(selectedParticipant.budget || settings.defaultBudget)}
+                      {new Intl.NumberFormat('it-IT').format(selectedParticipant.budget || settings.defaultBudget)}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Speso</p>
                     <p className="text-lg font-bold text-orange-600">
-                      €{new Intl.NumberFormat('it-IT').format(totalSpent)}
+                      {new Intl.NumberFormat('it-IT').format(totalSpent)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Rimanente</p>
+                    <p className="text-xs text-gray-500">Budget Rimanente</p>
                     <p className="text-lg font-bold text-indigo-600">
-                      €{new Intl.NumberFormat('it-IT').format(remaining)}
+                      {new Intl.NumberFormat('it-IT').format(remaining)}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Giocatori</p>
                     <p className="text-lg font-bold text-purple-600">
-                      {participantPlayers.length} / {players.length}
+                      {participantPlayers.length} / {settings.maxPlayersPerTeam}
                     </p>
                   </div>
                 </div>
@@ -478,11 +479,11 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                             </div>
                             <div className="text-right">
                               <p className="font-bold text-purple-600">
-                                €{new Intl.NumberFormat('it-IT').format(player.prezzoEffettivo || player.prezzoAtteso || player.prezzo || 0)}
+                                {new Intl.NumberFormat('it-IT').format(player.prezzoEffettivo || player.prezzoAtteso || player.prezzo || 0)}
                               </p>
                               {player.prezzoAtteso !== (player.prezzoEffettivo || player.prezzo) && (
                                 <p className="text-xs text-gray-500">
-                                  (atteso: €{new Intl.NumberFormat('it-IT').format(player.prezzoAtteso || player.prezzo || 0)})
+                                  (atteso: {new Intl.NumberFormat('it-IT').format(player.prezzoAtteso || player.prezzo || 0)})
                                 </p>
                               )}
                             </div>
@@ -496,7 +497,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                   <div className="border-t border-gray-200 pt-4 mt-4">
                     <div className="flex justify-between items-center text-lg font-bold">
                       <span className="text-gray-700">Totale Speso</span>
-                      <span className="text-purple-600">€{new Intl.NumberFormat('it-IT').format(totalSpent)}</span>
+                      <span className="text-purple-600">{new Intl.NumberFormat('it-IT').format(totalSpent)}</span>
                     </div>
                   </div>
                 </div>
