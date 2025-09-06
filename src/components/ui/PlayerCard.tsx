@@ -7,7 +7,7 @@ interface PlayerCardProps {
   participants?: Array<{ id: string; name: string; squadra: string }>
 }
 
-export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate, participants = [] }) => {
+const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, participants = [] }) => {
   const [prezzoAtteso, setPrezzoAtteso] = React.useState(player.prezzoAtteso || player.prezzo || '')
   const [acquistatore, setAcquistatore] = React.useState(player.acquistatore || '')
   const [prezzoEffettivoEdit, setPrezzoEffettivoEdit] = React.useState(player.prezzoEffettivo?.toString() || '')
@@ -409,4 +409,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, onUpdate, partic
       )}
     </>
   )
-}
+})
+
+PlayerCard.displayName = 'PlayerCard'
+
+export { PlayerCard }

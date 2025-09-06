@@ -9,7 +9,7 @@ interface PlayersGridProps {
   participants?: Array<{ id: string; name: string; squadra: string }>
 }
 
-export const PlayersGrid: React.FC<PlayersGridProps> = ({ 
+const PlayersGrid: React.FC<PlayersGridProps> = React.memo(({ 
   players, 
   isLoading, 
   onUpdatePlayer,
@@ -52,4 +52,8 @@ export const PlayersGrid: React.FC<PlayersGridProps> = ({
       </div>
     </div>
   )
-}
+})
+
+PlayersGrid.displayName = 'PlayersGrid'
+
+export { PlayersGrid }

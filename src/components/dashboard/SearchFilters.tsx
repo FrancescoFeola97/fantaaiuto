@@ -8,6 +8,7 @@ interface SearchFiltersProps {
   onRoleFilterChange: (role: string) => void
   onInterestFilterToggle: () => void
   onClearFilters: () => void
+  isSearching?: boolean
 }
 
 export const SearchFilters: React.FC<SearchFiltersProps> = ({
@@ -17,7 +18,8 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   onSearchChange,
   onRoleFilterChange,
   onInterestFilterToggle,
-  onClearFilters
+  onClearFilters,
+  isSearching = false
 }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -35,7 +37,11 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               placeholder="Cerca giocatori per cognome..."
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-400">🔍</span>
+              {isSearching ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+              ) : (
+                <span className="text-gray-400">🔍</span>
+              )}
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Toaster } from 'react-hot-toast'
 import { LoginForm } from './components/auth/LoginForm'
 import { RegisterForm } from './components/auth/RegisterForm'
 import { Dashboard } from './components/Dashboard'
@@ -157,7 +158,12 @@ function App() {
     )
   }
 
-  return <Dashboard user={user!} onLogout={handleLogout} />
+  return (
+    <>
+      <Dashboard user={user!} onLogout={handleLogout} />
+      <Toaster />
+    </>
+  )
 }
 
 export default App

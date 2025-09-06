@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { StatsCards } from './dashboard/StatsCards'
 import { PlayerCounts } from './dashboard/PlayerCounts'
 import { SearchFilters } from './dashboard/SearchFilters'
@@ -9,6 +9,8 @@ import { Formations } from './dashboard/Formations'
 import { Participants } from './dashboard/Participants'
 import { FormationImages } from './dashboard/FormationImages'
 import { PlayerData } from '../types/Player'
+import { useNotifications } from '../hooks/useNotifications'
+import { useDebounce } from '../hooks/useDebounce'
 
 interface DashboardProps {
   user: {
@@ -29,6 +31,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [isImporting, setIsImporting] = useState(false)
   const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'images' | 'removed'>('players')
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
+  const { success, error } = useNotifications()
+  
+  // Debounce search query to improve performance
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
   useEffect(() => {
     loadUserData()
@@ -156,15 +162,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
   }
 
-  const filteredPlayers = players.filter(player => {
+  const filteredPlayers = useMemo(() => players.filter(player => {
     // Exclude removed players from main view
     if (player.status === 'removed') {
       return false
     }
 
-    // Search filter
-    if (searchQuery) {
-      const search = searchQuery.toLowerCase()
+    // Search filter (using debounced query)
+    if (debouncedSearchQuery) {
+      const search = debouncedSearchQuery.toLowerCase()
       if (!player.nome?.toLowerCase().includes(search) && 
           !player.squadra?.toLowerCase().includes(search)) {
         return false
@@ -208,7 +214,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     
     // Then sort by FVM (highest first)
     return (b.fvm || 0) - (a.fvm || 0)
-  })
+  }), [players, debouncedSearchQuery, roleFilter, interestFilter])
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query)
@@ -316,22 +322,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         // Reload data from backend to get any server-side updates
         await loadUserData()
         
-        // Success notification (no alert popup)
-        console.log(`✅ Sincronizzazione completata! ${newPlayers.length} giocatori caricati.`)
+        // Success notification
+        success(`✅ Sincronizzazione completata! ${newPlayers.length} giocatori caricati.`)
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('❌ Backend sync error:', errorData)
-        console.log(`⚠️ Giocatori caricati localmente. Sync database fallito: ${errorData.error || 'Errore server'}`)
+        error(`⚠️ Giocatori caricati localmente. Sync database fallito: ${errorData.error || 'Errore server'}`)
       }
     } catch (error: any) {
       console.error('❌ Backend sync failed:', error)
       
       if (error.name === 'AbortError') {
-        console.log(`⚠️ Sync timeout (server lento). Giocatori disponibili localmente.`)
+        error(`⚠️ Sync timeout (server lento). Giocatori disponibili localmente.`)
       } else if (error.message.includes('Failed to fetch')) {
-        console.log(`⚠️ Server non raggiungibile. Giocatori disponibili localmente.`)
+        error(`⚠️ Server non raggiungibile. Giocatori disponibili localmente.`)
       } else {
-        console.log(`⚠️ Errore sync: ${error.message}. Giocatori disponibili localmente.`)
+        error(`⚠️ Errore sync: ${error.message}. Giocatori disponibili localmente.`)
       }
     } finally {
       setIsImporting(false)
@@ -381,7 +387,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 const file = e.target.files?.[0]
                 if (file) {
                   console.log('📱 Mobile Excel upload triggered')
-                  alert('📱 Per caricare file Excel su mobile, usa un dispositivo desktop o ruota in modalità landscape.')
+                  error('📱 Per caricare file Excel su mobile, usa un dispositivo desktop o ruota in modalità landscape.')
                 }
               }}
               className="hidden"
@@ -530,6 +536,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                 onRoleFilterChange={handleRoleFilterChange}
                 onInterestFilterToggle={handleInterestFilterToggle}
                 onClearFilters={handleClearFilters}
+                isSearching={searchQuery !== debouncedSearchQuery && searchQuery.length > 0}
               />
               
               <PlayersGrid 

@@ -1,6 +1,6 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import { PlayerData } from '../../types/Player'
-import * as XLSX from 'xlsx'
+import { useNotifications } from '../../hooks/useNotifications'
 
 interface SidebarProps {
   onImportExcel: (players: PlayerData[]) => void
@@ -25,6 +25,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = React.useState(false)
+  const [xlsxProgress, setXlsxProgress] = useState(0)
+  const { success, error: showError } = useNotifications()
 
   const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -41,6 +43,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }
       
       const data = await file.arrayBuffer()
+      // Lazy load XLSX library
+      setXlsxProgress(20)
+      const XLSX = await import('xlsx')
+      setXlsxProgress(40)
+      
       const workbook = XLSX.read(data, { type: 'array' })
       
       // Use 'Tutti' sheet if available, otherwise first sheet
@@ -48,10 +55,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       const worksheet = workbook.Sheets[sheetName]
       
       // Skip header rows and get data starting from row 3 (skip title and headers)
+      setXlsxProgress(60)
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
         range: 2, // Skip first two rows (title + headers)
         header: ['Id', 'R', 'RM', 'Nome', 'Squadra', 'QtA', 'QtI', 'Diff', 'QtAM', 'QtIM', 'DiffM', 'FVM', 'FVMM']
       })
+      setXlsxProgress(80)
 
       if (!jsonData || jsonData.length === 0) {
         throw new Error('File Excel vuoto o formato non valido')
@@ -89,7 +98,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       console.log(`✅ Imported ${players.length} players from Excel`)
       console.log(`📋 Filtered out ${rawPlayers.length - players.length} invalid entries`)
       
+      setXlsxProgress(100)
       onImportExcel(players)
+      success(`✅ Excel importato! ${players.length} giocatori caricati.`)
       
       // Don't show alert here - let the parent component handle success messaging after backend sync
       
@@ -99,9 +110,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }
     } catch (error: any) {
       console.error('❌ Error processing Excel file:', error)
-      alert(`❌ Errore parsing Excel: ${error.message}`)
+      showError(`❌ Errore parsing Excel: ${error.message}`)
     } finally {
       setIsUploading(false)
+      setXlsxProgress(0)
     }
   }
 
@@ -151,6 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       if (token) {
         localStorage.setItem('fantaaiuto_token', token)
       }
+      success('🔄 Dati resettati con successo')
       location.reload()
     }
   }
@@ -199,17 +212,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="hidden"
           />
           
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading || isImporting}
-            className={`w-full px-4 py-3 rounded-lg border transition-colors text-left ${
-              isUploading || isImporting
-                ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200'
-            }`}
-          >
-            {isUploading ? '⏳ Parsing Excel...' : isImporting ? '☁️ Caricamento server...' : '📋 Carica Excel'}
-          </button>
+          <div className="space-y-2">
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading || isImporting}
+              className={`w-full px-4 py-3 rounded-lg border transition-colors text-left ${
+                isUploading || isImporting
+                  ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                  : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200'
+              }`}
+            >
+              {isUploading ? '⏳ Parsing Excel...' : isImporting ? '☁️ Caricamento server...' : '📋 Carica Excel'}
+            </button>
+            
+            {isUploading && xlsxProgress > 0 && (
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-yellow-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${xlsxProgress}%` }}
+                ></div>
+              </div>
+            )}
+          </div>
           
           <button 
             onClick={onShowFormationImages}
