@@ -21,14 +21,15 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
 
   const loadSavedLineup = () => {
     try {
-      const saved = localStorage.getItem('fantaaiuto_lineup')
-      if (saved) {
-        const savedLineup: Lineup = JSON.parse(saved)
-        setLineup(savedLineup)
-        const formation = FORMATIONS.find(f => f.id === savedLineup.formationId)
+      // Try to load the last selected formation
+      const lastFormationId = localStorage.getItem('fantaaiuto_last_formation')
+      if (lastFormationId) {
+        const formation = FORMATIONS.find(f => f.id === lastFormationId)
         if (formation) {
           setSelectedFormation(formation)
           setShowFormationSelector(false)
+          // Load the specific lineup for this formation
+          loadFormationLineup(lastFormationId)
         }
       }
     } catch (error) {
@@ -36,9 +37,29 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
     }
   }
 
+  const loadFormationLineup = (formationId: string) => {
+    try {
+      const saved = localStorage.getItem(`fantaaiuto_lineup_${formationId}`)
+      if (saved) {
+        const savedLineup: Lineup = JSON.parse(saved)
+        setLineup(savedLineup)
+      } else {
+        // Initialize empty lineup for this formation
+        setLineup({ formationId, starters: [], bench: [] })
+      }
+    } catch (error) {
+      console.error('Error loading formation lineup:', error)
+      // Initialize empty lineup on error
+      setLineup({ formationId, starters: [], bench: [] })
+    }
+  }
+
   const saveLineup = (newLineup: Lineup) => {
     try {
-      localStorage.setItem('fantaaiuto_lineup', JSON.stringify(newLineup))
+      // Save the lineup for the specific formation
+      localStorage.setItem(`fantaaiuto_lineup_${newLineup.formationId}`, JSON.stringify(newLineup))
+      // Save the current formation as the last selected one
+      localStorage.setItem('fantaaiuto_last_formation', newLineup.formationId)
       setLineup(newLineup)
     } catch (error) {
       console.error('Error saving lineup:', error)
@@ -47,13 +68,11 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
 
   const handleFormationSelect = (formation: Formation) => {
     setSelectedFormation(formation)
-    const newLineup: Lineup = {
-      formationId: formation.id,
-      starters: [],
-      bench: []
-    }
-    saveLineup(newLineup)
     setShowFormationSelector(false)
+    // Load existing lineup for this formation or create new one
+    loadFormationLineup(formation.id)
+    // Update the last selected formation
+    localStorage.setItem('fantaaiuto_last_formation', formation.id)
   }
 
   const handlePositionAssign = (positionId: string, playerId: string) => {
@@ -147,8 +166,10 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
     setSelectedFormation(null)
     setLineup({ formationId: '', starters: [], bench: [] })
     setShowFormationSelector(true)
-    localStorage.removeItem('fantaaiuto_lineup')
+    // Don't remove stored lineups, just clear the last selected formation preference
+    localStorage.removeItem('fantaaiuto_last_formation')
   }
+
 
   if (showFormationSelector) {
     return (
