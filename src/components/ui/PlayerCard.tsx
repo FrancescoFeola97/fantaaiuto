@@ -364,7 +364,7 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Acquistatore
                   </label>
-                  {participants.length > 0 ? (
+                  {participants && participants.length > 0 ? (
                     <select
                       value={acquistatore}
                       onChange={(e) => setAcquistatore(e.target.value)}
@@ -383,7 +383,7 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
                       value={acquistatore}
                       onChange={(e) => setAcquistatore(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
-                      placeholder="Nome partecipante (aggiungi partecipanti dalla sidebar)"
+                      placeholder="Nome partecipante (aggiungi nella sezione 👥 Altri Partecipanti)"
                     />
                   )}
                 </div>
