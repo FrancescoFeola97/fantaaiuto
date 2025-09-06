@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { useNotifications } from '../../hooks/useNotifications'
 
 export interface AppSettings {
+  // Modalità di gioco
+  gameMode: 'Mantra' | 'Classic'
+  
   // Budget e crediti
   defaultBudget: number
   maxBudget: number
@@ -11,6 +14,7 @@ export interface AppSettings {
   maxPlayersPerTeam: number
   minPlayersPerTeam: number
   maxPlayersByRole: {
+    // Ruoli Mantra (dettagliati)
     Por: number
     Ds: number
     Dd: number
@@ -23,6 +27,13 @@ export interface AppSettings {
     T: number
     A: number
     Pc: number
+  }
+  maxPlayersByRoleClassic: {
+    // Ruoli Classic (semplificati)
+    P: number  // Portieri
+    D: number  // Difensori
+    C: number  // Centrocampisti
+    A: number  // Attaccanti
   }
   
   // Asta e mercato
@@ -57,6 +68,8 @@ export interface AppSettings {
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
+  gameMode: 'Mantra',
+  
   defaultBudget: 500,
   maxBudget: 1000,
   minBudget: 100,
@@ -76,6 +89,12 @@ const DEFAULT_SETTINGS: AppSettings = {
     T: 3,
     A: 6,
     Pc: 3
+  },
+  maxPlayersByRoleClassic: {
+    P: 3,  // Portieri
+    D: 8,  // Difensori
+    C: 8,  // Centrocampisti
+    A: 6   // Attaccanti
   },
   
   auctionDuration: 120,
@@ -306,6 +325,70 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
         {/* General Settings */}
         {activeTab === 'general' && (
           <div className="space-y-6">
+            {/* Game Mode Selection */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-blue-900 mb-3">🎮 Modalità di Gioco</h3>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    settings.gameMode === 'Mantra' 
+                      ? 'border-blue-500 bg-blue-100' 
+                      : 'border-gray-300 bg-white hover:border-blue-300'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="gameMode"
+                      value="Mantra"
+                      checked={settings.gameMode === 'Mantra'}
+                      onChange={(e) => updateSetting('gameMode', e.target.value as 'Mantra' | 'Classic')}
+                      className="sr-only"
+                    />
+                    <div className="text-center">
+                      <div className="text-2xl mb-2">⚡</div>
+                      <div className="font-semibold text-gray-900">Mantra</div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        Ruoli dettagliati (Por, Ds, Dd, Dc, B, E, M, C, W, T, A, Pc)
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Usa colonna RM del file Excel
+                      </div>
+                    </div>
+                  </label>
+                  
+                  <label className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    settings.gameMode === 'Classic' 
+                      ? 'border-green-500 bg-green-100' 
+                      : 'border-gray-300 bg-white hover:border-green-300'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="gameMode"
+                      value="Classic"
+                      checked={settings.gameMode === 'Classic'}
+                      onChange={(e) => updateSetting('gameMode', e.target.value as 'Mantra' | 'Classic')}
+                      className="sr-only"
+                    />
+                    <div className="text-center">
+                      <div className="text-2xl mb-2">🏛️</div>
+                      <div className="font-semibold text-gray-900">Classic</div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        Ruoli semplificati (P, D, C, A)
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Usa colonna R del file Excel
+                      </div>
+                    </div>
+                  </label>
+                </div>
+                
+                <div className="bg-amber-50 border border-amber-200 rounded p-3">
+                  <p className="text-sm text-amber-800">
+                    <strong>⚠️ Importante:</strong> Cambiare modalità richiede di ricaricare il file Excel per aggiornare i ruoli dei giocatori.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -1,4 +1,5 @@
 import React from 'react'
+import { useAppSettings } from './Settings'
 
 interface SearchFiltersProps {
   searchQuery: string
@@ -21,6 +22,33 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   onClearFilters,
   isSearching = false
 }) => {
+  const settings = useAppSettings()
+
+  const getMantraRoleOptions = () => [
+    { value: 'all', label: 'Tutti i ruoli' },
+    { value: 'Por', label: '🥅 Portieri' },
+    { value: 'Ds', label: '🛡️ Dif. Sx' },
+    { value: 'Dd', label: '🛡️ Dif. Dx' },
+    { value: 'Dc', label: '🛡️ Dif. Cen.' },
+    { value: 'B', label: '🛡️ Braccetto' },
+    { value: 'E', label: '⚽ Esterni' },
+    { value: 'M', label: '⚽ Mediani' },
+    { value: 'C', label: '⚽ Centrocamp.' },
+    { value: 'W', label: '💜 Ali' },
+    { value: 'T', label: '💜 Trequart.' },
+    { value: 'A', label: '🚀 Attaccanti' },
+    { value: 'Pc', label: '🚀 Punte Cen.' }
+  ]
+
+  const getClassicRoleOptions = () => [
+    { value: 'all', label: 'Tutti i ruoli' },
+    { value: 'P', label: '🥅 Portieri' },
+    { value: 'D', label: '🛡️ Difensori' },
+    { value: 'C', label: '⚽ Centrocampisti' },
+    { value: 'A', label: '🚀 Attaccanti' }
+  ]
+
+  const currentRoleOptions = settings.gameMode === 'Classic' ? getClassicRoleOptions() : getMantraRoleOptions()
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
@@ -73,19 +101,11 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             onChange={(e) => onRoleFilterChange(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="all">Tutti i ruoli</option>
-            <option value="Por">🥅 Portieri</option>
-            <option value="Ds">🛡️ Dif. Sx</option>
-            <option value="Dd">🛡️ Dif. Dx</option>
-            <option value="Dc">🛡️ Dif. Cen.</option>
-            <option value="B">🛡️ Braccetto</option>
-            <option value="E">⚽ Esterni</option>
-            <option value="M">⚽ Mediani</option>
-            <option value="C">⚽ Centrocamp.</option>
-            <option value="W">💜 Ali</option>
-            <option value="T">💜 Trequart.</option>
-            <option value="A">🚀 Attaccanti</option>
-            <option value="Pc">🚀 Punte Cen.</option>
+            {currentRoleOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
           
           <button 

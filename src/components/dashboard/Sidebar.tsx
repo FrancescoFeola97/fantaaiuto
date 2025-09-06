@@ -71,17 +71,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
       console.log('📋 Total Excel rows:', jsonData.length)
       console.log('📋 Sample Excel row:', jsonData[0])
 
-      const rawPlayers = jsonData.map((row: any, index) => ({
-        id: `player_${Date.now()}_${index}`,
-        nome: row.Nome?.toString().trim() || '',
-        squadra: row.Squadra?.toString().trim() || '',
-        ruoli: parseRoles(row.RM || row.R || ''), // Use RM (detailed role) or R (basic role)
-        fvm: parseFloat(row.FVM || '0') || 0,
-        prezzo: parseFloat(row.QtA || '0') || 0, // Qt.A = prezzo attuale
-        status: 'available' as const,
-        interessante: false,
-        createdAt: new Date().toISOString()
-      }))
+      const rawPlayers = jsonData.map((row: any, index) => {
+        const ruoliMantra = parseRolesMantra(row.RM || '')
+        const ruoliClassic = parseRolesClassic(row.R || '')
+        
+        return {
+          id: `player_${Date.now()}_${index}`,
+          nome: row.Nome?.toString().trim() || '',
+          squadra: row.Squadra?.toString().trim() || '',
+          ruoli: ruoliMantra.length > 0 ? ruoliMantra : ruoliClassic, // Default to Mantra roles
+          ruoliMantra,
+          ruoliClassic,
+          fvm: parseFloat(row.FVM || '0') || 0,
+          prezzo: parseFloat(row.QtA || '0') || 0, // Qt.A = prezzo attuale
+          status: 'available' as const,
+          interessante: false,
+          createdAt: new Date().toISOString()
+        }
+      })
 
       console.log('📋 Raw players before filtering:', rawPlayers.length)
       
@@ -119,43 +126,62 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   }
 
-  const parseRoles = (roleStr: string): string[] => {
+  const parseRolesMantra = (roleStr: string): string[] => {
     if (!roleStr) return []
     
     const roleString = roleStr.toString().trim()
-    if (!roleString) return ['A'] // Default fallback
+    if (!roleString) return []
     
     // Handle multiple roles separated by semicolon
     const roles = roleString.split(';').map(r => r.trim()).filter(r => r.length > 0)
     
-    // Map each role and flatten the results
+    // Valid Mantra roles (detailed)
+    const validMantraRoles = ['Por', 'Ds', 'Dd', 'Dc', 'B', 'E', 'M', 'C', 'W', 'T', 'A', 'Pc']
+    
+    const mappedRoles = roles
+      .map(role => role.trim())
+      .filter(role => validMantraRoles.includes(role))
+    
+    return [...new Set(mappedRoles)]
+  }
+
+  const parseRolesClassic = (roleStr: string): string[] => {
+    if (!roleStr) return []
+    
+    const roleString = roleStr.toString().trim()
+    if (!roleString) return []
+    
+    // Handle multiple roles separated by semicolon
+    const roles = roleString.split(';').map(r => r.trim()).filter(r => r.length > 0)
+    
+    // Map to Classic roles (simplified)
     const mappedRoles: string[] = []
     
     roles.forEach(role => {
-      // Direct role mapping
-      const roleMapping: Record<string, string[]> = {
-        'P': ['Por'],
-        'Por': ['Por'],
-        'D': ['Ds', 'Dd', 'Dc'],
-        'B': ['B'], // Braccetto di difesa
-        'Ds': ['Ds'],
-        'Dd': ['Dd'], 
-        'Dc': ['Dc'],
-        'E': ['E'], // Esterno
-        'C': ['C'],
-        'M': ['M'],
-        'W': ['W'], // Wing
-        'T': ['T'], // Trequartista
-        'A': ['A'],
-        'Pc': ['Pc'] // Prima Punta Centrale
+      const roleMapping: Record<string, string> = {
+        'P': 'P',
+        'Por': 'P',
+        'D': 'D',
+        'Ds': 'D',
+        'Dd': 'D', 
+        'Dc': 'D',
+        'B': 'D', // Braccetto -> Difensore
+        'E': 'C', // Esterno -> Centrocampista
+        'C': 'C',
+        'M': 'C',
+        'W': 'C', // Wing -> Centrocampista
+        'T': 'C', // Trequartista -> Centrocampista
+        'A': 'A',
+        'Pc': 'A' // Prima Punta -> Attaccante
       }
       
-      const mapped = roleMapping[role] || [role]
-      mappedRoles.push(...mapped)
+      const mapped = roleMapping[role]
+      if (mapped) {
+        mappedRoles.push(mapped)
+      }
     })
     
-    // Remove duplicates and return
-    return [...new Set(mappedRoles)].filter(r => r.length > 0) || ['A']
+    return [...new Set(mappedRoles)]
   }
 
   const handleResetData = () => {

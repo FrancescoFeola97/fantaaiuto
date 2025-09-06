@@ -1,5 +1,6 @@
 import React from 'react'
 import { PlayerData } from '../../types/Player'
+import { useAppSettings } from '../dashboard/Settings'
 
 interface PlayerCardProps {
   player: PlayerData
@@ -8,6 +9,7 @@ interface PlayerCardProps {
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, participants = [] }) => {
+  const settings = useAppSettings()
   const [prezzoAtteso, setPrezzoAtteso] = React.useState(player.prezzoAtteso || player.prezzo || '')
   const [acquistatore, setAcquistatore] = React.useState(player.acquistatore || '')
   const [prezzoEffettivoEdit, setPrezzoEffettivoEdit] = React.useState(player.prezzoEffettivo?.toString() || '')
@@ -17,6 +19,17 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
   const [isEditingPrezzoEffettivo, setIsEditingPrezzoEffettivo] = React.useState(false)
   const [showPurchaseModal, setShowPurchaseModal] = React.useState(false)
   const [purchaseType, setPurchaseType] = React.useState<'me' | 'other'>('me')
+
+  // Get roles based on current game mode
+  const getCurrentRoles = () => {
+    if (settings.gameMode === 'Classic') {
+      return player.ruoliClassic?.length ? player.ruoliClassic : player.ruoli
+    } else {
+      return player.ruoliMantra?.length ? player.ruoliMantra : player.ruoli
+    }
+  }
+
+  const currentRoles = getCurrentRoles()
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('it-IT', {
@@ -129,7 +142,7 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
             <div className="flex items-center space-x-2 mt-1">
               <p className="text-sm text-gray-600">{player.squadra}</p>
               <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
-                {player.ruoli?.join('/') || 'N/A'}
+                {currentRoles?.join('/') || 'N/A'}
               </span>
             </div>
           </div>
@@ -343,7 +356,7 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
             <div className="space-y-4">
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <p className="font-medium text-gray-900">{player.nome}</p>
-                <p className="text-sm text-gray-600">{player.squadra} • {player.ruoli?.join('/')}</p>
+                <p className="text-sm text-gray-600">{player.squadra} • {currentRoles?.join('/')}</p>
               </div>
 
               {purchaseType === 'other' && (

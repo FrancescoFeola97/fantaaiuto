@@ -12,6 +12,7 @@ import { Settings } from './dashboard/Settings'
 import { PlayerData } from '../types/Player'
 import { useNotifications } from '../hooks/useNotifications'
 import { useDebounce } from '../hooks/useDebounce'
+import { useAppSettings } from './dashboard/Settings'
 
 interface DashboardProps {
   user: {
@@ -23,6 +24,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
+  const settings = useAppSettings()
   const [players, setPlayers] = useState<PlayerData[]>([])
   const [participants, setParticipants] = useState<Array<{ id: string; name: string; squadra: string }>>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -36,6 +38,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   
   // Debounce search query to improve performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
+
+  // Get player roles based on current game mode
+  const getPlayerRoles = (player: PlayerData): string[] => {
+    if (settings.gameMode === 'Classic') {
+      return player.ruoliClassic?.length ? player.ruoliClassic : player.ruoli
+    } else {
+      return player.ruoliMantra?.length ? player.ruoliMantra : player.ruoli
+    }
+  }
 
   useEffect(() => {
     loadUserData()
@@ -67,22 +78,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         
         if (response.ok) {
           const data = await response.json()
-          const mappedPlayers = data.players.map((p: any) => ({
-            id: p.id.toString(),
-            nome: p.nome,
-            squadra: p.squadra,
-            ruoli: p.ruolo ? p.ruolo.split(';').map((r: string) => r.trim()).filter((r: string) => r.length > 0) : ['A'], // Parse multiple roles from backend
-            fvm: p.fvm,
-            prezzo: p.prezzo,
-            prezzoAtteso: p.prezzoAtteso || p.prezzo,
-            prezzoEffettivo: p.costoReale,
-            status: p.status,
-            interessante: p.interessante,
-            costoReale: p.costoReale,
-            acquistatore: p.proprietario || p.acquistatore,
-            note: p.note,
-            createdAt: new Date().toISOString()
-          }))
+          const mappedPlayers = data.players.map((p: any) => {
+            // Parse roles from backend - try both detailed (RM) and basic (R)
+            const rawRoles = p.ruolo ? p.ruolo.split(';').map((r: string) => r.trim()).filter((r: string) => r.length > 0) : ['A']
+            
+            // For existing data, assume these are Mantra roles and generate Classic roles
+            const ruoliMantra = rawRoles
+            const ruoliClassic = rawRoles.map((role: string) => {
+              const roleMapping: Record<string, string> = {
+                'Por': 'P', 'P': 'P',
+                'Ds': 'D', 'Dd': 'D', 'Dc': 'D', 'B': 'D', 'D': 'D',
+                'E': 'C', 'M': 'C', 'C': 'C', 'W': 'C', 'T': 'C',
+                'A': 'A', 'Pc': 'A'
+              }
+              return roleMapping[role] || 'A'
+            }).filter((role: string, index: number, self: string[]) => self.indexOf(role) === index) // Remove duplicates
+
+            return {
+              id: p.id.toString(),
+              nome: p.nome,
+              squadra: p.squadra,
+              ruoli: ruoliMantra, // Default to Mantra roles
+              ruoliMantra,
+              ruoliClassic,
+              fvm: p.fvm,
+              prezzo: p.prezzo,
+              prezzoAtteso: p.prezzoAtteso || p.prezzo,
+              prezzoEffettivo: p.costoReale,
+              status: p.status,
+              interessante: p.interessante,
+              costoReale: p.costoReale,
+              acquistatore: p.proprietario || p.acquistatore,
+              note: p.note,
+              createdAt: new Date().toISOString()
+            }
+          })
           setPlayers(mappedPlayers)
           console.log('📊 Loaded players from backend:', mappedPlayers.length)
         } else {
@@ -180,7 +210,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
     // Role filter
     if (roleFilter !== 'all') {
-      if (!player.ruoli || !player.ruoli.includes(roleFilter)) {
+      const playerRoles = getPlayerRoles(player)
+      if (!playerRoles || !playerRoles.includes(roleFilter)) {
         return false
       }
     }
@@ -198,12 +229,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
     
     // For unfiltered view, sort by role first, then FVM
-    // Define role priority order
-    const roleOrder = ['Por', 'Ds', 'Dd', 'Dc', 'B', 'E', 'M', 'C', 'W', 'T', 'A', 'Pc']
+    // Define role priority order based on game mode
+    const mantraRoleOrder = ['Por', 'Ds', 'Dd', 'Dc', 'B', 'E', 'M', 'C', 'W', 'T', 'A', 'Pc']
+    const classicRoleOrder = ['P', 'D', 'C', 'A']
+    const roleOrder = settings.gameMode === 'Classic' ? classicRoleOrder : mantraRoleOrder
     
     // Get primary role for sorting (first role in array)
-    const roleA = a.ruoli?.[0] || 'A'
-    const roleB = b.ruoli?.[0] || 'A'
+    const roleA = getPlayerRoles(a)?.[0] || (settings.gameMode === 'Classic' ? 'A' : 'A')
+    const roleB = getPlayerRoles(b)?.[0] || (settings.gameMode === 'Classic' ? 'A' : 'A')
     
     // First sort by role
     const roleIndexA = roleOrder.indexOf(roleA)

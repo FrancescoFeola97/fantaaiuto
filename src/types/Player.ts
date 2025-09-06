@@ -2,7 +2,9 @@ export interface PlayerData {
   id: string
   nome: string
   squadra: string
-  ruoli: string[]
+  ruoli: string[] // Ruoli attivi basati sulla modalità di gioco
+  ruoliMantra?: string[] // Ruoli dettagliati dalla colonna RM
+  ruoliClassic?: string[] // Ruoli semplificati dalla colonna R
   fvm: number
   prezzo: number
   prezzoAtteso?: number

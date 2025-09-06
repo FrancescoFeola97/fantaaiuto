@@ -1,5 +1,6 @@
 import React from 'react'
 import { PlayerData } from '../../types/Player'
+import { useAppSettings } from './Settings'
 
 interface PlayerCountsProps {
   players: PlayerData[]
@@ -9,7 +10,9 @@ interface PlayerCountsProps {
 }
 
 export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRoleFilter, onRoleFilterChange, onBackToPlayers }) => {
-  const roles = [
+  const settings = useAppSettings()
+  
+  const mantraRoles = [
     { key: 'Por', label: '🥅 Portieri', emoji: '🥅' },
     { key: 'Ds', label: '🛡️ Dif. Sx', emoji: '🛡️' },
     { key: 'Dd', label: '🛡️ Dif. Dx', emoji: '🛡️' },
@@ -24,8 +27,25 @@ export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRole
     { key: 'Pc', label: '🚀 Punte Cen.', emoji: '🚀' }
   ]
 
+  const classicRoles = [
+    { key: 'P', label: '🥅 Portieri', emoji: '🥅' },
+    { key: 'D', label: '🛡️ Difensori', emoji: '🛡️' },
+    { key: 'C', label: '⚽ Centrocampisti', emoji: '⚽' },
+    { key: 'A', label: '🚀 Attaccanti', emoji: '🚀' }
+  ]
+
+  const currentRoles = settings.gameMode === 'Classic' ? classicRoles : mantraRoles
+
   const getCountByRole = (role: string) => {
-    return players.filter(p => p.ruoli && p.ruoli.includes(role)).length
+    return players.filter(p => {
+      if (settings.gameMode === 'Classic') {
+        const playerClassicRoles = p.ruoliClassic?.length ? p.ruoliClassic : p.ruoli
+        return playerClassicRoles && playerClassicRoles.includes(role)
+      } else {
+        const playerMantraRoles = p.ruoliMantra?.length ? p.ruoliMantra : p.ruoli
+        return playerMantraRoles && playerMantraRoles.includes(role)
+      }
+    }).length
   }
 
   return (
@@ -49,7 +69,7 @@ export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRole
       </button>
       
       {/* Role Counts */}
-      {roles.map(role => {
+      {currentRoles.map(role => {
         const count = getCountByRole(role.key)
         return (
           <button 
