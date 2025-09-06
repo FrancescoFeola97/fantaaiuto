@@ -113,6 +113,22 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
     }
   }
 
+  const handleRemovePlayerFromPosition = (positionId: string) => {
+    const newLineup: Lineup = {
+      ...lineup,
+      starters: lineup.starters.filter(s => s.positionId !== positionId)
+    }
+    saveLineup(newLineup)
+  }
+
+  const handleRemovePlayerFromBench = (playerId: string) => {
+    const newLineup: Lineup = {
+      ...lineup,
+      bench: lineup.bench.filter(id => id !== playerId)
+    }
+    saveLineup(newLineup)
+  }
+
   const getPlayerInPosition = (positionId: string): PlayerData | null => {
     const assignment = lineup.starters.find(s => s.positionId === positionId)
     if (!assignment) return null
@@ -284,12 +300,21 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
                   
                   {/* Player Name Rectangle - Only shows if player assigned */}
                   {assignedPlayer && (
-                    <div className="mt-1 bg-white/90 rounded px-2 py-1 shadow-md border border-gray-300 min-w-max">
-                      <span className="text-xs font-medium text-gray-800 whitespace-nowrap">
-                        {assignedPlayer.nome.length > 12 
-                          ? `${assignedPlayer.nome.substring(0, 12)}...` 
-                          : assignedPlayer.nome}
-                      </span>
+                    <div className="mt-1 flex items-center space-x-1">
+                      <div className="bg-white/90 rounded px-2 py-1 shadow-md border border-gray-300 min-w-max">
+                        <span className="text-xs font-medium text-gray-800 whitespace-nowrap">
+                          {assignedPlayer.nome.length > 12 
+                            ? `${assignedPlayer.nome.substring(0, 12)}...` 
+                            : assignedPlayer.nome}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleRemovePlayerFromPosition(position.id)}
+                        className="bg-red-500 hover:bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-bold shadow-md transition-colors"
+                        title="Rimuovi giocatore"
+                      >
+                        ×
+                      </button>
                     </div>
                   )}
                   
@@ -390,10 +415,11 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
                       <p className="text-xs text-gray-600">{player.ruoli?.join('/')}</p>
                     </div>
                     <button
-                      onClick={() => handleBenchToggle(playerId)}
-                      className="text-red-600 hover:text-red-700 p-1"
+                      onClick={() => handleRemovePlayerFromBench(playerId)}
+                      className="bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold shadow-sm transition-colors"
+                      title="Rimuovi dalla panchina"
                     >
-                      ✕
+                      ×
                     </button>
                   </div>
                 )
