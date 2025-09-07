@@ -32,34 +32,39 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
 
   const currentRoles = getCurrentRoles()
 
-  // Get team logo URL based on team name - using local assets
+  // Get team logo URL based on team name - using local SVG assets
   const getTeamLogo = (teamName: string): string => {
     const teamLogos: Record<string, string> = {
-      // Serie A 2024/25 - Using local assets for better performance and reliability
-      'Atalanta': '/assets/team-logos/atalanta.png',
-      'Bologna': '/assets/team-logos/bologna.png',
-      'Cagliari': '/assets/team-logos/cagliari.png',
-      'Como': '/assets/team-logos/como.png',
-      'Empoli': '/assets/team-logos/empoli.png',
-      'Fiorentina': '/assets/team-logos/fiorentina.png',
-      'Genoa': '/assets/team-logos/genoa.png',
-      'Inter': '/assets/team-logos/inter.png',
-      'Internazionale': '/assets/team-logos/inter.png',
-      'Juventus': '/assets/team-logos/juventus.png',
-      'Lazio': '/assets/team-logos/lazio.png',
-      'Lecce': '/assets/team-logos/lecce.png',
-      'Milan': '/assets/team-logos/milan.png',
-      'Monza': '/assets/team-logos/monza.png',
-      'Napoli': '/assets/team-logos/napoli.png',
-      'Parma': '/assets/team-logos/parma.png',
-      'Roma': '/assets/team-logos/roma.png',
-      'Torino': '/assets/team-logos/torino.png',
-      'Udinese': '/assets/team-logos/udinese.png',
-      'Venezia': '/assets/team-logos/venezia.png',
-      'Verona': '/assets/team-logos/verona.png'
+      // Serie A 2024/25 - Using local SVG assets for perfect scalability
+      'Atalanta': '/assets/team-logos/atalanta.svg',
+      'Bologna': '/assets/team-logos/bologna.svg',
+      'Cagliari': '/assets/team-logos/cagliari.svg',
+      'Como': '/assets/team-logos/como.svg',
+      'Empoli': '/assets/team-logos/empoli.svg',
+      'Fiorentina': '/assets/team-logos/fiorentina.svg',
+      'Genoa': '/assets/team-logos/genoa.svg',
+      'Inter': '/assets/team-logos/inter.svg',
+      'Internazionale': '/assets/team-logos/inter.svg',
+      'Juventus': '/assets/team-logos/juventus.svg',
+      'Lazio': '/assets/team-logos/lazio.svg',
+      'Lecce': '/assets/team-logos/lecce.svg',
+      'Milan': '/assets/team-logos/milan.svg',
+      'Monza': '/assets/team-logos/monza.svg',
+      'Napoli': '/assets/team-logos/napoli.svg',
+      'Parma': '/assets/team-logos/parma.svg',
+      'Roma': '/assets/team-logos/roma.svg',
+      'Torino': '/assets/team-logos/torino.svg',
+      'Udinese': '/assets/team-logos/udinese.svg',
+      'Venezia': '/assets/team-logos/venezia.svg',
+      'Verona': '/assets/team-logos/verona.svg'
     }
 
-    return teamLogos[teamName] || `https://ui-avatars.com/api/?name=${teamName}&size=24&background=cccccc&color=666666&bold=true`
+    return teamLogos[teamName] || `data:image/svg+xml;base64,${btoa(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+        <circle cx="12" cy="12" r="11" fill="#f0f0f0" stroke="#cccccc" stroke-width="1"/>
+        <text x="12" y="16" text-anchor="middle" font-size="8" fill="#666666" font-family="Arial">${teamName.slice(0,3).toUpperCase()}</text>
+      </svg>
+    `)}`
   }
 
 
