@@ -199,12 +199,17 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }))
     setIsDirty(true)
+    
+    // Se si cambia a Mantra e si è nella sezione Limiti, torna alla sezione Generale
+    if (key === 'gameMode' && value === 'Mantra' && activeTab === 'limits') {
+      setActiveTab('general')
+    }
   }
 
-  const updateRoleSetting = (role: keyof AppSettings['maxPlayersByRole'], value: number) => {
+  const updateClassicRoleSetting = (role: keyof AppSettings['maxPlayersByRoleClassic'], value: number) => {
     setSettings(prev => ({
       ...prev,
-      maxPlayersByRole: { ...prev.maxPlayersByRole, [role]: value }
+      maxPlayersByRoleClassic: { ...prev.maxPlayersByRoleClassic, [role]: value }
     }))
     setIsDirty(true)
   }
@@ -299,7 +304,7 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
         <nav className="flex space-x-8 overflow-x-auto">
           {[
             { id: 'general', label: '🏠 Generale', icon: '🏠' },
-            { id: 'limits', label: '📊 Limiti', icon: '📊' },
+            ...(settings.gameMode === 'Classic' ? [{ id: 'limits', label: '📊 Limiti', icon: '📊' }] : []),
             { id: 'auction', label: '🔨 Asta', icon: '🔨' },
             { id: 'display', label: '🎨 Vista', icon: '🎨' },
             { id: 'notifications', label: '🔔 Notifiche', icon: '🔔' },
@@ -433,14 +438,17 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Scadenza Mercato
+                  Max Giocatori per Squadra
                 </label>
                 <input
-                  type="datetime-local"
-                  value={settings.marketDeadline}
-                  onChange={(e) => updateSetting('marketDeadline', e.target.value)}
+                  type="number"
+                  value={settings.maxPlayersPerTeam}
+                  onChange={(e) => updateSetting('maxPlayersPerTeam', parseInt(e.target.value) || 25)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  min="11"
+                  max="50"
                 />
+                <p className="text-xs text-gray-500 mt-1">Numero massimo di giocatori per ogni squadra</p>
               </div>
             </div>
 
@@ -470,70 +478,58 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
           </div>
         )}
 
-        {/* Limits Settings */}
-        {activeTab === 'limits' && (
+        {/* Limits Settings - Only visible in Classic mode */}
+        {activeTab === 'limits' && settings.gameMode === 'Classic' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Budget Minimo (€)
-                </label>
-                <input
-                  type="number"
-                  value={settings.minBudget}
-                  onChange={(e) => updateSetting('minBudget', parseInt(e.target.value) || 100)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  min="0"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Budget Massimo (€)
-                </label>
-                <input
-                  type="number"
-                  value={settings.maxBudget}
-                  onChange={(e) => updateSetting('maxBudget', parseInt(e.target.value) || 1000)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  min="0"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Max Giocatori per Squadra
-                </label>
-                <input
-                  type="number"
-                  value={settings.maxPlayersPerTeam}
-                  onChange={(e) => updateSetting('maxPlayersPerTeam', parseInt(e.target.value) || 25)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  min="11"
-                  max="50"
-                />
-              </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">📊 Limiti per Ruolo (Modalità Classic)</h3>
+              <p className="text-sm text-blue-700">
+                Configura il numero massimo di giocatori per ogni ruolo. La somma totale non deve superare il numero massimo di giocatori per squadra ({settings.maxPlayersPerTeam}).
+              </p>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Limiti per Ruolo</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(settings.maxPlayersByRole).map(([role, max]) => (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                {Object.entries(settings.maxPlayersByRoleClassic).map(([role, max]) => (
                   <div key={role}>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {role}
+                      {role === 'P' ? '🥅 Portieri' : role === 'D' ? '🛡️ Difensori' : role === 'C' ? '⚽ Centrocampisti' : '🚀 Attaccanti'}
                     </label>
                     <input
                       type="number"
                       value={max}
-                      onChange={(e) => updateRoleSetting(role as keyof AppSettings['maxPlayersByRole'], parseInt(e.target.value) || 1)}
+                      onChange={(e) => updateClassicRoleSetting(role as keyof AppSettings['maxPlayersByRoleClassic'], parseInt(e.target.value) || 1)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      min="1"
-                      max="10"
+                      min="0"
+                      max={settings.maxPlayersPerTeam}
                     />
                   </div>
                 ))}
               </div>
+              
+              {(() => {
+                const totalRolePlayers = Object.values(settings.maxPlayersByRoleClassic).reduce((sum, count) => sum + count, 0)
+                const isValid = totalRolePlayers <= settings.maxPlayersPerTeam
+                return (
+                  <div className={`p-3 rounded-lg border ${isValid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className="flex items-center">
+                      <div className={`mr-2 ${isValid ? 'text-green-600' : 'text-red-600'}`}>
+                        {isValid ? '✅' : '⚠️'}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-medium ${isValid ? 'text-green-800' : 'text-red-800'}`}>
+                          Totale giocatori per ruolo: {totalRolePlayers} / {settings.maxPlayersPerTeam}
+                        </p>
+                        {!isValid && (
+                          <p className="text-xs text-red-700 mt-1">
+                            La somma dei limiti per ruolo ({totalRolePlayers}) supera il massimo giocatori per squadra ({settings.maxPlayersPerTeam})
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         )}
@@ -755,21 +751,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ruoli Personalizzati (separati da virgola)
-              </label>
-              <input
-                type="text"
-                value={settings.customRoles.join(', ')}
-                onChange={(e) => updateSetting('customRoles', e.target.value.split(',').map(r => r.trim()).filter(r => r))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Es: SS, CAM, CDM"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Aggiungi ruoli personalizzati oltre a quelli standard
-              </p>
-            </div>
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <div className="flex">
