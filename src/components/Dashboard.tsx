@@ -51,6 +51,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   useEffect(() => {
     loadUserData()
     loadParticipants()
+    
+    // Listen for participants updates
+    const handleParticipantsUpdate = () => {
+      loadParticipants()
+    }
+    
+    window.addEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
+    
+    return () => {
+      window.removeEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
+    }
   }, [])
 
   const loadUserData = async () => {

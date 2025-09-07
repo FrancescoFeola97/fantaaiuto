@@ -373,7 +373,7 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
                       <option value="">Seleziona partecipante...</option>
                       {participants.map((participant) => (
                         <option key={participant.id} value={participant.name}>
-                          {participant.name} ({participant.squadra})
+                          {participant.name}{participant.squadra ? ` (${participant.squadra})` : ''}
                         </option>
                       ))}
                     </select>

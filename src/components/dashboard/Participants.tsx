@@ -105,6 +105,10 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
       if (response.ok) {
         const data = await response.json()
         setParticipants(prev => [...prev, data.participant])
+        
+        // Notify other components that participants list has been updated
+        window.dispatchEvent(new CustomEvent('fantaaiuto_participants_updated'))
+        
         setShowCreateModal(false)
         setNewParticipantName('')
       } else {
@@ -132,6 +136,10 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
 
       if (response.ok) {
         setParticipants(prev => prev.filter(p => p.id !== participantId))
+        
+        // Notify other components that participants list has been updated
+        window.dispatchEvent(new CustomEvent('fantaaiuto_participants_updated'))
+        
         success('✅ Partecipante eliminato!')
       } else {
         throw new Error('Errore eliminazione partecipante')
@@ -169,6 +177,10 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
         setParticipants(prev => prev.map(p => 
           p.id === participant.id ? { ...p, name: newName, squadra: newSquadra, budget: newBudget } : p
         ))
+        
+        // Notify other components that participants list has been updated
+        window.dispatchEvent(new CustomEvent('fantaaiuto_participants_updated'))
+        
         success('✅ Partecipante modificato con successo!')
       } else {
         throw new Error('Errore modifica partecipante')

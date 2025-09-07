@@ -165,6 +165,9 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers, players = [
         await updateParticipantBudgets()
       }
       
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new CustomEvent('fantaaiuto_settings_updated'))
+      
       success('✅ Impostazioni salvate con successo!')
       setIsDirty(false)
     } catch (err) {
@@ -816,11 +819,11 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers, players = [
 // Export default settings for use in other components
 export { DEFAULT_SETTINGS }
 
-// Hook for accessing settings
+// Hook for accessing settings with real-time updates
 export const useAppSettings = () => {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   
-  useEffect(() => {
+  const loadSettings = () => {
     const savedSettings = localStorage.getItem('fantaaiuto_settings')
     if (savedSettings) {
       try {
@@ -829,6 +832,30 @@ export const useAppSettings = () => {
       } catch (err) {
         console.error('Error loading settings:', err)
       }
+    }
+  }
+  
+  useEffect(() => {
+    loadSettings()
+    
+    // Listen for storage changes from other tabs/components
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'fantaaiuto_settings') {
+        loadSettings()
+      }
+    }
+    
+    // Listen for custom settings update event
+    const handleSettingsUpdate = () => {
+      loadSettings()
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('fantaaiuto_settings_updated', handleSettingsUpdate)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('fantaaiuto_settings_updated', handleSettingsUpdate)
     }
   }, [])
   
