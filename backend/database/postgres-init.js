@@ -53,6 +53,17 @@ export async function initializeDatabase() {
     await client.query(schemaSQL);
     console.log('✅ Database schema initialized');
     
+    // Load and execute demo data
+    try {
+      const seedPath = path.join(__dirname, 'seed-demo.sql');
+      const seedSQL = await fs.readFile(seedPath, 'utf8');
+      
+      await client.query(seedSQL);
+      console.log('✅ Demo data initialized');
+    } catch (seedError) {
+      console.log('⚠️ Demo data seeding skipped (file may not exist or already exists)');
+    }
+    
     client.release();
     
     return pool;
@@ -98,7 +109,13 @@ export function getDatabase() {
     async run(sql, params = []) {
       const client = await pool.connect();
       try {
-        const result = await client.query(sql, params);
+        // For INSERT statements, add RETURNING id if not present
+        let modifiedSql = sql;
+        if (sql.toUpperCase().includes('INSERT INTO') && !sql.toUpperCase().includes('RETURNING')) {
+          modifiedSql = sql + ' RETURNING id';
+        }
+        
+        const result = await client.query(modifiedSql, params);
         return {
           lastID: result.rows[0]?.id,
           changes: result.rowCount
