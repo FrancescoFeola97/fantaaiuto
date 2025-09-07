@@ -61,8 +61,6 @@ export interface AppSettings {
   
   // Avanzate
   allowNegativeBudget: boolean
-  enableMultiRole: boolean
-  customRoles: string[]
   leagueName: string
   season: string
 }
@@ -117,17 +115,22 @@ const DEFAULT_SETTINGS: AppSettings = {
   exportFormat: 'excel',
   
   allowNegativeBudget: false,
-  enableMultiRole: true,
-  customRoles: [],
   leagueName: 'La Mia Lega',
   season: '2024/25'
 }
 
 interface SettingsProps {
   onBackToPlayers: () => void
+  players?: Array<{
+    id: string
+    nome: string
+    prezzoAtteso?: number
+    interessante: boolean
+  }>
+  onUpdatePlayers?: (updates: Array<{id: string, prezzoAtteso?: number, interessante: boolean}>) => void
 }
 
-export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
+export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers, players = [], onUpdatePlayers }) => {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'general' | 'limits' | 'auction' | 'display' | 'notifications' | 'advanced'>('general')
@@ -214,21 +217,36 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
     setIsDirty(true)
   }
 
-  const exportSettings = () => {
-    const dataStr = JSON.stringify(settings, null, 2)
+  const exportPlayerChoices = () => {
+    // Esporta solo giocatori con prezzoAtteso o interessante settati
+    const playerChoices = players.filter(p => p.prezzoAtteso || p.interessante).map(p => ({
+      id: p.id,
+      nome: p.nome,
+      prezzoAtteso: p.prezzoAtteso,
+      interessante: p.interessante
+    }))
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      totalPlayers: players.length,
+      savedChoices: playerChoices.length,
+      choices: playerChoices
+    }
+
+    const dataStr = JSON.stringify(exportData, null, 2)
     const blob = new Blob([dataStr], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `fantaaiuto-settings-${new Date().toISOString().split('T')[0]}.json`
+    link.download = `fantaaiuto-scelte-${new Date().toISOString().split('T')[0]}.json`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-    success('📥 Impostazioni esportate!')
+    success(`📥 Esportate ${playerChoices.length} scelte giocatori!`)
   }
 
-  const importSettings = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const importPlayerChoices = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -236,11 +254,29 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
     reader.onload = (e) => {
       try {
         const imported = JSON.parse(e.target?.result as string)
-        setSettings({ ...DEFAULT_SETTINGS, ...imported })
-        setIsDirty(true)
-        success('📤 Impostazioni importate!')
+        
+        if (!imported.choices || !Array.isArray(imported.choices)) {
+          throw new Error('Formato file non valido')
+        }
+
+        // Applica le scelte importate
+        const updates = imported.choices.map((choice: any) => ({
+          id: choice.id,
+          prezzoAtteso: choice.prezzoAtteso || undefined,
+          interessante: choice.interessante || false
+        }))
+
+        if (onUpdatePlayers) {
+          onUpdatePlayers(updates)
+          success(`📤 Importate ${updates.length} scelte giocatori!`)
+        } else {
+          error('❌ Impossibile applicare le importazioni')
+        }
+        
+        // Reset input file
+        event.target.value = ''
       } catch (err) {
-        error('❌ File impostazioni non valido')
+        error('❌ File scelte giocatori non valido')
       }
     }
     reader.readAsText(file)
@@ -452,28 +488,34 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
               </div>
             </div>
 
-            <div className="flex space-x-3">
-              <button
-                onClick={exportSettings}
-                className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-colors"
-              >
-                📥 Esporta Impostazioni
-              </button>
-              <label className="px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg border border-green-200 transition-colors cursor-pointer">
-                📤 Importa Impostazioni
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={importSettings}
-                  className="hidden"
-                />
-              </label>
-              <button
-                onClick={resetSettings}
-                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg border border-red-200 transition-colors"
-              >
-                🔄 Ripristina Default
-              </button>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">💾 Backup delle tue scelte</h4>
+              <p className="text-xs text-gray-600 mb-3">
+                Salva ed importa i tuoi prezzi attesi e giocatori interessanti per non perdere il lavoro di analisi.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={exportPlayerChoices}
+                  className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg border border-blue-200 transition-colors"
+                >
+                  📥 Esporta Scelte
+                </button>
+                <label className="px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg border border-green-200 transition-colors cursor-pointer">
+                  📤 Importa Scelte
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={importPlayerChoices}
+                    className="hidden"
+                  />
+                </label>
+                <button
+                  onClick={resetSettings}
+                  className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg border border-red-200 transition-colors"
+                >
+                  🔄 Reset Impostazioni
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -714,16 +756,6 @@ export const Settings: React.FC<SettingsProps> = ({ onBackToPlayers }) => {
         {activeTab === 'advanced' && (
           <div className="space-y-6">
             <div className="space-y-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={settings.enableMultiRole}
-                  onChange={(e) => updateSetting('enableMultiRole', e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">Abilita giocatori multi-ruolo</span>
-              </label>
-
               <label className="flex items-center">
                 <input
                   type="checkbox"

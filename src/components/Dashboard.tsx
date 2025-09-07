@@ -638,6 +638,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           {currentView === 'settings' && (
             <Settings 
               onBackToPlayers={handleBackToPlayers}
+              players={players}
+              onUpdatePlayers={(updates) => {
+                // Applica gli aggiornamenti ai giocatori
+                updates.forEach(update => {
+                  updatePlayer(update.id, {
+                    prezzoAtteso: update.prezzoAtteso,
+                    interessante: update.interessante
+                  })
+                })
+              }}
             />
           )}
         </div>
