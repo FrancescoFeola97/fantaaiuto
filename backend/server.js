@@ -155,7 +155,7 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
-// Start the server
+// Start the server - Deploy test for persistence check
 startServer();
 
 export default app;
