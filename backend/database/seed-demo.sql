@@ -10,7 +10,7 @@ INSERT INTO users (username, email, password_hash, display_name, is_active, crea
 VALUES (
   'demo', 
   'demo@fantaaiuto.com', 
-  '$2b$12$LQv3c1yqBwEHxv03NnzOXeLEiaCKCgFTyJhynkx9mRAaNhCiKZdXe', -- demo123
+  '$2a$12$qGm1rnwpW4KB8tpsQ5d27OY16Bj6ofgwWVSwv2Iae5F1mNtEdHCwu', -- demo123 (verified hash)
   'Demo User',
   true,
   CURRENT_TIMESTAMP,
