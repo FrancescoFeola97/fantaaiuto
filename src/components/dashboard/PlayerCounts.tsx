@@ -1,6 +1,7 @@
 import React from 'react'
 import { PlayerData } from '../../types/Player'
 import { useAppSettings } from './Settings'
+import { RoleCircle } from '../../utils/roleColors'
 
 interface PlayerCountsProps {
   players: PlayerData[]
@@ -13,25 +14,25 @@ export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRole
   const settings = useAppSettings()
   
   const mantraRoles = [
-    { key: 'Por', label: '🥅 Portieri', emoji: '🥅' },
-    { key: 'Ds', label: '🛡️ Dif. Sx', emoji: '🛡️' },
-    { key: 'Dd', label: '🛡️ Dif. Dx', emoji: '🛡️' },
-    { key: 'Dc', label: '🛡️ Dif. Cen.', emoji: '🛡️' },
-    { key: 'B', label: '🛡️ Braccetto', emoji: '🛡️' },
-    { key: 'E', label: '⚽ Esterni', emoji: '⚽' },
-    { key: 'M', label: '⚽ Mediani', emoji: '⚽' },
-    { key: 'C', label: '⚽ Centrocamp.', emoji: '⚽' },
-    { key: 'W', label: '💜 Ali', emoji: '💜' },
-    { key: 'T', label: '💜 Trequart.', emoji: '💜' },
-    { key: 'A', label: '🚀 Attaccanti', emoji: '🚀' },
-    { key: 'Pc', label: '🚀 Punte Cen.', emoji: '🚀' }
+    { key: 'Por', label: 'Portieri' },
+    { key: 'Ds', label: 'Dif. Sx' },
+    { key: 'Dd', label: 'Dif. Dx' },
+    { key: 'Dc', label: 'Dif. Cen.' },
+    { key: 'B', label: 'Braccetto' },
+    { key: 'E', label: 'Esterni' },
+    { key: 'M', label: 'Mediani' },
+    { key: 'C', label: 'Centrocamp.' },
+    { key: 'W', label: 'Ali' },
+    { key: 'T', label: 'Trequart.' },
+    { key: 'A', label: 'Attaccanti' },
+    { key: 'Pc', label: 'Punte Cen.' }
   ]
 
   const classicRoles = [
-    { key: 'P', label: '🥅 Portieri', emoji: '🥅' },
-    { key: 'D', label: '🛡️ Difensori', emoji: '🛡️' },
-    { key: 'C', label: '⚽ Centrocampisti', emoji: '⚽' },
-    { key: 'A', label: '🚀 Attaccanti', emoji: '🚀' }
+    { key: 'P', label: 'Portieri' },
+    { key: 'D', label: 'Difensori' },
+    { key: 'C', label: 'Centrocampisti' },
+    { key: 'A', label: 'Attaccanti' }
   ]
 
   const currentRoles = settings.gameMode === 'Classic' ? classicRoles : mantraRoles
@@ -81,7 +82,10 @@ export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRole
                 : 'hover:bg-gray-50'
             }`}
           >
-            <span className="text-sm text-gray-600">{role.label}</span>
+            <div className="flex items-center gap-2">
+              <RoleCircle role={role.key} gameMode={settings.gameMode} size="sm" />
+              <span className="text-sm text-gray-600">{role.label}</span>
+            </div>
             <span className="text-sm font-medium text-gray-900">{count}</span>
           </button>
         )

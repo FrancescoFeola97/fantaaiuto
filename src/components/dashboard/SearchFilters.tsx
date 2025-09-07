@@ -1,5 +1,6 @@
 import React from 'react'
 import { useAppSettings } from './Settings'
+import { RoleCircle } from '../../utils/roleColors'
 
 interface SearchFiltersProps {
   searchQuery: string
@@ -26,26 +27,26 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
 
   const getMantraRoleOptions = () => [
     { value: 'all', label: 'Tutti i ruoli' },
-    { value: 'Por', label: '🥅 Portieri' },
-    { value: 'Ds', label: '🛡️ Dif. Sx' },
-    { value: 'Dd', label: '🛡️ Dif. Dx' },
-    { value: 'Dc', label: '🛡️ Dif. Cen.' },
-    { value: 'B', label: '🛡️ Braccetto' },
-    { value: 'E', label: '⚽ Esterni' },
-    { value: 'M', label: '⚽ Mediani' },
-    { value: 'C', label: '⚽ Centrocamp.' },
-    { value: 'W', label: '💜 Ali' },
-    { value: 'T', label: '💜 Trequart.' },
-    { value: 'A', label: '🚀 Attaccanti' },
-    { value: 'Pc', label: '🚀 Punte Cen.' }
+    { value: 'Por', label: 'Portieri' },
+    { value: 'Ds', label: 'Dif. Sx' },
+    { value: 'Dd', label: 'Dif. Dx' },
+    { value: 'Dc', label: 'Dif. Cen.' },
+    { value: 'B', label: 'Braccetto' },
+    { value: 'E', label: 'Esterni' },
+    { value: 'M', label: 'Mediani' },
+    { value: 'C', label: 'Centrocamp.' },
+    { value: 'W', label: 'Ali' },
+    { value: 'T', label: 'Trequart.' },
+    { value: 'A', label: 'Attaccanti' },
+    { value: 'Pc', label: 'Punte Cen.' }
   ]
 
   const getClassicRoleOptions = () => [
     { value: 'all', label: 'Tutti i ruoli' },
-    { value: 'P', label: '🥅 Portieri' },
-    { value: 'D', label: '🛡️ Difensori' },
-    { value: 'C', label: '⚽ Centrocampisti' },
-    { value: 'A', label: '🚀 Attaccanti' }
+    { value: 'P', label: 'Portieri' },
+    { value: 'D', label: 'Difensori' },
+    { value: 'C', label: 'Centrocampisti' },
+    { value: 'A', label: 'Attaccanti' }
   ]
 
   const currentRoleOptions = settings.gameMode === 'Classic' ? getClassicRoleOptions() : getMantraRoleOptions()
@@ -96,17 +97,22 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             ⭐ Solo Interessanti
           </button>
           
-          <select 
-            value={roleFilter}
-            onChange={(e) => onRoleFilterChange(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {currentRoleOptions.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            {roleFilter !== 'all' && (
+              <RoleCircle role={roleFilter} gameMode={settings.gameMode} size="sm" />
+            )}
+            <select 
+              value={roleFilter}
+              onChange={(e) => onRoleFilterChange(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {currentRoleOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
           
           <button 
             onClick={onClearFilters}

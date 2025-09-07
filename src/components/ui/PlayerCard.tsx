@@ -1,6 +1,7 @@
 import React from 'react'
 import { PlayerData } from '../../types/Player'
 import { useAppSettings } from '../dashboard/Settings'
+import { getRoleColor } from '../../utils/roleColors'
 
 interface PlayerCardProps {
   player: PlayerData
@@ -31,29 +32,36 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
 
   const currentRoles = getCurrentRoles()
 
-  // Get role color based on game mode
-  const getRoleColor = (role: string) => {
-    if (settings.gameMode === 'Classic') {
-      // Classic colors
-      switch (role) {
-        case 'P': return 'bg-orange-200 text-orange-800 border-orange-300' // Arancione chiaro
-        case 'D': return 'bg-green-200 text-green-800 border-green-300' // Verde chiaro
-        case 'C': return 'bg-blue-200 text-blue-800 border-blue-300' // Blu
-        case 'A': return 'bg-red-200 text-red-800 border-red-300' // Rosso
-        default: return 'bg-gray-200 text-gray-800 border-gray-300'
-      }
-    } else {
-      // Mantra colors
-      switch (role) {
-        case 'Por': return 'bg-orange-200 text-orange-800 border-orange-300' // Arancione chiaro
-        case 'Dc': case 'Ds': case 'Dd': case 'B': return 'bg-green-200 text-green-800 border-green-300' // Verde chiaro
-        case 'E': case 'M': case 'C': return 'bg-blue-200 text-blue-800 border-blue-300' // Blu
-        case 'W': case 'T': return 'bg-purple-200 text-purple-800 border-purple-300' // Violetto
-        case 'A': case 'Pc': return 'bg-red-200 text-red-800 border-red-300' // Rosso
-        default: return 'bg-gray-200 text-gray-800 border-gray-300'
-      }
+  // Get team logo URL based on team name - using local assets
+  const getTeamLogo = (teamName: string): string => {
+    const teamLogos: Record<string, string> = {
+      // Serie A 2024/25 - Using local assets for better performance and reliability
+      'Atalanta': '/assets/team-logos/atalanta.png',
+      'Bologna': '/assets/team-logos/bologna.png',
+      'Cagliari': '/assets/team-logos/cagliari.png',
+      'Como': '/assets/team-logos/como.png',
+      'Empoli': '/assets/team-logos/empoli.png',
+      'Fiorentina': '/assets/team-logos/fiorentina.png',
+      'Genoa': '/assets/team-logos/genoa.png',
+      'Inter': '/assets/team-logos/inter.png',
+      'Internazionale': '/assets/team-logos/inter.png',
+      'Juventus': '/assets/team-logos/juventus.png',
+      'Lazio': '/assets/team-logos/lazio.png',
+      'Lecce': '/assets/team-logos/lecce.png',
+      'Milan': '/assets/team-logos/milan.png',
+      'Monza': '/assets/team-logos/monza.png',
+      'Napoli': '/assets/team-logos/napoli.png',
+      'Parma': '/assets/team-logos/parma.png',
+      'Roma': '/assets/team-logos/roma.png',
+      'Torino': '/assets/team-logos/torino.png',
+      'Udinese': '/assets/team-logos/udinese.png',
+      'Venezia': '/assets/team-logos/venezia.png',
+      'Verona': '/assets/team-logos/verona.png'
     }
+
+    return teamLogos[teamName] || `https://ui-avatars.com/api/?name=${teamName}&size=24&background=cccccc&color=666666&bold=true`
   }
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('it-IT', {
@@ -161,28 +169,48 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
 
         {/* Player Header */}
         <div className="flex justify-between items-start mb-3">
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 space-y-2">
+            {/* Nome giocatore */}
             <h4 className="font-semibold text-gray-900 truncate text-base">{player.nome}</h4>
-            <div className="flex items-center space-x-2 mt-1">
-              <p className="text-sm text-gray-600">{player.squadra}</p>
-              <div className="flex gap-1">
-                {currentRoles && currentRoles.length > 0 ? (
-                  currentRoles.map((role, index) => (
-                    <span
-                      key={index}
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium border ${getRoleColor(role)}`}
-                    >
-                      {role}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-800 border border-gray-300 rounded-full font-medium">
-                    N/A
+            
+            {/* Ruoli */}
+            <div className="flex gap-1">
+              {currentRoles && currentRoles.length > 0 ? (
+                currentRoles.map((role, index) => (
+                  <span
+                    key={index}
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium border ${getRoleColor(role, settings.gameMode)}`}
+                  >
+                    {role}
                   </span>
-                )}
-              </div>
+                ))
+              ) : (
+                <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-800 border border-gray-300 rounded-full font-medium">
+                  N/A
+                </span>
+              )}
+            </div>
+
+            {/* Squadra con logo */}
+            <div className="flex items-center gap-2">
+              <img 
+                src={getTeamLogo(player.squadra)} 
+                alt={`Logo ${player.squadra}`}
+                className="w-5 h-5 rounded-full object-cover"
+                onError={(e) => {
+                  // Fallback locale se l'immagine non carica
+                  e.currentTarget.src = `data:image/svg+xml;base64,${btoa(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <text x="12" y="16" text-anchor="middle" font-size="8" fill="#666666">${player.squadra.slice(0,3).toUpperCase()}</text>
+                    </svg>
+                  `)}`
+                }}
+              />
+              <p className="text-sm text-gray-600 font-medium">{player.squadra}</p>
             </div>
           </div>
+          
           <button
             onClick={handleToggleInterest}
             className={`p-1.5 rounded-full transition-all ${
