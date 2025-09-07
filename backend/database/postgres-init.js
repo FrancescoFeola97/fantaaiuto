@@ -8,31 +8,60 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // PostgreSQL connection configuration
-const connectionConfig = {
-  host: 'db.aeclnikdyepiqjymmicw.supabase.co',
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres',
-  password: 'Deployfantaiuto97!!',
-  ssl: { rejectUnauthorized: false },
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-  family: 4, // Force IPv4
-};
+const connectionConfig = process.env.DATABASE_URL 
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false
+      },
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 20000
+    }
+  : {
+      host: 'db.aeclnikdyepiqjymmicw.supabase.co',
+      port: 5432,
+      database: 'postgres',
+      user: 'postgres',
+      password: 'Deployfantaiuto97!!',
+      ssl: {
+        rejectUnauthorized: false
+      },
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 20000,
+      family: 4,
+      keepAlive: true
+    };
 
 let pool;
 
 export async function initializeDatabase() {
   try {
     console.log('Using Supabase PostgreSQL connection...');
+    console.log('🔧 DATABASE_URL present:', !!process.env.DATABASE_URL);
+    console.log('🔧 Connection method:', process.env.DATABASE_URL ? 'connectionString' : 'individual params');
+    
+    if (process.env.DATABASE_URL) {
+      console.log('🔧 Using DATABASE_URL for connection');
+    } else {
+      console.log('🔧 Connection config:', {
+        host: connectionConfig.host,
+        port: connectionConfig.port,
+        database: connectionConfig.database,
+        user: connectionConfig.user,
+        ssl: !!connectionConfig.ssl,
+        family: connectionConfig.family
+      });
+    }
 
     console.log('🔄 Initializing PostgreSQL database...');
     
     // Create connection pool
     pool = new Pool(connectionConfig);
     
-    // Test connection
+    // Test connection with timeout
+    console.log('🔗 Attempting database connection...');
     const client = await pool.connect();
     console.log('✅ Connected to PostgreSQL database');
     
@@ -48,6 +77,13 @@ export async function initializeDatabase() {
     return pool;
   } catch (error) {
     console.error('❌ Database initialization failed:', error);
+    console.error('Error details:', {
+      code: error.code,
+      errno: error.errno,
+      syscall: error.syscall,
+      address: error.address,
+      port: error.port
+    });
     throw error;
   }
 }
