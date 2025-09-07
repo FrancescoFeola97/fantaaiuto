@@ -290,16 +290,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       console.error('❌ Failed to sync player update with backend:', error)
       // Keep local change even if backend fails
     }
-    
-    saveData()
   }
 
   const importPlayersFromExcel = async (newPlayers: PlayerData[]) => {
     setIsImporting(true)
     
-    // Show players immediately for better UX (optimistic UI)
+    // Show players immediately for better UX (optimistic UI)  
     setPlayers(newPlayers)
-    saveData()
     
     try {
       console.log('📤 Uploading players to backend...')

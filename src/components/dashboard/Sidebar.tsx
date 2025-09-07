@@ -189,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       try {
         const token = localStorage.getItem('fantaaiuto_token')
         if (!token) {
-          error('❌ Token di autenticazione non trovato')
+          showError('❌ Token di autenticazione non trovato')
           return
         }
 
@@ -221,15 +221,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }, 1500)
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-          error(`❌ Errore nel reset del database: ${errorData.error || 'Errore sconosciuto'}`)
+          showError(`❌ Errore nel reset del database: ${errorData.error || 'Errore sconosciuto'}`)
         }
 
-      } catch (err) {
+      } catch (err: any) {
         console.error('Reset data error:', err)
         if (err.name === 'AbortError') {
-          error('❌ Timeout durante il reset dei dati')
+          showError('❌ Timeout durante il reset dei dati')
         } else {
-          error('❌ Errore durante il reset dei dati')
+          showError('❌ Errore durante il reset dei dati')
         }
       }
     }
