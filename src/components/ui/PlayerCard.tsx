@@ -35,12 +35,12 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
   // Get team logo URL based on team name - using local SVG assets
   const getTeamLogo = (teamName: string): string => {
     const teamLogos: Record<string, string> = {
-      // Serie A 2024/25 - Using local SVG assets for perfect scalability
+      // Teams from Excel file - Using local SVG assets for perfect scalability
       'Atalanta': '/assets/team-logos/atalanta.svg',
       'Bologna': '/assets/team-logos/bologna.svg',
       'Cagliari': '/assets/team-logos/cagliari.svg',
       'Como': '/assets/team-logos/como.svg',
-      'Empoli': '/assets/team-logos/empoli.svg',
+      'Cremonese': '/assets/team-logos/cremonese.svg',
       'Fiorentina': '/assets/team-logos/fiorentina.svg',
       'Genoa': '/assets/team-logos/genoa.svg',
       'Inter': '/assets/team-logos/inter.svg',
@@ -49,13 +49,13 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
       'Lazio': '/assets/team-logos/lazio.svg',
       'Lecce': '/assets/team-logos/lecce.svg',
       'Milan': '/assets/team-logos/milan.svg',
-      'Monza': '/assets/team-logos/monza.svg',
       'Napoli': '/assets/team-logos/napoli.svg',
       'Parma': '/assets/team-logos/parma.svg',
+      'Pisa': '/assets/team-logos/pisa.svg',
       'Roma': '/assets/team-logos/roma.svg',
+      'Sassuolo': '/assets/team-logos/sassuolo.svg',
       'Torino': '/assets/team-logos/torino.svg',
       'Udinese': '/assets/team-logos/udinese.svg',
-      'Venezia': '/assets/team-logos/venezia.svg',
       'Verona': '/assets/team-logos/verona.svg'
     }
 
