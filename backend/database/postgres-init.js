@@ -2,58 +2,49 @@ import pkg from 'pg';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dns from 'dns';
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// PostgreSQL connection configuration
-const connectionConfig = process.env.DATABASE_URL 
-  ? {
-      connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false
-      },
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 20000
-    }
-  : {
-      host: 'db.aeclnikdyepiqjymmicw.supabase.co',
-      port: 5432,
-      database: 'postgres',
-      user: 'postgres',
-      password: 'Deployfantaiuto97!!',
-      ssl: {
-        rejectUnauthorized: false
-      },
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 20000,
-      family: 4,
-      keepAlive: true
-    };
+// Set DNS to prefer IPv4 globally
+dns.setDefaultResultOrder('ipv4first');
+
+// PostgreSQL connection configuration with forced IPv4
+const connectionConfig = {
+  host: 'db.aeclnikdyepiqjymmicw.supabase.co',
+  port: 5432,
+  database: 'postgres',
+  user: 'postgres',
+  password: 'Deployfantaiuto97!!',
+  ssl: {
+    rejectUnauthorized: false
+  },
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 25000,
+  // Force IPv4
+  family: 4,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 30000,
+};
 
 let pool;
 
 export async function initializeDatabase() {
   try {
     console.log('Using Supabase PostgreSQL connection...');
-    console.log('🔧 DATABASE_URL present:', !!process.env.DATABASE_URL);
-    console.log('🔧 Connection method:', process.env.DATABASE_URL ? 'connectionString' : 'individual params');
-    
-    if (process.env.DATABASE_URL) {
-      console.log('🔧 Using DATABASE_URL for connection');
-    } else {
-      console.log('🔧 Connection config:', {
-        host: connectionConfig.host,
-        port: connectionConfig.port,
-        database: connectionConfig.database,
-        user: connectionConfig.user,
-        ssl: !!connectionConfig.ssl,
-        family: connectionConfig.family
-      });
-    }
+    console.log('🔧 DNS order set to:', dns.getDefaultResultOrder());
+    console.log('🔧 Connection config:', {
+      host: connectionConfig.host,
+      port: connectionConfig.port,
+      database: connectionConfig.database,
+      user: connectionConfig.user,
+      ssl: !!connectionConfig.ssl,
+      family: connectionConfig.family,
+      keepAlive: connectionConfig.keepAlive
+    });
 
     console.log('🔄 Initializing PostgreSQL database...');
     
