@@ -128,9 +128,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
         <div className="mt-6 space-y-4">
           <div className="bg-blue-50 p-4 rounded-lg text-center text-sm">
             <p className="font-medium text-gray-900 mb-2">🌐 Account Demo</p>
-            <p className="text-gray-700"><strong>Username:</strong> admin</p>
-            <p className="text-gray-700"><strong>Password:</strong> password</p>
-            <p className="text-xs text-gray-500 mt-2">Backend SQLite</p>
+            <p className="text-gray-700"><strong>Username:</strong> demo</p>
+            <p className="text-gray-700"><strong>Password:</strong> demo123</p>
+            <p className="text-xs text-gray-500 mt-2">Backend PostgreSQL (Supabase)</p>
           </div>
           
           {onRegisterClick && (
