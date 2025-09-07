@@ -11,39 +11,29 @@ const __dirname = path.dirname(__filename);
 // Set DNS to prefer IPv4 globally
 dns.setDefaultResultOrder('ipv4first');
 
-// PostgreSQL connection configuration with forced IPv4
+// PostgreSQL connection configuration using Supabase Session Pooler (IPv4-optimized)
 const connectionConfig = {
-  host: 'db.aeclnikdyepiqjymmicw.supabase.co',
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres',
-  password: 'Deployfantaiuto97!!',
+  connectionString: 'postgresql://postgres.aeclnikdyepiqjymmicw:Deployfantaiuto97!!@aws-1-eu-central-2.pooler.supabase.com:5432/postgres',
   ssl: {
     rejectUnauthorized: false
   },
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 25000,
-  // Force IPv4
-  family: 4,
-  keepAlive: true,
-  keepAliveInitialDelayMillis: 30000,
 };
 
 let pool;
 
 export async function initializeDatabase() {
   try {
-    console.log('Using Supabase PostgreSQL connection...');
+    console.log('Using Supabase PostgreSQL Session Pooler (IPv4-optimized)...');
     console.log('🔧 DNS order set to:', dns.getDefaultResultOrder());
+    console.log('🔧 Using Session Pooler connection string');
     console.log('🔧 Connection config:', {
-      host: connectionConfig.host,
-      port: connectionConfig.port,
-      database: connectionConfig.database,
-      user: connectionConfig.user,
+      pooler: 'aws-1-eu-central-2.pooler.supabase.com',
       ssl: !!connectionConfig.ssl,
-      family: connectionConfig.family,
-      keepAlive: connectionConfig.keepAlive
+      max: connectionConfig.max,
+      timeout: connectionConfig.connectionTimeoutMillis
     });
 
     console.log('🔄 Initializing PostgreSQL database...');
