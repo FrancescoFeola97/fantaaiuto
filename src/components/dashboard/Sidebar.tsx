@@ -184,15 +184,54 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return [...new Set(mappedRoles)]
   }
 
-  const handleResetData = () => {
-    if (confirm('⚠️ Sei sicuro di voler cancellare tutti i dati? Questa azione è irreversibile.')) {
-      const token = localStorage.getItem('fantaaiuto_token')
-      localStorage.clear()
-      if (token) {
-        localStorage.setItem('fantaaiuto_token', token)
+  const handleResetData = async () => {
+    if (confirm('⚠️ Sei sicuro di voler cancellare tutti i dati? Questa azione è irreversibile.\n\nVerranno eliminati:\n- Tutti i giocatori importati\n- Formazioni create\n- Partecipanti\n- Immagini formazioni\n\nDovrai ricaricare l\'Excel per riavere i dati.')) {
+      try {
+        const token = localStorage.getItem('fantaaiuto_token')
+        if (!token) {
+          error('❌ Token di autenticazione non trovato')
+          return
+        }
+
+        // Call backend to reset database data
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000)
+        
+        const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players/reset', {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          signal: controller.signal
+        })
+        
+        clearTimeout(timeoutId)
+
+        if (response.ok) {
+          // Clear localStorage after successful backend reset
+          localStorage.clear()
+          if (token) {
+            localStorage.setItem('fantaaiuto_token', token)
+          }
+          success('🔄 Tutti i dati sono stati eliminati dal database. Ricarica l\'Excel per ripristinare i giocatori.')
+          
+          // Reload page to refresh UI
+          setTimeout(() => {
+            location.reload()
+          }, 1500)
+        } else {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+          error(`❌ Errore nel reset del database: ${errorData.error || 'Errore sconosciuto'}`)
+        }
+
+      } catch (err) {
+        console.error('Reset data error:', err)
+        if (err.name === 'AbortError') {
+          error('❌ Timeout durante il reset dei dati')
+        } else {
+          error('❌ Errore durante il reset dei dati')
+        }
       }
-      success('🔄 Dati resettati con successo')
-      location.reload()
     }
   }
 

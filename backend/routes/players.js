@@ -4,6 +4,53 @@ import { getDatabase } from '../database/postgres-init.js';
 
 const router = express.Router();
 
+// Reset all user data - clears all players and related data for authenticated user
+router.delete('/reset', async (req, res, next) => {
+  try {
+    const db = getDatabase();
+    const userId = req.user.id;
+    
+    console.log('🔄 Resetting all data for user:', userId);
+    
+    // Delete user-specific data in correct order (foreign keys)
+    await db.run('DELETE FROM participant_players WHERE user_id = ?', [userId]);
+    console.log('✅ Deleted participant_players for user:', userId);
+    
+    await db.run('DELETE FROM user_players WHERE user_id = ?', [userId]);
+    console.log('✅ Deleted user_players for user:', userId);
+    
+    await db.run('DELETE FROM participants WHERE user_id = ?', [userId]);
+    console.log('✅ Deleted participants for user:', userId);
+    
+    await db.run('DELETE FROM formations WHERE user_id = ?', [userId]);
+    console.log('✅ Deleted formations for user:', userId);
+    
+    await db.run('DELETE FROM formation_images WHERE user_id = ?', [userId]);
+    console.log('✅ Deleted formation_images for user:', userId);
+    
+    // Optional: Clean up master_players that are no longer referenced
+    // (This keeps master players for other users, only removes orphaned ones)
+    await db.run(`
+      DELETE FROM master_players 
+      WHERE id NOT IN (
+        SELECT DISTINCT master_player_id 
+        FROM user_players 
+        WHERE master_player_id IS NOT NULL
+      )
+    `);
+    console.log('✅ Cleaned up orphaned master_players');
+    
+    res.json({
+      success: true,
+      message: 'All user data has been reset successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Reset data error:', error);
+    next(error);
+  }
+});
+
 // Debug endpoint to check database connection
 router.get('/debug', async (req, res) => {
   try {
