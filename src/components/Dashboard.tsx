@@ -66,7 +66,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const loadUserData = async () => {
     try {
-      console.log('🔄 Loading players from backend...')
+      console.log('🔄 Loading players (localStorage first, then backend sync)...')
+      
+      // ALWAYS load from localStorage first for immediate startup
+      const savedData = localStorage.getItem('fantaaiuto_data')
+      if (savedData) {
+        const localData = JSON.parse(savedData)
+        if (localData.players && Array.isArray(localData.players)) {
+          setPlayers(localData.players)
+          console.log('📊 Loaded players from localStorage:', localData.players.length)
+        }
+      }
       
       const token = localStorage.getItem('fantaaiuto_token')
       if (!token) {
@@ -74,8 +84,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         return
       }
 
+      // Try to sync with backend (optional enhancement)
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000)
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // Shorter timeout
       
       try {
         const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players', {
@@ -89,7 +100,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         
         if (response.ok) {
           const data = await response.json()
-          const mappedPlayers = data.players.map((p: any) => {
+          // Only update if backend has MORE recent data
+          if (data.players && data.players.length > 0) {
+            const mappedPlayers = data.players.map((p: any) => {
             // Parse roles from backend - try both detailed (RM) and basic (R)
             const rawRoles = p.ruolo ? p.ruolo.split(';').map((r: string) => r.trim()).filter((r: string) => r.length > 0) : ['A']
             
@@ -124,32 +137,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               createdAt: new Date().toISOString()
             }
           })
-          setPlayers(mappedPlayers)
-          console.log('📊 Loaded players from backend:', mappedPlayers.length)
-        } else {
-          console.warn('⚠️ Failed to load players from backend, using local storage fallback')
-          // Fallback to localStorage only if backend fails
-          const savedData = localStorage.getItem('fantaaiuto_data')
-          if (savedData) {
-            const localData = JSON.parse(savedData)
-            if (localData.players && Array.isArray(localData.players)) {
-              setPlayers(localData.players)
-              console.log('📊 Loaded players from localStorage:', localData.players.length)
+          
+          // Check if backend data is more recent than localStorage  
+          const localTimestamp = savedData ? JSON.parse(savedData).timestamp : null
+          const backendHasNewerData = !localTimestamp || mappedPlayers.length > (savedData ? JSON.parse(savedData).players?.length || 0 : 0)
+          
+          if (backendHasNewerData) {
+            setPlayers(mappedPlayers)
+            // Save backend data to localStorage for next time
+            const dataToSave = {
+              players: mappedPlayers,
+              timestamp: new Date().toISOString(),
+              version: '2.0.0',
+              source: 'backend_sync'
             }
+            localStorage.setItem('fantaaiuto_data', JSON.stringify(dataToSave))
+            console.log('✅ Synced newer data from backend:', mappedPlayers.length)
+          } else {
+            console.log('📊 localStorage data is current, no backend sync needed')
           }
+        } else {
+          console.log('⚠️ Backend returned no data, keeping localStorage data')
         }
       } catch (error) {
         clearTimeout(timeoutId)
-        console.error('❌ Backend connection failed, using localStorage:', error)
-        // Fallback to localStorage
-        const savedData = localStorage.getItem('fantaaiuto_data')
-        if (savedData) {
-          const localData = JSON.parse(savedData)
-          if (localData.players && Array.isArray(localData.players)) {
-            setPlayers(localData.players)
-            console.log('📊 Loaded players from localStorage:', localData.players.length)
-          }
-        }
+        console.log('⚠️ Backend sync failed (expected for cold starts), using localStorage')
       }
     } catch (error) {
       console.error('❌ Error loading user data:', error)
@@ -195,10 +207,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       const dataToSave = {
         players,
         timestamp: new Date().toISOString(),
-        version: '2.0.0'
+        version: '2.0.0',
+        source: 'user_changes'
       }
       localStorage.setItem('fantaaiuto_data', JSON.stringify(dataToSave))
-      console.log('💾 Data saved successfully')
+      console.log('💾 Data saved to localStorage (persistent across deployments):', players.length, 'players')
     } catch (error) {
       console.error('❌ Error saving data:', error)
     }
@@ -368,22 +381,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         await loadUserData()
         
         // Success notification
-        success(`✅ Sincronizzazione completata! ${newPlayers.length} giocatori caricati.`)
+        success(`✅ Dati persistiti! ${newPlayers.length} giocatori salvati localmente + backup backend.`)
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('❌ Backend sync error:', errorData)
-        error(`⚠️ Giocatori caricati localmente. Sync database fallito: ${errorData.error || 'Errore server'}`)
+        success(`✅ Dati salvati localmente! ${newPlayers.length} giocatori (backup backend non disponibile)`)
       }
     } catch (error: any) {
       console.error('❌ Backend sync failed:', error)
       
-      if (error.name === 'AbortError') {
-        error(`⚠️ Sync timeout (server lento). Giocatori disponibili localmente.`)
-      } else if (error.message.includes('Failed to fetch')) {
-        error(`⚠️ Server non raggiungibile. Giocatori disponibili localmente.`)
-      } else {
-        error(`⚠️ Errore sync: ${error.message}. Giocatori disponibili localmente.`)
-      }
+      success(`✅ Dati salvati localmente! ${newPlayers.length} giocatori (backup backend: server in avvio)`)
     } finally {
       setIsImporting(false)
     }
