@@ -4,6 +4,39 @@ import { getDatabase } from '../database/postgres-init.js';
 
 const router = express.Router();
 
+// Debug endpoint to check database connection
+router.get('/debug', async (req, res) => {
+  try {
+    const db = getDatabase();
+    const userId = req.user.id;
+    
+    console.log('🔍 Debug: user ID:', userId);
+    
+    // Test basic query
+    const testQuery = await db.get('SELECT COUNT(*) as count FROM users WHERE id = ?', [userId]);
+    console.log('🔍 Debug: user exists:', testQuery);
+    
+    // Test master_players table
+    const playersCount = await db.get('SELECT COUNT(*) as count FROM master_players');
+    console.log('🔍 Debug: master_players count:', playersCount);
+    
+    res.json({
+      success: true,
+      userId,
+      userExists: testQuery,
+      playersCount: playersCount
+    });
+    
+  } catch (error) {
+    console.error('❌ Debug endpoint error:', error);
+    res.status(500).json({
+      error: 'Debug failed',
+      message: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Get all players for the authenticated user
 router.get('/', [
   query('status').optional().isIn(['available', 'owned', 'removed', 'interesting']),
