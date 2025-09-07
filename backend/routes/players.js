@@ -28,9 +28,9 @@ router.get('/', [
 
     // Add status filtering
     if (status === 'interesting') {
-      whereClause += ' AND up.interessante = 1';
+      whereClause += ' AND up.interessante = true';
     } else if (status) {
-      whereClause += ' AND COALESCE(up.status, "available") = ?';
+      whereClause += ' AND COALESCE(up.status, \'available\') = ?';
       params.push(status);
     }
 
@@ -57,8 +57,8 @@ router.get('/', [
         mp.fvm,
         mp.season,
         COALESCE(up.status, 'available') as status,
-        COALESCE(up.interessante, 0) as interessante,
-        COALESCE(up.rimosso, 0) as rimosso,
+        COALESCE(up.interessante, false) as interessante,
+        COALESCE(up.rimosso, false) as rimosso,
         up.costo_reale,
         up.prezzo_atteso,
         up.acquistatore,
