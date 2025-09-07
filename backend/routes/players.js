@@ -365,15 +365,14 @@ router.patch('/:playerId/status', [
 
     const updateData = {
       status,
-      interessante: status === 'interesting' ? 1 : 0,
-      rimosso: status === 'removed' ? 1 : 0,
+      interessante: status === 'interesting',
+      rimosso: status === 'removed',
       costo_reale: costoReale || 0,
       prezzo_atteso: prezzoAtteso || 0,
       acquistatore: acquistatore || null,
       note: note || null,
-      data_acquisto: status === 'owned' ? new Date().toISOString() : null,
-      data_rimozione: status === 'removed' ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString()
+      data_acquisto: status === 'owned' ? 'CURRENT_TIMESTAMP' : null,
+      data_rimozione: status === 'removed' ? 'CURRENT_TIMESTAMP' : null
     };
 
     if (userPlayer) {
@@ -381,24 +380,30 @@ router.patch('/:playerId/status', [
       await db.run(`
         UPDATE user_players 
         SET status = ?, interessante = ?, rimosso = ?, costo_reale = ?, prezzo_atteso = ?, 
-            acquistatore = ?, note = ?, data_acquisto = ?, data_rimozione = ?, updated_at = ?
+            acquistatore = ?, note = ?, 
+            data_acquisto = CASE WHEN ? = 'owned' THEN CURRENT_TIMESTAMP ELSE data_acquisto END,
+            data_rimozione = CASE WHEN ? = 'removed' THEN CURRENT_TIMESTAMP ELSE data_rimozione END,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `, [
         updateData.status, updateData.interessante, updateData.rimosso,
         updateData.costo_reale, updateData.prezzo_atteso, updateData.acquistatore,
-        updateData.note, updateData.data_acquisto, updateData.data_rimozione, 
-        updateData.updated_at, userPlayer.id
+        updateData.note, status, status, userPlayer.id
       ]);
     } else {
       // Create new record
       await db.run(`
         INSERT INTO user_players (user_id, master_player_id, status, interessante, rimosso, 
-                                 costo_reale, prezzo_atteso, acquistatore, note, data_acquisto, data_rimozione)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 costo_reale, prezzo_atteso, acquistatore, note,
+                                 data_acquisto, data_rimozione, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
+                CASE WHEN ? = 'owned' THEN CURRENT_TIMESTAMP ELSE NULL END,
+                CASE WHEN ? = 'removed' THEN CURRENT_TIMESTAMP ELSE NULL END,
+                CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `, [
         userId, playerId, updateData.status, updateData.interessante, updateData.rimosso,
         updateData.costo_reale, updateData.prezzo_atteso, updateData.acquistatore,
-        updateData.note, updateData.data_acquisto, updateData.data_rimozione
+        updateData.note, status, status
       ]);
     }
 
