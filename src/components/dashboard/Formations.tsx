@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { PlayerData } from '../../types/Player'
 import { Formation, FORMATIONS, Lineup } from '../../types/Formation'
+import { useAppSettings } from './Settings'
 
 interface FormationsProps {
   players: PlayerData[]
@@ -8,12 +9,16 @@ interface FormationsProps {
 }
 
 export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers }) => {
+  const settings = useAppSettings()
   const [selectedFormation, setSelectedFormation] = useState<Formation | null>(null)
   const [lineup, setLineup] = useState<Lineup>({ formationId: '', starters: [], bench: [] })
   const [error, setError] = useState('')
   const [showFormationSelector, setShowFormationSelector] = useState(true)
 
   const ownedPlayers = players.filter(p => p.status === 'owned')
+  
+  // Calculate maximum bench size: maxPlayersPerTeam - 11 starters
+  const maxBenchSize = Math.max(0, settings.maxPlayersPerTeam - 11)
 
   useEffect(() => {
     loadSavedLineup()
@@ -122,7 +127,7 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
         bench: lineup.bench.filter(id => id !== playerId)
       }
       saveLineup(newLineup)
-    } else if (!isStarter && lineup.bench.length < 19) {
+    } else if (!isStarter && lineup.bench.length < maxBenchSize) {
       // Add to bench
       const newLineup: Lineup = {
         ...lineup,
@@ -259,7 +264,7 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
           <div>
             <h2 className="text-xl font-bold text-gray-900">⚽ Formazione {selectedFormation.displayName}</h2>
             <p className="text-sm text-gray-600">
-              {lineup.starters.length}/11 titolari • {lineup.bench.length}/19 in panchina
+              {lineup.starters.length}/11 titolari • {lineup.bench.length}/{maxBenchSize} in panchina
             </p>
           </div>
           <div className="flex space-x-2">
@@ -400,7 +405,7 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
                     {/* Bench button */}
                     <button
                       onClick={() => handleBenchToggle(player.id)}
-                      disabled={lineup.bench.length >= 19}
+                      disabled={lineup.bench.length >= maxBenchSize}
                       className="py-1 px-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded text-xs border border-orange-200 transition-colors disabled:opacity-50"
                     >
                       Panchina
@@ -415,7 +420,7 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
         {/* Bench */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            🪑 Panchina ({lineup.bench.length}/19)
+            🪑 Panchina ({lineup.bench.length}/{maxBenchSize})
           </h3>
           
           {lineup.bench.length === 0 ? (

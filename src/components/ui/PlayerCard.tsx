@@ -31,6 +31,30 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
 
   const currentRoles = getCurrentRoles()
 
+  // Get role color based on game mode
+  const getRoleColor = (role: string) => {
+    if (settings.gameMode === 'Classic') {
+      // Classic colors
+      switch (role) {
+        case 'P': return 'bg-orange-200 text-orange-800 border-orange-300' // Arancione chiaro
+        case 'D': return 'bg-green-200 text-green-800 border-green-300' // Verde chiaro
+        case 'C': return 'bg-blue-200 text-blue-800 border-blue-300' // Blu
+        case 'A': return 'bg-red-200 text-red-800 border-red-300' // Rosso
+        default: return 'bg-gray-200 text-gray-800 border-gray-300'
+      }
+    } else {
+      // Mantra colors
+      switch (role) {
+        case 'Por': return 'bg-orange-200 text-orange-800 border-orange-300' // Arancione chiaro
+        case 'Dc': case 'Ds': case 'Dd': case 'B': return 'bg-green-200 text-green-800 border-green-300' // Verde chiaro
+        case 'E': case 'M': case 'C': return 'bg-blue-200 text-blue-800 border-blue-300' // Blu
+        case 'W': case 'T': return 'bg-purple-200 text-purple-800 border-purple-300' // Violetto
+        case 'A': case 'Pc': return 'bg-red-200 text-red-800 border-red-300' // Rosso
+        default: return 'bg-gray-200 text-gray-800 border-gray-300'
+      }
+    }
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('it-IT', {
       minimumFractionDigits: 0,
@@ -141,9 +165,22 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
             <h4 className="font-semibold text-gray-900 truncate text-base">{player.nome}</h4>
             <div className="flex items-center space-x-2 mt-1">
               <p className="text-sm text-gray-600">{player.squadra}</p>
-              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
-                {currentRoles?.join('/') || 'N/A'}
-              </span>
+              <div className="flex gap-1">
+                {currentRoles && currentRoles.length > 0 ? (
+                  currentRoles.map((role, index) => (
+                    <span
+                      key={index}
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium border ${getRoleColor(role)}`}
+                    >
+                      {role}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-800 border border-gray-300 rounded-full font-medium">
+                    N/A
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <button
@@ -362,7 +399,7 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
               {purchaseType === 'other' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Acquistatore
+                    Acquirente
                   </label>
                   {participants && participants.length > 0 ? (
                     <select
