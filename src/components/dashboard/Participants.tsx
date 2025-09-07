@@ -65,7 +65,19 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
 
       if (response.ok) {
         const data = await response.json()
-        setParticipants(data.participants || [])
+        console.log('📊 Participants loaded:', data)
+        
+        // Map backend data to frontend structure
+        const mappedParticipants = (data.participants || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          squadra: p.name, // Use name as squadra for compatibility
+          budget: settings.defaultBudget, // Use settings budget since backend doesn't store it
+          playersCount: p.playersCount || 0,
+          createdAt: p.createdAt
+        }))
+        
+        setParticipants(mappedParticipants)
       } else {
         throw new Error('Errore caricamento partecipanti')
       }
@@ -86,12 +98,12 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
     if (!newParticipantName.trim()) return
 
     const name = newParticipantName.trim()
-    const squadra = name // Use name as team name
-    const budget = settings.defaultBudget // Use settings budget
 
     try {
       const token = localStorage.getItem('fantaaiuto_token')
       if (!token) return
+
+      console.log('🔄 Creating participant:', { name })
 
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/participants', {
         method: 'POST',
@@ -99,24 +111,35 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ name, squadra, budget })
+        body: JSON.stringify({ name })
       })
 
       if (response.ok) {
         const data = await response.json()
-        setParticipants(prev => [...prev, data.participant])
+        console.log('✅ Participant created successfully:', data)
+        
+        // Add the new participant with default values for squadra and budget
+        const newParticipant = {
+          ...data.participant,
+          squadra: name, // Use name as team name for display
+          budget: settings.defaultBudget // Use settings budget for display
+        }
+        
+        setParticipants(prev => [...prev, newParticipant])
         
         // Notify other components that participants list has been updated
         window.dispatchEvent(new CustomEvent('fantaaiuto_participants_updated'))
         
         setShowCreateModal(false)
         setNewParticipantName('')
+        success('✅ Partecipante creato con successo!')
       } else {
-        throw new Error('Errore creazione partecipante')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Errore creazione partecipante')
       }
     } catch (error: any) {
       console.error('❌ Errore creazione partecipante:', error)
-      setError(error.message)
+      showError(`❌ Errore: ${error.message}`)
     }
   }
 
@@ -151,14 +174,18 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
 
   const editParticipant = async (participant: Participant) => {
     const newName = prompt('Nome del partecipante:', participant.name)
-    if (!newName) return
+    if (!newName || newName.trim() === '') return
 
-    const newSquadra = newName // Use name as team name (no prompt needed)
-    const newBudget = parseInt(prompt('Budget:', participant.budget.toString()) || participant.budget.toString())
+    const trimmedName = newName.trim()
 
     try {
       const token = localStorage.getItem('fantaaiuto_token')
-      if (!token) return
+      if (!token) {
+        showError('❌ Token di autenticazione non trovato')
+        return
+      }
+
+      console.log('🔄 Updating participant:', { id: participant.id, name: trimmedName })
 
       const response = await fetch(`https://fantaaiuto-backend.onrender.com/api/participants/${participant.id}`, {
         method: 'PUT',
@@ -167,25 +194,30 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
-          name: newName, 
-          squadra: newSquadra, 
-          budget: newBudget 
+          name: trimmedName
         })
       })
 
       if (response.ok) {
+        const updatedData = await response.json()
+        console.log('✅ Participant updated successfully:', updatedData)
+        
+        // Update only the name field since backend doesn't support squadra/budget
         setParticipants(prev => prev.map(p => 
-          p.id === participant.id ? { ...p, name: newName, squadra: newSquadra, budget: newBudget } : p
+          p.id === participant.id ? { ...p, name: trimmedName, squadra: trimmedName } : p
         ))
         
         // Notify other components that participants list has been updated
         window.dispatchEvent(new CustomEvent('fantaaiuto_participants_updated'))
         
-        success('✅ Partecipante modificato con successo!')
+        success('✅ Nome partecipante modificato con successo!')
       } else {
-        throw new Error('Errore modifica partecipante')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('❌ Update error:', errorData)
+        throw new Error(errorData.error || 'Errore modifica partecipante')
       }
     } catch (error: any) {
+      console.error('❌ Error updating participant:', error)
       showError(`❌ Errore: ${error.message}`)
     }
   }

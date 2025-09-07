@@ -292,7 +292,7 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
 
       {/* Formation Field */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="relative bg-gradient-to-b from-green-400 to-green-600 rounded-lg h-96 mb-6 overflow-hidden">
+        <div className="relative bg-gradient-to-b from-green-400 to-green-600 rounded-lg h-[28rem] mb-6 overflow-hidden">
           {/* Field markings */}
           <div className="absolute inset-0">
             {/* Center line */}
