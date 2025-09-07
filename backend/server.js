@@ -19,7 +19,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './middleware/logger.js';
 
 // Import database initialization
-import { initDatabase } from './database/init.js';
+import { initializeDatabase } from './database/postgres-init.js';
 
 // ES6 __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -128,9 +128,9 @@ app.use(errorHandler);
 // Initialize database and start server
 async function startServer() {
   try {
-    console.log('🔄 Initializing database...');
-    await initDatabase();
-    console.log('✅ Database initialized successfully');
+    console.log('🔄 Initializing PostgreSQL database...');
+    await initializeDatabase();
+    console.log('✅ PostgreSQL database initialized successfully');
 
     app.listen(PORT, () => {
       console.log(`🚀 FantaAiuto Backend Server running on port ${PORT}`);

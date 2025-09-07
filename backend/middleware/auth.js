@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { getDatabase } from '../database/init.js';
+import { getDatabase } from '../database/postgres-init.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-in-production';
 

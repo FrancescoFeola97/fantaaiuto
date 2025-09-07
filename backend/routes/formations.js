@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { getDatabase } from '../database/init.js';
+import { getDatabase } from '../database/postgres-init.js';
 import { uploadFormationImage, handleUploadError } from '../middleware/upload.js';
 import path from 'path';
 import fs from 'fs';

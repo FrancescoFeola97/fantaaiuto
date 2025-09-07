@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { getDatabase } from '../database/init.js';
+import { getDatabase } from '../database/postgres-init.js';
 
 const router = express.Router();
 
