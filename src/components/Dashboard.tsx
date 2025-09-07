@@ -66,17 +66,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const loadUserData = async () => {
     try {
-      console.log('🔄 Loading players (localStorage first, then backend sync)...')
-      
-      // ALWAYS load from localStorage first for immediate startup
-      const savedData = localStorage.getItem('fantaaiuto_data')
-      if (savedData) {
-        const localData = JSON.parse(savedData)
-        if (localData.players && Array.isArray(localData.players)) {
-          setPlayers(localData.players)
-          console.log('📊 Loaded players from localStorage:', localData.players.length)
-        }
-      }
+      console.log('🔄 Loading players from backend database...')
       
       const token = localStorage.getItem('fantaaiuto_token')
       if (!token) {
@@ -84,90 +74,71 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         return
       }
 
-      // Try to sync with backend (optional enhancement)
+      // Load data directly from backend PostgreSQL database
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000) // Shorter timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
       
-      try {
-        const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          signal: controller.signal
-        })
-        
-        clearTimeout(timeoutId)
-        
-        if (response.ok) {
-          const data = await response.json()
-          // Only update if backend has MORE recent data
-          if (data.players && data.players.length > 0) {
-            const mappedPlayers = data.players.map((p: any) => {
-              // Parse roles from backend - try both detailed (RM) and basic (R)
-              const rawRoles = p.ruolo ? p.ruolo.split(';').map((r: string) => r.trim()).filter((r: string) => r.length > 0) : ['A']
-              
-              // For existing data, assume these are Mantra roles and generate Classic roles
-              const ruoliMantra = rawRoles
-              const ruoliClassic = rawRoles.map((role: string) => {
-                const roleMapping: Record<string, string> = {
-                  'Por': 'P', 'P': 'P',
-                  'Ds': 'D', 'Dd': 'D', 'Dc': 'D', 'B': 'D', 'D': 'D',
-                  'E': 'C', 'M': 'C', 'C': 'C', 'W': 'C', 'T': 'C',
-                  'A': 'A', 'Pc': 'A'
-                }
-                return roleMapping[role] || 'A'
-              }).filter((role: string, index: number, self: string[]) => self.indexOf(role) === index) // Remove duplicates
+      const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.players && data.players.length > 0) {
+          const mappedPlayers = data.players.map((p: any) => {
+            // Parse roles from backend - try both detailed (RM) and basic (R)
+            const rawRoles = p.ruolo ? p.ruolo.split(';').map((r: string) => r.trim()).filter((r: string) => r.length > 0) : ['A']
+            
+            // For existing data, assume these are Mantra roles and generate Classic roles
+            const ruoliMantra = rawRoles
+            const ruoliClassic = rawRoles.map((role: string) => {
+              const roleMapping: Record<string, string> = {
+                'Por': 'P', 'P': 'P',
+                'Ds': 'D', 'Dd': 'D', 'Dc': 'D', 'B': 'D', 'D': 'D',
+                'E': 'C', 'M': 'C', 'C': 'C', 'W': 'C', 'T': 'C',
+                'A': 'A', 'Pc': 'A'
+              }
+              return roleMapping[role] || 'A'
+            }).filter((role: string, index: number, self: string[]) => self.indexOf(role) === index) // Remove duplicates
 
-              return {
-                id: p.id.toString(),
-                nome: p.nome,
-                squadra: p.squadra,
-                ruoli: ruoliMantra, // Default to Mantra roles
-                ruoliMantra,
-                ruoliClassic,
-                fvm: p.fvm,
-                prezzo: p.prezzo,
-                prezzoAtteso: p.prezzoAtteso || p.prezzo,
-                prezzoEffettivo: p.costoReale,
-                status: p.status,
-                interessante: p.interessante,
-                costoReale: p.costoReale,
-                acquistatore: p.proprietario || p.acquistatore,
-                note: p.note,
-                createdAt: new Date().toISOString()
-              }
-            })
-            
-            // Check if backend data is more recent than localStorage  
-            const localTimestamp = savedData ? JSON.parse(savedData).timestamp : null
-            const backendHasNewerData = !localTimestamp || mappedPlayers.length > (savedData ? JSON.parse(savedData).players?.length || 0 : 0)
-            
-            if (backendHasNewerData) {
-              setPlayers(mappedPlayers)
-              // Save backend data to localStorage for next time
-              const dataToSave = {
-                players: mappedPlayers,
-                timestamp: new Date().toISOString(),
-                version: '2.0.0',
-                source: 'backend_sync'
-              }
-              localStorage.setItem('fantaaiuto_data', JSON.stringify(dataToSave))
-              console.log('✅ Synced newer data from backend:', mappedPlayers.length)
-            } else {
-              console.log('📊 localStorage data is current, no backend sync needed')
+            return {
+              id: p.master_id?.toString() || p.id?.toString(),
+              nome: p.nome,
+              squadra: p.squadra,
+              ruoli: ruoliMantra, // Default to Mantra roles
+              ruoliMantra,
+              ruoliClassic,
+              fvm: p.fvm,
+              prezzo: p.prezzo,
+              prezzoAtteso: p.prezzo_atteso || p.prezzo,
+              prezzoEffettivo: p.costo_reale,
+              status: p.status || 'available',
+              interessante: p.interessante || false,
+              costoReale: p.costo_reale,
+              acquistatore: p.acquistatore,
+              note: p.note,
+              createdAt: new Date().toISOString()
             }
-          } else {
-            console.log('⚠️ Backend returned no data, keeping localStorage data')
-          }
+          })
+          
+          setPlayers(mappedPlayers)
+          console.log('✅ Loaded players from PostgreSQL database:', mappedPlayers.length)
         } else {
-          console.log('⚠️ Backend returned no data, keeping localStorage data')
+          console.log('📊 No players found in database')
+          setPlayers([])
         }
-      } catch (error) {
-        clearTimeout(timeoutId)
-        console.log('⚠️ Backend sync failed (expected for cold starts), using localStorage')
+      } else {
+        console.error('❌ Failed to load players from backend:', response.status)
+        setPlayers([])
       }
     } catch (error) {
-      console.error('❌ Error loading user data:', error)
+      console.error('❌ Error loading players from database:', error)
+      setPlayers([])
     } finally {
       setIsLoading(false)
     }
@@ -205,20 +176,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     }
   }
 
-  const saveData = () => {
-    try {
-      const dataToSave = {
-        players,
-        timestamp: new Date().toISOString(),
-        version: '2.0.0',
-        source: 'user_changes'
-      }
-      localStorage.setItem('fantaaiuto_data', JSON.stringify(dataToSave))
-      console.log('💾 Data saved to localStorage (persistent across deployments):', players.length, 'players')
-    } catch (error) {
-      console.error('❌ Error saving data:', error)
-    }
-  }
+  // Data persistence is now handled by PostgreSQL backend
+  // No longer saving to localStorage - all data stored in cloud database
 
   const filteredPlayers = useMemo(() => players.filter(player => {
     // Exclude removed players from main view
