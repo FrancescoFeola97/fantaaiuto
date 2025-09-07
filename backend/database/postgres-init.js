@@ -85,11 +85,13 @@ export function getDatabase() {
     throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
   return {
-    // Wrapper methods to match SQLite API
+    // Wrapper methods to match SQLite API with parameter conversion
     async get(sql, params = []) {
       const client = await pool.connect();
       try {
-        const result = await client.query(sql, params);
+        // Convert SQLite ? parameters to PostgreSQL $1, $2, etc.
+        const pgSql = this._convertParams(sql);
+        const result = await client.query(pgSql, params);
         return result.rows[0] || null;
       } finally {
         client.release();
@@ -99,7 +101,9 @@ export function getDatabase() {
     async all(sql, params = []) {
       const client = await pool.connect();
       try {
-        const result = await client.query(sql, params);
+        // Convert SQLite ? parameters to PostgreSQL $1, $2, etc.
+        const pgSql = this._convertParams(sql);
+        const result = await client.query(pgSql, params);
         return result.rows;
       } finally {
         client.release();
@@ -109,13 +113,15 @@ export function getDatabase() {
     async run(sql, params = []) {
       const client = await pool.connect();
       try {
+        // Convert SQLite ? parameters to PostgreSQL $1, $2, etc.
+        let pgSql = this._convertParams(sql);
+        
         // For INSERT statements, add RETURNING id if not present
-        let modifiedSql = sql;
-        if (sql.toUpperCase().includes('INSERT INTO') && !sql.toUpperCase().includes('RETURNING')) {
-          modifiedSql = sql + ' RETURNING id';
+        if (pgSql.toUpperCase().includes('INSERT INTO') && !pgSql.toUpperCase().includes('RETURNING')) {
+          pgSql = pgSql + ' RETURNING id';
         }
         
-        const result = await client.query(modifiedSql, params);
+        const result = await client.query(pgSql, params);
         return {
           lastID: result.rows[0]?.id,
           changes: result.rowCount
@@ -123,6 +129,12 @@ export function getDatabase() {
       } finally {
         client.release();
       }
+    },
+    
+    // Convert SQLite ? parameters to PostgreSQL $1, $2, etc.
+    _convertParams(sql) {
+      let paramIndex = 1;
+      return sql.replace(/\?/g, () => `$${paramIndex++}`);
     }
   };
 }
