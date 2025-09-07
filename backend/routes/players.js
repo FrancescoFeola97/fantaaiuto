@@ -485,4 +485,91 @@ router.get('/stats', async (req, res, next) => {
   }
 });
 
+// Fast batch import for Excel upload with progress tracking
+router.post('/import/batch', [
+  body('players').isArray().withMessage('Players must be an array'),
+  body('players.*.nome').notEmpty().withMessage('Player name required'),
+  body('players.*.ruolo').notEmpty().withMessage('Player role required'),
+  body('batchSize').optional().isInt({ min: 50, max: 200 }).withMessage('Batch size must be 50-200')
+], async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const { players, batchSize = 100 } = req.body;
+    const userId = req.user.id;
+    const db = getDatabase();
+    
+    console.log(`🚀 Fast batch import: ${players.length} players in batches of ${batchSize}`);
+    
+    let processedCount = 0;
+    const startTime = Date.now();
+
+    // Process in batches for better performance
+    for (let i = 0; i < players.length; i += batchSize) {
+      const batch = players.slice(i, i + batchSize);
+      const batchNum = Math.floor(i/batchSize) + 1;
+      const totalBatches = Math.ceil(players.length/batchSize);
+      
+      console.log(`📦 Processing batch ${batchNum}/${totalBatches} (${batch.length} players)`);
+      
+      // Prepare batch insert values for master_players
+      const masterPlayersValues = [];
+      const masterPlayersParams = [];
+      
+      for (const player of batch) {
+        masterPlayersValues.push('(?, ?, ?, ?, ?, ?)');
+        masterPlayersParams.push(
+          player.nome,
+          player.squadra || '',
+          player.ruolo,
+          player.prezzo || 0,
+          player.fvm || 0,
+          '2025-26'
+        );
+      }
+
+      // Batch insert master players using UPSERT (PostgreSQL)
+      const batchInsertSQL = `
+        INSERT INTO master_players (nome, squadra, ruolo, prezzo, fvm, season)
+        VALUES ${masterPlayersValues.join(', ')}
+        ON CONFLICT (nome, squadra, season) 
+        DO UPDATE SET 
+          ruolo = EXCLUDED.ruolo,
+          prezzo = EXCLUDED.prezzo,
+          fvm = EXCLUDED.fvm,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING id, nome
+      `;
+      
+      await db.all(batchInsertSQL, masterPlayersParams);
+      processedCount += batch.length;
+      
+      console.log(`✅ Batch ${batchNum}/${totalBatches} completed (${processedCount}/${players.length})`);
+    }
+
+    const duration = Date.now() - startTime;
+    console.log(`🎉 Fast batch import completed in ${duration}ms: ${processedCount} total players`);
+
+    res.json({
+      success: true,
+      message: 'Players imported successfully with fast batch processing',
+      processed: processedCount,
+      total: players.length,
+      duration: duration,
+      batchSize: batchSize,
+      batches: Math.ceil(players.length / batchSize)
+    });
+
+  } catch (error) {
+    console.error('❌ Batch import error:', error);
+    next(error);
+  }
+});
+
 export default router;

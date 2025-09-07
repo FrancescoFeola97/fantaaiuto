@@ -9,6 +9,7 @@ import { Formations } from './dashboard/Formations'
 import { Participants } from './dashboard/Participants'
 import { FormationImages } from './dashboard/FormationImages'
 import { Settings } from './dashboard/Settings'
+import { ProgressOverlay } from './ui/ProgressOverlay'
 import { PlayerData } from '../types/Player'
 import { useNotifications } from '../hooks/useNotifications'
 import { useDebounce } from '../hooks/useDebounce'
@@ -35,6 +36,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'images' | 'removed' | 'settings'>('players')
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
   const { success, error } = useNotifications()
+  
+  // Progress overlay state
+  const [progressState, setProgressState] = useState({
+    isVisible: false,
+    progress: 0,
+    currentStep: '',
+    processedCount: 0,
+    totalCount: 0,
+    estimatedTimeRemaining: 0,
+    currentBatch: 0,
+    totalBatches: 0
+  })
   
   // Debounce search query to improve performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
@@ -295,23 +308,70 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const importPlayersFromExcel = async (newPlayers: PlayerData[]) => {
     setIsImporting(true)
     
+    // Initialize progress overlay
+    const batchSize = 100
+    const totalBatches = Math.ceil(newPlayers.length / batchSize)
+    const startTime = Date.now()
+    ;(window as any).importStartTime = startTime
+    
+    setProgressState({
+      isVisible: true,
+      progress: 0,
+      currentStep: 'Preparazione caricamento...',
+      processedCount: 0,
+      totalCount: newPlayers.length,
+      estimatedTimeRemaining: 0,
+      currentBatch: 0,
+      totalBatches
+    })
+    
     // Show players immediately for better UX (optimistic UI)  
     setPlayers(newPlayers)
     
+    let progressInterval: NodeJS.Timeout | null = null
+    
     try {
-      console.log('📤 Uploading players to backend...')
+      console.log('📤 Starting fast batch upload:', newPlayers.length, 'players')
       
       const token = localStorage.getItem('fantaaiuto_token')
       if (!token) {
         console.log('📊 No token found, using local mode only')
+        setProgressState(prev => ({ ...prev, currentStep: 'Nessun token - modalità locale' }))
         return
       }
 
-      // Try backend sync with longer timeout for Render cold starts
+      setProgressState(prev => ({ ...prev, currentStep: 'Connessione al database...' }))
+
+      // Simulate progress updates during upload
+      progressInterval = setInterval(() => {
+        setProgressState(prev => {
+          if (prev.progress < 85) { // Don't go above 85% until we get the response
+            const elapsed = (Date.now() - startTime) / 1000
+            const estimatedTotal = (elapsed / Math.max(prev.progress, 1)) * 100
+            const remainingTime = Math.max(0, estimatedTotal - elapsed)
+            
+            const newProgress = Math.min(prev.progress + 2 + Math.random() * 3, 85)
+            const processedCount = Math.floor((newProgress / 100) * newPlayers.length)
+            const currentBatch = Math.floor((processedCount / batchSize)) + 1
+            
+            return {
+              ...prev,
+              progress: newProgress,
+              processedCount,
+              currentBatch: Math.min(currentBatch, totalBatches),
+              currentStep: `Elaborazione batch ${Math.min(currentBatch, totalBatches)} di ${totalBatches}...`,
+              estimatedTimeRemaining: remainingTime
+            }
+          }
+          return prev
+        })
+      }, 300)
+
+      // Use new fast batch import endpoint
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 180000) // 3 minutes
+      const timeoutId = setTimeout(() => controller.abort(), 300000) // 5 minutes for large uploads
       
-      const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players/import', {
+      const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players/import/batch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -325,33 +385,57 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             prezzo: p.prezzo,
             fvm: p.fvm
           })),
-          mode: '1' // Mode 1 = replace all
+          batchSize: batchSize
         }),
         signal: controller.signal
       })
+      
+      // Stop the progress simulation
+      if (progressInterval) clearInterval(progressInterval)
       
       clearTimeout(timeoutId)
       
       if (response.ok) {
         const result = await response.json()
-        console.log('✅ Players synced to backend successfully:', result)
+        console.log('✅ Fast batch import completed:', result)
         
-        // Reload data from backend to get any server-side updates
-        await loadUserData()
+        // Update progress to completion
+        setProgressState(prev => ({ 
+          ...prev, 
+          progress: 100,
+          processedCount: newPlayers.length,
+          currentStep: 'Caricamento completato!',
+          currentBatch: totalBatches,
+          estimatedTimeRemaining: 0
+        }))
         
-        // Success notification
-        success(`✅ Dati persistiti! ${newPlayers.length} giocatori salvati localmente + backup backend.`)
+        // Wait a moment to show completion
+        setTimeout(async () => {
+          // Hide progress overlay
+          setProgressState(prev => ({ ...prev, isVisible: false }))
+          
+          // Reload data from backend to get any server-side updates
+          await loadUserData()
+          
+          // Success notification
+          success(`🚀 Caricamento veloce completato! ${newPlayers.length} giocatori importati in ${result.batches} batch.`)
+        }, 1500)
+        
       } else {
         const errorData = await response.json().catch(() => ({}))
-        console.error('❌ Backend sync error:', errorData)
+        console.error('❌ Fast batch import error:', errorData)
+        setProgressState(prev => ({ ...prev, isVisible: false }))
         success(`✅ Dati salvati localmente! ${newPlayers.length} giocatori (backup backend non disponibile)`)
       }
     } catch (error: any) {
-      console.error('❌ Backend sync failed:', error)
+      console.error('❌ Fast batch import failed:', error)
+      setProgressState(prev => ({ ...prev, isVisible: false }))
       
       success(`✅ Dati salvati localmente! ${newPlayers.length} giocatori (backup backend: server in avvio)`)
     } finally {
       setIsImporting(false)
+      // Ensure progress interval is cleaned up
+      if (progressInterval) clearInterval(progressInterval)
     }
   }
 
@@ -641,6 +725,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         onShowFormationImages={handleShowFormationImages}
         onShowRemovedPlayers={handleShowRemovedPlayers}
         onShowSettings={handleShowSettings}
+      />
+
+      {/* Progress Overlay for Excel Upload */}
+      <ProgressOverlay
+        isVisible={progressState.isVisible}
+        progress={progressState.progress}
+        currentStep={progressState.currentStep}
+        processedCount={progressState.processedCount}
+        totalCount={progressState.totalCount}
+        estimatedTimeRemaining={progressState.estimatedTimeRemaining}
+        currentBatch={progressState.currentBatch}
+        totalBatches={progressState.totalBatches}
       />
     </div>
   )
