@@ -103,58 +103,61 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           // Only update if backend has MORE recent data
           if (data.players && data.players.length > 0) {
             const mappedPlayers = data.players.map((p: any) => {
-            // Parse roles from backend - try both detailed (RM) and basic (R)
-            const rawRoles = p.ruolo ? p.ruolo.split(';').map((r: string) => r.trim()).filter((r: string) => r.length > 0) : ['A']
-            
-            // For existing data, assume these are Mantra roles and generate Classic roles
-            const ruoliMantra = rawRoles
-            const ruoliClassic = rawRoles.map((role: string) => {
-              const roleMapping: Record<string, string> = {
-                'Por': 'P', 'P': 'P',
-                'Ds': 'D', 'Dd': 'D', 'Dc': 'D', 'B': 'D', 'D': 'D',
-                'E': 'C', 'M': 'C', 'C': 'C', 'W': 'C', 'T': 'C',
-                'A': 'A', 'Pc': 'A'
-              }
-              return roleMapping[role] || 'A'
-            }).filter((role: string, index: number, self: string[]) => self.indexOf(role) === index) // Remove duplicates
+              // Parse roles from backend - try both detailed (RM) and basic (R)
+              const rawRoles = p.ruolo ? p.ruolo.split(';').map((r: string) => r.trim()).filter((r: string) => r.length > 0) : ['A']
+              
+              // For existing data, assume these are Mantra roles and generate Classic roles
+              const ruoliMantra = rawRoles
+              const ruoliClassic = rawRoles.map((role: string) => {
+                const roleMapping: Record<string, string> = {
+                  'Por': 'P', 'P': 'P',
+                  'Ds': 'D', 'Dd': 'D', 'Dc': 'D', 'B': 'D', 'D': 'D',
+                  'E': 'C', 'M': 'C', 'C': 'C', 'W': 'C', 'T': 'C',
+                  'A': 'A', 'Pc': 'A'
+                }
+                return roleMapping[role] || 'A'
+              }).filter((role: string, index: number, self: string[]) => self.indexOf(role) === index) // Remove duplicates
 
-            return {
-              id: p.id.toString(),
-              nome: p.nome,
-              squadra: p.squadra,
-              ruoli: ruoliMantra, // Default to Mantra roles
-              ruoliMantra,
-              ruoliClassic,
-              fvm: p.fvm,
-              prezzo: p.prezzo,
-              prezzoAtteso: p.prezzoAtteso || p.prezzo,
-              prezzoEffettivo: p.costoReale,
-              status: p.status,
-              interessante: p.interessante,
-              costoReale: p.costoReale,
-              acquistatore: p.proprietario || p.acquistatore,
-              note: p.note,
-              createdAt: new Date().toISOString()
+              return {
+                id: p.id.toString(),
+                nome: p.nome,
+                squadra: p.squadra,
+                ruoli: ruoliMantra, // Default to Mantra roles
+                ruoliMantra,
+                ruoliClassic,
+                fvm: p.fvm,
+                prezzo: p.prezzo,
+                prezzoAtteso: p.prezzoAtteso || p.prezzo,
+                prezzoEffettivo: p.costoReale,
+                status: p.status,
+                interessante: p.interessante,
+                costoReale: p.costoReale,
+                acquistatore: p.proprietario || p.acquistatore,
+                note: p.note,
+                createdAt: new Date().toISOString()
+              }
+            })
+            
+            // Check if backend data is more recent than localStorage  
+            const localTimestamp = savedData ? JSON.parse(savedData).timestamp : null
+            const backendHasNewerData = !localTimestamp || mappedPlayers.length > (savedData ? JSON.parse(savedData).players?.length || 0 : 0)
+            
+            if (backendHasNewerData) {
+              setPlayers(mappedPlayers)
+              // Save backend data to localStorage for next time
+              const dataToSave = {
+                players: mappedPlayers,
+                timestamp: new Date().toISOString(),
+                version: '2.0.0',
+                source: 'backend_sync'
+              }
+              localStorage.setItem('fantaaiuto_data', JSON.stringify(dataToSave))
+              console.log('✅ Synced newer data from backend:', mappedPlayers.length)
+            } else {
+              console.log('📊 localStorage data is current, no backend sync needed')
             }
-          })
-          
-          // Check if backend data is more recent than localStorage  
-          const localTimestamp = savedData ? JSON.parse(savedData).timestamp : null
-          const backendHasNewerData = !localTimestamp || mappedPlayers.length > (savedData ? JSON.parse(savedData).players?.length || 0 : 0)
-          
-          if (backendHasNewerData) {
-            setPlayers(mappedPlayers)
-            // Save backend data to localStorage for next time
-            const dataToSave = {
-              players: mappedPlayers,
-              timestamp: new Date().toISOString(),
-              version: '2.0.0',
-              source: 'backend_sync'
-            }
-            localStorage.setItem('fantaaiuto_data', JSON.stringify(dataToSave))
-            console.log('✅ Synced newer data from backend:', mappedPlayers.length)
           } else {
-            console.log('📊 localStorage data is current, no backend sync needed')
+            console.log('⚠️ Backend returned no data, keeping localStorage data')
           }
         } else {
           console.log('⚠️ Backend returned no data, keeping localStorage data')
