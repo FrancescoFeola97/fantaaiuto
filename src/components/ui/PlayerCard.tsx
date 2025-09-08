@@ -1,6 +1,6 @@
 import React from 'react'
 import { PlayerData } from '../../types/Player'
-import { useAppSettings } from '../dashboard/Settings'
+import { useGameMode } from '../../contexts/LeagueContext'
 import { getRoleColor } from '../../utils/roleColors'
 
 interface PlayerCardProps {
@@ -10,7 +10,7 @@ interface PlayerCardProps {
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, participants = [] }) => {
-  const settings = useAppSettings()
+  const gameMode = useGameMode()
   const [prezzoAtteso, setPrezzoAtteso] = React.useState(player.prezzoAtteso || player.prezzo || '')
   const [acquistatore, setAcquistatore] = React.useState(player.acquistatore || '')
   const [prezzoEffettivoEdit, setPrezzoEffettivoEdit] = React.useState(player.prezzoEffettivo?.toString() || '')
@@ -23,7 +23,7 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
 
   // Get roles based on current game mode
   const getCurrentRoles = () => {
-    if (settings.gameMode === 'Classic') {
+    if (gameMode === 'Classic') {
       return player.ruoliClassic?.length ? player.ruoliClassic : player.ruoli
     } else {
       return player.ruoliMantra?.length ? player.ruoliMantra : player.ruoli
@@ -184,7 +184,7 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
                 currentRoles.map((role, index) => (
                   <span
                     key={index}
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium border ${getRoleColor(role, settings.gameMode)}`}
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium border ${getRoleColor(role, gameMode)}`}
                   >
                     {role}
                   </span>

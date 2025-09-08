@@ -1,6 +1,6 @@
 import React from 'react'
 import { PlayerData } from '../../types/Player'
-import { useAppSettings } from './Settings'
+import { useGameMode } from '../../contexts/LeagueContext'
 import { RoleCircle } from '../../utils/roleColors'
 
 interface PlayerCountsProps {
@@ -11,7 +11,7 @@ interface PlayerCountsProps {
 }
 
 export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRoleFilter, onRoleFilterChange, onBackToPlayers }) => {
-  const settings = useAppSettings()
+  const gameMode = useGameMode()
   
   const mantraRoles = [
     { key: 'Por', label: 'Portieri' },
@@ -35,11 +35,11 @@ export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRole
     { key: 'A', label: 'Attaccanti' }
   ]
 
-  const currentRoles = settings.gameMode === 'Classic' ? classicRoles : mantraRoles
+  const currentRoles = gameMode === 'Classic' ? classicRoles : mantraRoles
 
   const getCountByRole = (role: string) => {
     return players.filter(p => {
-      if (settings.gameMode === 'Classic') {
+      if (gameMode === 'Classic') {
         const playerClassicRoles = p.ruoliClassic?.length ? p.ruoliClassic : p.ruoli
         return playerClassicRoles && playerClassicRoles.includes(role)
       } else {
@@ -83,7 +83,7 @@ export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRole
             }`}
           >
             <div className="flex items-center gap-2">
-              <RoleCircle role={role.key} gameMode={settings.gameMode} size="sm" />
+              <RoleCircle role={role.key} gameMode={gameMode} size="sm" />
               <span className="text-sm text-gray-600">{role.label}</span>
             </div>
             <span className="text-sm font-medium text-gray-900">{count}</span>

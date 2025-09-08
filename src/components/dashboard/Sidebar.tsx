@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { PlayerData } from '../../types/Player'
 import { useNotifications } from '../../hooks/useNotifications'
-import { useLeague } from '../../contexts/LeagueContext'
+import { usePermissions } from '../../hooks/usePermissions'
 
 interface SidebarProps {
   onImportExcel: (players: PlayerData[]) => void
@@ -30,10 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isUploading, setIsUploading] = React.useState(false)
   const [xlsxProgress, setXlsxProgress] = useState(0)
   const { success, error: showError } = useNotifications()
-  const { currentLeague } = useLeague()
-  
-  // Check if user is master of current league
-  const isMaster = currentLeague?.isOwner || currentLeague?.userRole === 'master'
+  const { isMaster, canManageData } = usePermissions()
 
   const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -190,7 +187,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }
 
   const handleResetData = async () => {
-    if (confirm('⚠️ Sei sicuro di voler cancellare tutti i dati? Questa azione è irreversibile.\n\nVerranno eliminati:\n- Tutti i giocatori importati\n- Formazioni create\n- Partecipanti\n- Immagini formazioni\n\nDovrai ricaricare l\'Excel per riavere i dati.')) {
+    if (!canManageData()) return
+    
+    if (confirm('⚠️ Sei sicuro di voler cancellare tutti i dati della lega? Questa azione è irreversibile.\n\nVerranno eliminati:\n- Tutti i giocatori importati\n- Formazioni create\n- Partecipanti\n- Immagini formazioni\n\nDovrai ricaricare l\'Excel per riavere i dati.')) {
       try {
         const token = localStorage.getItem('fantaaiuto_token')
         if (!token) {
@@ -276,7 +275,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             ⚙️ Impostazioni
           </button>
           
-          {isMaster && (
+          {isMaster() && (
             <button 
               onClick={onShowLeagueManagement}
               className="w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 transition-colors text-left">

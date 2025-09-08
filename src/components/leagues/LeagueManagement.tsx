@@ -38,7 +38,7 @@ export const LeagueManagement: React.FC<LeagueManagementProps> = ({ onClose }) =
   })
 
   // Check if user is master
-  const isMaster = currentLeague?.isOwner || currentLeague?.userRole === 'master'
+  const isMaster = currentLeague?.isOwner || false
 
   const createApiHeaders = () => {
     const token = localStorage.getItem('fantaaiuto_token')

@@ -1,5 +1,5 @@
 import React from 'react'
-import { useAppSettings } from './Settings'
+import { useGameMode } from '../../contexts/LeagueContext'
 import { RoleCircle } from '../../utils/roleColors'
 
 interface SearchFiltersProps {
@@ -23,7 +23,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   onClearFilters,
   isSearching = false
 }) => {
-  const settings = useAppSettings()
+  const gameMode = useGameMode()
 
   const getMantraRoleOptions = () => [
     { value: 'all', label: 'Tutti i ruoli' },
@@ -49,7 +49,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
     { value: 'A', label: 'Attaccanti' }
   ]
 
-  const currentRoleOptions = settings.gameMode === 'Classic' ? getClassicRoleOptions() : getMantraRoleOptions()
+  const currentRoleOptions = gameMode === 'Classic' ? getClassicRoleOptions() : getMantraRoleOptions()
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
@@ -99,7 +99,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           
           <div className="flex items-center gap-2">
             {roleFilter !== 'all' && (
-              <RoleCircle role={roleFilter} gameMode={settings.gameMode} size="sm" />
+              <RoleCircle role={roleFilter} gameMode={gameMode} size="sm" />
             )}
             <select 
               value={roleFilter}

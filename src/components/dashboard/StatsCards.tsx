@@ -16,7 +16,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ players }) => {
   const takenByOthers = players.filter(p => p.status === 'taken_by_other').length
   
   // Budget warning check
-  const budgetWarning = remainingCredits > 0 && (remainingCredits / totalBudget) * 100 <= settings.budgetWarningThreshold
+  const budgetWarning = remainingCredits > 0 && (remainingCredits / totalBudget) * 100 <= 20
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -38,7 +38,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ players }) => {
         }`}>
           {new Intl.NumberFormat('it-IT').format(remainingCredits)}
         </div>
-        {budgetWarning && settings.enableNotifications && settings.notifyBudgetLow && (
+        {budgetWarning && settings.enableNotifications && (
           <div className="text-xs text-amber-600 mt-1">
             ⚠️ Budget basso ({Math.round((remainingCredits / totalBudget) * 100)}%)
           </div>

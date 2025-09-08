@@ -17,7 +17,6 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
   const [error, setError] = useState('')
   const [showFormationSelector, setShowFormationSelector] = useState(true)
   const [savedFormations, setSavedFormations] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [formationName, setFormationName] = useState('')
 
@@ -68,7 +67,6 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
     } catch (error) {
       console.error('Error loading formations:', error)
     } finally {
-      setIsLoading(false)
     }
   }
 
