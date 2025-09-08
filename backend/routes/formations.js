@@ -7,15 +7,59 @@ import fs from 'fs';
 
 const router = express.Router();
 
-// Get all formations for the authenticated user
+// Middleware to validate league access
+const validateLeagueAccess = async (req, res, next) => {
+  try {
+    const db = getDatabase();
+    const userId = req.user.id;
+    const leagueId = req.headers['x-league-id'];
+    
+    if (!leagueId) {
+      return res.status(400).json({
+        error: 'League ID required',
+        message: 'Please select a league first'
+      });
+    }
+    
+    // Check if user is member of this league
+    const membership = await db.get(
+      'SELECT league_id, role FROM league_members WHERE league_id = $1 AND user_id = $2',
+      [leagueId, userId]
+    );
+    
+    if (!membership) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You are not a member of this league'
+      });
+    }
+    
+    req.leagueId = leagueId;
+    req.leagueRole = membership.role;
+    next();
+    
+  } catch (error) {
+    console.error('❌ League validation error:', error);
+    res.status(500).json({
+      error: 'League validation failed',
+      message: error.message
+    });
+  }
+};
+
+// Apply league validation to all routes
+router.use(validateLeagueAccess);
+
+// Get all formations for the authenticated user in current league
 router.get('/', async (req, res, next) => {
   try {
     const db = getDatabase();
     const userId = req.user.id;
+    const leagueId = req.leagueId;
 
     const formations = await db.all(
-      'SELECT id, name, schema, players, is_active, created_at, updated_at FROM formations WHERE user_id = ? ORDER BY created_at DESC',
-      [userId]
+      'SELECT id, name, schema, players, is_active, created_at, updated_at FROM league_formations WHERE user_id = $1 AND league_id = $2 ORDER BY created_at DESC',
+      [userId, leagueId]
     );
 
     res.json({
@@ -52,16 +96,17 @@ router.post('/', [
 
     const { name, schema, players = [] } = req.body;
     const userId = req.user.id;
+    const leagueId = req.leagueId;
     const db = getDatabase();
 
-    // Create formation
-    const result = await db.run(
-      'INSERT INTO formations (user_id, name, schema, players) VALUES (?, ?, ?, ?)',
-      [userId, name, schema, JSON.stringify(players)]
+    // Create formation in league
+    const result = await db.get(
+      'INSERT INTO league_formations (user_id, league_id, name, schema, players) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [userId, leagueId, name, schema, JSON.stringify(players)]
     );
 
     const formation = {
-      id: result.lastID,
+      id: result.id,
       name,
       schema,
       players,
@@ -99,17 +144,18 @@ router.put('/:formationId', [
     const { formationId } = req.params;
     const { name, schema, players, isActive } = req.body;
     const userId = req.user.id;
+    const leagueId = req.leagueId;
     const db = getDatabase();
 
-    // Verify formation exists and belongs to user
+    // Verify formation exists and belongs to user in this league
     const formation = await db.get(
-      'SELECT id FROM formations WHERE id = ? AND user_id = ?',
-      [formationId, userId]
+      'SELECT id FROM league_formations WHERE id = $1 AND user_id = $2 AND league_id = $3',
+      [formationId, userId, leagueId]
     );
 
     if (!formation) {
       return res.status(404).json({
-        error: 'Formation not found',
+        error: 'Formation not found in this league',
         code: 'FORMATION_NOT_FOUND'
       });
     }
@@ -117,26 +163,27 @@ router.put('/:formationId', [
     // Build update query dynamically based on provided fields
     const updates = [];
     const values = [];
+    let paramCount = 0;
 
     if (name !== undefined) {
-      updates.push('name = ?');
+      updates.push(`name = $${++paramCount}`);
       values.push(name);
     }
     if (schema !== undefined) {
-      updates.push('schema = ?');
+      updates.push(`schema = $${++paramCount}`);
       values.push(schema);
     }
     if (players !== undefined) {
-      updates.push('players = ?');
+      updates.push(`players = $${++paramCount}`);
       values.push(JSON.stringify(players));
     }
     if (isActive !== undefined) {
-      updates.push('is_active = ?');
+      updates.push(`is_active = $${++paramCount}`);
       values.push(isActive ? 1 : 0);
       
-      // If setting this formation as active, deactivate others
+      // If setting this formation as active, deactivate others in this league
       if (isActive) {
-        await db.run('UPDATE formations SET is_active = 0 WHERE user_id = ? AND id != ?', [userId, formationId]);
+        await db.run('UPDATE league_formations SET is_active = 0 WHERE user_id = $1 AND league_id = $2 AND id != $3', [userId, leagueId, formationId]);
       }
     }
 
@@ -151,7 +198,7 @@ router.put('/:formationId', [
     values.push(formationId);
 
     await db.run(
-      `UPDATE formations SET ${updates.join(', ')} WHERE id = ?`,
+      `UPDATE league_formations SET ${updates.join(', ')} WHERE id = $${++paramCount}`,
       values
     );
 
@@ -170,25 +217,26 @@ router.delete('/:formationId', async (req, res, next) => {
   try {
     const { formationId } = req.params;
     const userId = req.user.id;
+    const leagueId = req.leagueId;
     const db = getDatabase();
 
-    // Verify formation exists and belongs to user
+    // Verify formation exists and belongs to user in this league
     const formation = await db.get(
-      'SELECT id, name FROM formations WHERE id = ? AND user_id = ?',
-      [formationId, userId]
+      'SELECT id, name FROM league_formations WHERE id = $1 AND user_id = $2 AND league_id = $3',
+      [formationId, userId, leagueId]
     );
 
     if (!formation) {
       return res.status(404).json({
-        error: 'Formation not found',
+        error: 'Formation not found in this league',
         code: 'FORMATION_NOT_FOUND'
       });
     }
 
     // Delete formation
-    await db.run('DELETE FROM formations WHERE id = ?', [formationId]);
+    await db.run('DELETE FROM league_formations WHERE id = $1', [formationId]);
 
-    console.log(`⚽ Formation deleted: ${formation.name} (ID: ${formationId}) for user ${userId}`);
+    console.log(`⚽ Formation deleted: ${formation.name} (ID: ${formationId}) for user ${userId} in league ${leagueId}`);
 
     res.json({
       message: 'Formation deleted successfully',

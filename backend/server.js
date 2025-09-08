@@ -12,6 +12,7 @@ import playersRoutes from './routes/players.js';
 import participantsRoutes from './routes/participants.js';
 import formationsRoutes from './routes/formations.js';
 import userRoutes from './routes/users.js';
+import leaguesRoutes from './routes/leagues.js';
 
 // Import middleware
 import { authenticateToken } from './middleware/auth.js';
@@ -109,6 +110,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
+app.use('/api/leagues', authenticateToken, leaguesRoutes);
 app.use('/api/players', authenticateToken, playersRoutes);
 app.use('/api/participants', authenticateToken, participantsRoutes);
 app.use('/api/formations', authenticateToken, formationsRoutes);

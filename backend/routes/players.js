@@ -4,37 +4,78 @@ import { getDatabase } from '../database/postgres-init.js';
 
 const router = express.Router();
 
-// Reset all user data - clears all players and related data for authenticated user
+// Middleware to validate league access
+const validateLeagueAccess = async (req, res, next) => {
+  try {
+    const db = getDatabase();
+    const userId = req.user.id;
+    const leagueId = req.headers['x-league-id'];
+    
+    if (!leagueId) {
+      return res.status(400).json({
+        error: 'League ID required',
+        message: 'Please select a league first'
+      });
+    }
+    
+    // Check if user is member of this league
+    const membership = await db.get(
+      'SELECT league_id, role FROM league_members WHERE league_id = $1 AND user_id = $2',
+      [leagueId, userId]
+    );
+    
+    if (!membership) {
+      return res.status(403).json({
+        error: 'Access denied',
+        message: 'You are not a member of this league'
+      });
+    }
+    
+    req.leagueId = leagueId;
+    req.leagueRole = membership.role;
+    next();
+    
+  } catch (error) {
+    console.error('❌ League validation error:', error);
+    res.status(500).json({
+      error: 'League validation failed',
+      message: error.message
+    });
+  }
+};
+
+// Apply league validation to all routes
+router.use(validateLeagueAccess);
+
+// Reset all league data for user - clears all players and related data for authenticated user in current league
 router.delete('/reset', async (req, res, next) => {
   try {
     const db = getDatabase();
     const userId = req.user.id;
+    const leagueId = req.leagueId;
     
-    console.log('🔄 Resetting all data for user:', userId);
+    console.log('🔄 Resetting all league data for user:', userId, 'in league:', leagueId);
     
-    // Delete user-specific data in correct order (foreign keys)
-    await db.run('DELETE FROM participant_players WHERE user_id = ?', [userId]);
-    console.log('✅ Deleted participant_players for user:', userId);
+    // Delete user-specific league data in correct order (foreign keys)
+    await db.run('DELETE FROM league_participant_players WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
+    console.log('✅ Deleted league_participant_players for user:', userId);
     
-    await db.run('DELETE FROM user_players WHERE user_id = ?', [userId]);
-    console.log('✅ Deleted user_players for user:', userId);
+    await db.run('DELETE FROM league_user_players WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
+    console.log('✅ Deleted league_user_players for user:', userId);
     
-    await db.run('DELETE FROM participants WHERE user_id = ?', [userId]);
-    console.log('✅ Deleted participants for user:', userId);
+    await db.run('DELETE FROM league_participants WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
+    console.log('✅ Deleted league_participants for user:', userId);
     
-    await db.run('DELETE FROM formations WHERE user_id = ?', [userId]);
-    console.log('✅ Deleted formations for user:', userId);
-    
-    await db.run('DELETE FROM formation_images WHERE user_id = ?', [userId]);
-    console.log('✅ Deleted formation_images for user:', userId);
+    await db.run('DELETE FROM league_formations WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
+    console.log('✅ Deleted league_formations for user:', userId);
     
     // Optional: Clean up master_players that are no longer referenced
-    // (This keeps master players for other users, only removes orphaned ones)
+    // (This keeps master players for other users/leagues, only removes orphaned ones)
     await db.run(`
       DELETE FROM master_players 
       WHERE id NOT IN (
         SELECT DISTINCT master_player_id 
-        FROM user_players 
+        FROM league_user_players 
         WHERE master_player_id IS NOT NULL
       )
     `);
@@ -42,7 +83,7 @@ router.delete('/reset', async (req, res, next) => {
     
     res.json({
       success: true,
-      message: 'All user data has been reset successfully'
+      message: 'All league data has been reset successfully'
     });
     
   } catch (error) {
@@ -56,22 +97,29 @@ router.get('/debug', async (req, res) => {
   try {
     const db = getDatabase();
     const userId = req.user.id;
+    const leagueId = req.leagueId;
     
-    console.log('🔍 Debug: user ID:', userId);
+    console.log('🔍 Debug: user ID:', userId, 'league ID:', leagueId);
     
     // Test basic query
-    const testQuery = await db.get('SELECT COUNT(*) as count FROM users WHERE id = ?', [userId]);
+    const testQuery = await db.get('SELECT COUNT(*) as count FROM users WHERE id = $1', [userId]);
     console.log('🔍 Debug: user exists:', testQuery);
     
     // Test master_players table
     const playersCount = await db.get('SELECT COUNT(*) as count FROM master_players');
     console.log('🔍 Debug: master_players count:', playersCount);
     
+    // Test league membership
+    const membership = await db.get('SELECT * FROM league_members WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
+    console.log('🔍 Debug: league membership:', membership);
+    
     res.json({
       success: true,
       userId,
+      leagueId,
       userExists: testQuery,
-      playersCount: playersCount
+      playersCount: playersCount,
+      membership: membership
     });
     
   } catch (error) {
@@ -101,28 +149,29 @@ router.get('/', [
 
     const db = getDatabase();
     const userId = req.user.id;
+    const leagueId = req.leagueId;
     const { status, role, search } = req.query;
 
     let whereClause = 'WHERE 1=1';
-    const params = [userId, userId];
+    const params = [userId, leagueId, userId, leagueId];
 
     // Add status filtering
     if (status === 'interesting') {
       whereClause += ' AND up.interessante = true';
     } else if (status) {
-      whereClause += ' AND COALESCE(up.status, \'available\') = ?';
+      whereClause += ' AND COALESCE(up.status, \'available\') = $' + (params.length + 1);
       params.push(status);
     }
 
     // Add role filtering
     if (role) {
-      whereClause += ' AND mp.ruolo = ?';
+      whereClause += ' AND mp.ruolo = $' + (params.length + 1);
       params.push(role);
     }
 
     // Add search filtering
     if (search) {
-      whereClause += ' AND (LOWER(mp.nome) LIKE ? OR LOWER(mp.squadra) LIKE ?)';
+      whereClause += ' AND (LOWER(mp.nome) LIKE $' + (params.length + 1) + ' OR LOWER(mp.squadra) LIKE $' + (params.length + 2) + ')';
       const searchTerm = `%${search.toLowerCase()}%`;
       params.push(searchTerm, searchTerm);
     }
@@ -150,9 +199,9 @@ router.get('/', [
         p.name as owned_by_participant,
         pp.costo_altri
       FROM master_players mp
-      LEFT JOIN user_players up ON mp.id = up.master_player_id AND up.user_id = ?
-      LEFT JOIN participant_players pp ON mp.id = pp.master_player_id AND pp.user_id = ?
-      LEFT JOIN participants p ON pp.participant_id = p.id
+      LEFT JOIN league_user_players up ON mp.id = up.master_player_id AND up.user_id = $1 AND up.league_id = $2
+      LEFT JOIN league_participant_players pp ON mp.id = pp.master_player_id AND pp.user_id = $3 AND pp.league_id = $4
+      LEFT JOIN league_participants p ON pp.participant_id = p.id AND p.league_id = $4
       ${whereClause}
       ORDER BY mp.ruolo, mp.nome
     `, params);
@@ -204,6 +253,7 @@ router.post('/import', [
 
     const { players, mode = '1' } = req.body;
     const userId = req.user.id;
+    const leagueId = req.leagueId;
     const db = getDatabase();
     
     let importedCount = 0;
@@ -244,10 +294,10 @@ router.post('/import', [
           importedCount++;
         }
 
-        // Handle user-specific player data based on mode
+        // Handle league-specific player data based on mode
         const existingUserPlayer = await db.get(
-          'SELECT id FROM user_players WHERE user_id = ? AND master_player_id = ?',
-          [userId, masterId]
+          'SELECT id FROM league_user_players WHERE user_id = $1 AND league_id = $2 AND master_player_id = $3',
+          [userId, leagueId, masterId]
         );
 
         let status = 'available';
@@ -291,18 +341,18 @@ router.post('/import', [
             break;
         }
 
-        // Insert or update user player data
+        // Insert or update league user player data
         if (existingUserPlayer) {
           await db.run(`
-            UPDATE user_players 
-            SET status = ?, interessante = ?, rimosso = ?, tier = ?, prezzo_atteso = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            UPDATE league_user_players 
+            SET status = $1, interessante = $2, rimosso = $3, tier = $4, prezzo_atteso = $5, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $6
           `, [status, interessante, rimosso, tier, prezzoAtteso, existingUserPlayer.id]);
         } else {
           await db.run(`
-            INSERT INTO user_players (user_id, master_player_id, status, interessante, rimosso, tier, prezzo_atteso)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-          `, [userId, masterId, status, interessante, rimosso, tier, prezzoAtteso]);
+            INSERT INTO league_user_players (user_id, league_id, master_player_id, status, interessante, rimosso, tier, prezzo_atteso)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `, [userId, leagueId, masterId, status, interessante, rimosso, tier, prezzoAtteso]);
         }
 
       } catch (playerError) {
@@ -311,7 +361,7 @@ router.post('/import', [
       }
     }
 
-    console.log(`📊 Player import completed for user ${userId}: ${importedCount} new, ${updatedCount} updated`);
+    console.log(`📊 Player import completed for user ${userId} in league ${leagueId}: ${importedCount} new, ${updatedCount} updated`);
 
     res.json({
       message: 'Players imported successfully',
@@ -346,10 +396,11 @@ router.patch('/:playerId/status', [
     const { playerId } = req.params;
     const { status, costoReale, note, prezzoAtteso, acquistatore } = req.body;
     const userId = req.user.id;
+    const leagueId = req.leagueId;
     const db = getDatabase();
 
     // Verify player exists
-    const masterPlayer = await db.get('SELECT id FROM master_players WHERE id = ?', [playerId]);
+    const masterPlayer = await db.get('SELECT id FROM master_players WHERE id = $1', [playerId]);
     if (!masterPlayer) {
       return res.status(404).json({
         error: 'Player not found',
@@ -357,10 +408,10 @@ router.patch('/:playerId/status', [
       });
     }
 
-    // Get or create user player record
+    // Get or create league user player record
     let userPlayer = await db.get(
-      'SELECT id FROM user_players WHERE user_id = ? AND master_player_id = ?',
-      [userId, playerId]
+      'SELECT id FROM league_user_players WHERE user_id = $1 AND league_id = $2 AND master_player_id = $3',
+      [userId, leagueId, playerId]
     );
 
     const updateData = {
@@ -378,13 +429,13 @@ router.patch('/:playerId/status', [
     if (userPlayer) {
       // Update existing record
       await db.run(`
-        UPDATE user_players 
-        SET status = ?, interessante = ?, rimosso = ?, costo_reale = ?, prezzo_atteso = ?, 
-            acquistatore = ?, note = ?, 
-            data_acquisto = CASE WHEN ? = 'owned' THEN CURRENT_TIMESTAMP ELSE data_acquisto END,
-            data_rimozione = CASE WHEN ? = 'removed' THEN CURRENT_TIMESTAMP ELSE data_rimozione END,
+        UPDATE league_user_players 
+        SET status = $1, interessante = $2, rimosso = $3, costo_reale = $4, prezzo_atteso = $5, 
+            acquistatore = $6, note = $7, 
+            data_acquisto = CASE WHEN $8 = 'owned' THEN CURRENT_TIMESTAMP ELSE data_acquisto END,
+            data_rimozione = CASE WHEN $9 = 'removed' THEN CURRENT_TIMESTAMP ELSE data_rimozione END,
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = $10
       `, [
         updateData.status, updateData.interessante, updateData.rimosso,
         updateData.costo_reale, updateData.prezzo_atteso, updateData.acquistatore,
@@ -393,15 +444,15 @@ router.patch('/:playerId/status', [
     } else {
       // Create new record
       await db.run(`
-        INSERT INTO user_players (user_id, master_player_id, status, interessante, rimosso, 
-                                 costo_reale, prezzo_atteso, acquistatore, note,
-                                 data_acquisto, data_rimozione, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
-                CASE WHEN ? = 'owned' THEN CURRENT_TIMESTAMP ELSE NULL END,
-                CASE WHEN ? = 'removed' THEN CURRENT_TIMESTAMP ELSE NULL END,
+        INSERT INTO league_user_players (user_id, league_id, master_player_id, status, interessante, rimosso, 
+                                        costo_reale, prezzo_atteso, acquistatore, note,
+                                        data_acquisto, data_rimozione, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                CASE WHEN $11 = 'owned' THEN CURRENT_TIMESTAMP ELSE NULL END,
+                CASE WHEN $12 = 'removed' THEN CURRENT_TIMESTAMP ELSE NULL END,
                 CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `, [
-        userId, playerId, updateData.status, updateData.interessante, updateData.rimosso,
+        userId, leagueId, playerId, updateData.status, updateData.interessante, updateData.rimosso,
         updateData.costo_reale, updateData.prezzo_atteso, updateData.acquistatore,
         updateData.note, status, status
       ]);
@@ -426,17 +477,18 @@ router.get('/stats', async (req, res, next) => {
   try {
     const db = getDatabase();
     const userId = req.user.id;
+    const leagueId = req.leagueId;
 
-    // Get user settings
+    // Get league settings
     const settings = await db.get(
-      'SELECT total_budget, max_players, roles_config FROM user_settings WHERE user_id = ?',
-      [userId]
+      'SELECT total_budget, max_players_per_team as max_players FROM leagues WHERE id = $1',
+      [leagueId]
     );
 
     if (!settings) {
       return res.status(404).json({
-        error: 'User settings not found',
-        code: 'SETTINGS_NOT_FOUND'
+        error: 'League settings not found',
+        code: 'LEAGUE_NOT_FOUND'
       });
     }
 
@@ -445,26 +497,22 @@ router.get('/stats', async (req, res, next) => {
       SELECT 
         COUNT(*) as players_owned,
         COALESCE(SUM(up.costo_reale), 0) as budget_used
-      FROM user_players up
-      WHERE up.user_id = ? AND up.status = 'owned'
-    `, [userId]);
+      FROM league_user_players up
+      WHERE up.user_id = $1 AND up.league_id = $2 AND up.status = 'owned'
+    `, [userId, leagueId]);
 
     // Get role distribution
     const roleDistribution = await db.all(`
       SELECT 
         mp.ruolo,
         COUNT(*) as count
-      FROM user_players up
+      FROM league_user_players up
       JOIN master_players mp ON up.master_player_id = mp.id
-      WHERE up.user_id = ? AND up.status = 'owned'
+      WHERE up.user_id = $1 AND up.league_id = $2 AND up.status = 'owned'
       GROUP BY mp.ruolo
-    `, [userId]);
+    `, [userId, leagueId]);
 
     const roleDistObj = {};
-    const rolesConfig = JSON.parse(settings.roles_config || '{}');
-    Object.keys(rolesConfig).forEach(role => {
-      roleDistObj[role] = 0;
-    });
     roleDistribution.forEach(role => {
       roleDistObj[role.ruolo] = role.count;
     });
@@ -503,9 +551,10 @@ router.post('/import/batch', [
 
     const { players, batchSize = 100 } = req.body;
     const userId = req.user.id;
+    const leagueId = req.leagueId;
     const db = getDatabase();
     
-    console.log(`🚀 Fast batch import: ${players.length} players in batches of ${batchSize}`);
+    console.log(`🚀 Fast batch import for user ${userId} in league ${leagueId}: ${players.length} players in batches of ${batchSize}`);
     
     let processedCount = 0;
     const startTime = Date.now();

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react'
 import { PlayerData } from '../../types/Player'
 import { useNotifications } from '../../hooks/useNotifications'
+import { useLeague } from '../../contexts/LeagueContext'
 
 interface SidebarProps {
   onImportExcel: (players: PlayerData[]) => void
@@ -9,9 +10,9 @@ interface SidebarProps {
   onShowOwnedPlayers: () => void
   onShowFormations: () => void
   onShowParticipants: () => void
-  onShowFormationImages: () => void
   onShowRemovedPlayers: () => void
   onShowSettings: () => void
+  onShowLeagueManagement: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -21,14 +22,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onShowOwnedPlayers, 
   onShowFormations, 
   onShowParticipants, 
-  onShowFormationImages,
   onShowRemovedPlayers,
-  onShowSettings
+  onShowSettings,
+  onShowLeagueManagement
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = React.useState(false)
   const [xlsxProgress, setXlsxProgress] = useState(0)
   const { success, error: showError } = useNotifications()
+  const { currentLeague } = useLeague()
+  
+  // Check if user is master of current league
+  const isMaster = currentLeague?.isOwner || currentLeague?.userRole === 'master'
 
   const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -270,6 +275,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="w-full px-4 py-3 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg border border-orange-200 transition-colors text-left">
             ⚙️ Impostazioni
           </button>
+          
+          {isMaster && (
+            <button 
+              onClick={onShowLeagueManagement}
+              className="w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 transition-colors text-left">
+              🏆 Gestione Lega
+            </button>
+          )}
         </div>
       </div>
       
@@ -308,11 +321,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
           
-          <button 
-            onClick={onShowFormationImages}
-            className="w-full px-4 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition-colors text-left">
-            📸 Immagini Formazioni
-          </button>
           
           <button 
             onClick={handleResetData}

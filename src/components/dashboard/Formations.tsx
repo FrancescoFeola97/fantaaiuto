@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { PlayerData } from '../../types/Player'
 import { Formation, FORMATIONS, Lineup } from '../../types/Formation'
-import { useAppSettings } from './Settings'
+import { useLeague } from '../../contexts/LeagueContext'
+import { useNotifications } from '../../hooks/useNotifications'
 
 interface FormationsProps {
   players: PlayerData[]
@@ -9,75 +10,170 @@ interface FormationsProps {
 }
 
 export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers }) => {
-  const settings = useAppSettings()
+  const { currentLeague } = useLeague()
+  const { success, error: showError } = useNotifications()
   const [selectedFormation, setSelectedFormation] = useState<Formation | null>(null)
   const [lineup, setLineup] = useState<Lineup>({ formationId: '', starters: [], bench: [] })
   const [error, setError] = useState('')
   const [showFormationSelector, setShowFormationSelector] = useState(true)
+  const [savedFormations, setSavedFormations] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [formationName, setFormationName] = useState('')
 
   const ownedPlayers = players.filter(p => p.status === 'owned')
   
   // Calculate maximum bench size: maxPlayersPerTeam - 11 starters
-  const maxBenchSize = Math.max(0, settings.maxPlayersPerTeam - 11)
+  const maxBenchSize = Math.max(0, (currentLeague?.maxPlayersPerTeam || 25) - 11)
+
+  // Helper function to create headers with league ID
+  const createApiHeaders = () => {
+    const token = localStorage.getItem('fantaaiuto_token')
+    const headers: HeadersInit = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+    
+    if (currentLeague?.id) {
+      headers['x-league-id'] = currentLeague.id.toString()
+    }
+    
+    return headers
+  }
 
   useEffect(() => {
-    loadSavedLineup()
-  }, [])
+    if (currentLeague) {
+      loadSavedFormations()
+    }
+  }, [currentLeague])
 
-  const loadSavedLineup = () => {
+  const loadSavedFormations = async () => {
     try {
-      // Try to load the last selected formation
-      const lastFormationId = localStorage.getItem('fantaaiuto_last_formation')
-      if (lastFormationId) {
-        const formation = FORMATIONS.find(f => f.id === lastFormationId)
-        if (formation) {
-          setSelectedFormation(formation)
-          setShowFormationSelector(false)
-          // Load the specific lineup for this formation
-          loadFormationLineup(lastFormationId)
+      if (!currentLeague) return
+
+      const response = await fetch('https://fantaaiuto-backend.onrender.com/api/formations', {
+        headers: createApiHeaders()
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setSavedFormations(data.formations || [])
+        
+        // Load the active formation if exists
+        const activeFormation = data.formations?.find((f: any) => f.isActive)
+        if (activeFormation) {
+          loadFormationFromApi(activeFormation)
         }
       }
     } catch (error) {
-      console.error('Error loading saved lineup:', error)
+      console.error('Error loading formations:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const loadFormationLineup = (formationId: string) => {
+  const loadFormationFromApi = (formationData: any) => {
+    const formation = FORMATIONS.find(f => f.id === formationData.schema)
+    if (formation) {
+      setSelectedFormation(formation)
+      setLineup({
+        formationId: formation.id,
+        starters: formationData.players?.starters || [],
+        bench: formationData.players?.bench || []
+      })
+      setShowFormationSelector(false)
+    }
+  }
+
+  const openSaveModal = () => {
+    setFormationName(`${selectedFormation?.displayName || 'Formazione'} - ${new Date().toLocaleDateString()}`)
+    setShowSaveModal(true)
+  }
+
+  const saveFormationWithName = async () => {
+    if (!formationName.trim()) return
+    
     try {
-      const saved = localStorage.getItem(`fantaaiuto_lineup_${formationId}`)
-      if (saved) {
-        const savedLineup: Lineup = JSON.parse(saved)
-        setLineup(savedLineup)
+      if (!currentLeague || !selectedFormation) return
+
+      const formationData = {
+        name: formationName.trim(),
+        schema: selectedFormation.id,
+        players: {
+          starters: lineup.starters,
+          bench: lineup.bench
+        }
+      }
+
+      const response = await fetch('https://fantaaiuto-backend.onrender.com/api/formations', {
+        method: 'POST',
+        headers: createApiHeaders(),
+        body: JSON.stringify(formationData)
+      })
+
+      if (response.ok) {
+        success('✅ Formazione salvata!')
+        loadSavedFormations() // Reload formations list
+        setShowSaveModal(false)
+        setFormationName('')
       } else {
-        // Initialize empty lineup for this formation
-        setLineup({ formationId, starters: [], bench: [] })
+        showError('❌ Errore nel salvataggio della formazione')
       }
     } catch (error) {
-      console.error('Error loading formation lineup:', error)
-      // Initialize empty lineup on error
-      setLineup({ formationId, starters: [], bench: [] })
+      console.error('Error saving formation:', error)
+      showError('❌ Errore nel salvataggio della formazione')
     }
   }
 
-  const saveLineup = (newLineup: Lineup) => {
+  const saveLineup = async (newLineup: Lineup) => {
     try {
-      // Save the lineup for the specific formation
-      localStorage.setItem(`fantaaiuto_lineup_${newLineup.formationId}`, JSON.stringify(newLineup))
-      // Save the current formation as the last selected one
-      localStorage.setItem('fantaaiuto_last_formation', newLineup.formationId)
-      setLineup(newLineup)
+      // Save lineup via API if we have a formation selected
+      if (selectedFormation && currentLeague) {
+        const formationData = {
+          name: `${selectedFormation.displayName} - Auto Save`,
+          schema: selectedFormation.id,
+          players: {
+            starters: newLineup.starters,
+            bench: newLineup.bench
+          },
+          isActive: true // Set as active formation
+        }
+
+        const response = await fetch('https://fantaaiuto-backend.onrender.com/api/formations', {
+          method: 'POST',
+          headers: createApiHeaders(),
+          body: JSON.stringify(formationData)
+        })
+
+        if (response.ok) {
+          setLineup(newLineup)
+          // Reload formations to get the latest data
+          loadSavedFormations()
+        } else {
+          console.error('Failed to save formation via API')
+          setLineup(newLineup) // Still update UI locally
+        }
+      } else {
+        setLineup(newLineup)
+      }
     } catch (error) {
       console.error('Error saving lineup:', error)
+      setLineup(newLineup) // Still update UI locally on error
     }
   }
 
   const handleFormationSelect = (formation: Formation) => {
     setSelectedFormation(formation)
     setShowFormationSelector(false)
-    // Load existing lineup for this formation or create new one
-    loadFormationLineup(formation.id)
-    // Update the last selected formation
-    localStorage.setItem('fantaaiuto_last_formation', formation.id)
+    
+    // Check if we have an active formation with this schema
+    const activeFormation = savedFormations.find(f => f.schema === formation.id && f.isActive)
+    if (activeFormation) {
+      loadFormationFromApi(activeFormation)
+    } else {
+      // Initialize empty lineup for new formation
+      setLineup({ formationId: formation.id, starters: [], bench: [] })
+    }
   }
 
   const handlePositionAssign = (positionId: string, playerId: string) => {
@@ -171,8 +267,6 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
     setSelectedFormation(null)
     setLineup({ formationId: '', starters: [], bench: [] })
     setShowFormationSelector(true)
-    // Don't remove stored lineups, just clear the last selected formation preference
-    localStorage.removeItem('fantaaiuto_last_formation')
   }
 
 
@@ -210,43 +304,79 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
           </div>
         )}
 
-        {/* Formation Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {FORMATIONS.map(formation => (
-            <div
-              key={formation.id}
-              onClick={() => handleFormationSelect(formation)}
-              className="border-2 border-gray-200 hover:border-blue-500 rounded-lg p-4 cursor-pointer transition-all hover:shadow-lg bg-gradient-to-br from-green-50 to-green-100"
-            >
-              <div className="text-center">
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{formation.displayName}</h3>
-                
-                {/* Mini Field Preview */}
-                <div className="relative bg-green-600 rounded-lg h-32 mb-3 overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-b from-green-500 to-green-700"></div>
-                  
-                  {/* Field lines */}
-                  <div className="absolute inset-x-0 top-1/2 h-px bg-white/30"></div>
-                  <div className="absolute top-2 left-1/2 w-8 h-1 bg-white/30 transform -translate-x-1/2"></div>
-                  <div className="absolute bottom-2 left-1/2 w-8 h-1 bg-white/30 transform -translate-x-1/2"></div>
-                  
-                  {/* Position dots */}
-                  {formation.positions.map(position => (
-                    <div
-                      key={position.id}
-                      className="absolute w-2 h-2 bg-white rounded-full transform -translate-x-1/2 -translate-y-1/2"
-                      style={{
-                        left: `${position.x}%`,
-                        top: `${position.y}%`
-                      }}
-                    />
-                  ))}
+        {/* Saved Formations */}
+        {savedFormations.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Formazioni Salvate</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {savedFormations.map(formation => (
+                <div
+                  key={formation.id}
+                  onClick={() => loadFormationFromApi(formation)}
+                  className={`border-2 rounded-lg p-3 cursor-pointer transition-all hover:shadow-md ${
+                    formation.isActive 
+                      ? 'border-green-500 bg-green-50' 
+                      : 'border-gray-200 hover:border-blue-500 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-gray-900">{formation.name}</h4>
+                    {formation.isActive && (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                        Attiva
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600">{formation.schema}</p>
+                  <p className="text-xs text-gray-500">
+                    {formation.players?.starters?.length || 0} titolari • {formation.players?.bench?.length || 0} panchina
+                  </p>
                 </div>
-                
-                <p className="text-sm text-gray-600">{formation.positions.length} posizioni</p>
-              </div>
+              ))}
             </div>
-          ))}
+          </div>
+        )}
+
+        {/* Formation Templates */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">⚽ Moduli Disponibili</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {FORMATIONS.map(formation => (
+              <div
+                key={formation.id}
+                onClick={() => handleFormationSelect(formation)}
+                className="border-2 border-gray-200 hover:border-blue-500 rounded-lg p-4 cursor-pointer transition-all hover:shadow-lg bg-gradient-to-br from-green-50 to-green-100"
+              >
+                <div className="text-center">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{formation.displayName}</h3>
+                  
+                  {/* Mini Field Preview */}
+                  <div className="relative bg-green-600 rounded-lg h-32 mb-3 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-b from-green-500 to-green-700"></div>
+                    
+                    {/* Field lines */}
+                    <div className="absolute inset-x-0 top-1/2 h-px bg-white/30"></div>
+                    <div className="absolute top-2 left-1/2 w-8 h-1 bg-white/30 transform -translate-x-1/2"></div>
+                    <div className="absolute bottom-2 left-1/2 w-8 h-1 bg-white/30 transform -translate-x-1/2"></div>
+                    
+                    {/* Position dots */}
+                    {formation.positions.map(position => (
+                      <div
+                        key={position.id}
+                        className="absolute w-2 h-2 bg-white rounded-full transform -translate-x-1/2 -translate-y-1/2"
+                        style={{
+                          left: `${position.x}%`,
+                          top: `${position.y}%`
+                        }}
+                      />
+                    ))}
+                  </div>
+                  
+                  <p className="text-sm text-gray-600">{formation.positions.length} posizioni</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -268,6 +398,13 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
             </p>
           </div>
           <div className="flex space-x-2">
+            <button
+              onClick={openSaveModal}
+              disabled={lineup.starters.length === 0}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg transition-colors"
+            >
+              💾 Salva Formazione
+            </button>
             <button
               onClick={resetFormation}
               className="px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-lg border border-yellow-300 transition-colors"
@@ -454,6 +591,65 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
           )}
         </div>
       </div>
+
+      {/* Save Formation Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              💾 Salva Formazione
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nome Formazione
+                </label>
+                <input
+                  type="text"
+                  value={formationName}
+                  onChange={(e) => setFormationName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
+                  placeholder="Inserisci nome formazione"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && saveFormationWithName()}
+                />
+              </div>
+              
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <strong>📊 Dettagli:</strong>
+                </p>
+                <p className="text-sm text-blue-600">
+                  • Modulo: {selectedFormation?.displayName}
+                </p>
+                <p className="text-sm text-blue-600">
+                  • Titolari: {lineup.starters.length}/11
+                </p>
+                <p className="text-sm text-blue-600">
+                  • Panchina: {lineup.bench.length}/{maxBenchSize}
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={saveFormationWithName}
+                  disabled={!formationName.trim()}
+                  className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors"
+                >
+                  Salva
+                </button>
+                <button
+                  onClick={() => setShowSaveModal(false)}
+                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                >
+                  Annulla
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

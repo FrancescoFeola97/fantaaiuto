@@ -7,13 +7,13 @@ import { Sidebar } from './dashboard/Sidebar'
 import { OwnedPlayers } from './dashboard/OwnedPlayers'
 import { Formations } from './dashboard/Formations'
 import { Participants } from './dashboard/Participants'
-import { FormationImages } from './dashboard/FormationImages'
 import { Settings } from './dashboard/Settings'
+import { LeagueManagement } from './leagues/LeagueManagement'
 import { ProgressOverlay } from './ui/ProgressOverlay'
 import { PlayerData } from '../types/Player'
 import { useNotifications } from '../hooks/useNotifications'
 import { useDebounce } from '../hooks/useDebounce'
-import { useAppSettings } from './dashboard/Settings'
+import { useLeague, useGameMode } from '../contexts/LeagueContext'
 
 interface DashboardProps {
   user: {
@@ -25,7 +25,8 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
-  const settings = useAppSettings()
+  const { currentLeague } = useLeague()
+  const gameMode = useGameMode()
   const [players, setPlayers] = useState<PlayerData[]>([])
   const [participants, setParticipants] = useState<Array<{ id: string; name: string; squadra: string }>>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -33,7 +34,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [interestFilter, setInterestFilter] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isImporting, setIsImporting] = useState(false)
-  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'images' | 'removed' | 'settings'>('players')
+  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'removed' | 'settings' | 'league-management'>('players')
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
   const { success, error } = useNotifications()
   
@@ -52,9 +53,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   // Debounce search query to improve performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
+  // Helper function to create headers with league ID
+  const createApiHeaders = () => {
+    const token = localStorage.getItem('fantaaiuto_token')
+    const headers: HeadersInit = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+    
+    if (currentLeague?.id) {
+      headers['x-league-id'] = currentLeague.id.toString()
+    }
+    
+    return headers
+  }
+
   // Get player roles based on current game mode
   const getPlayerRoles = (player: PlayerData): string[] => {
-    if (settings.gameMode === 'Classic') {
+    if (gameMode === 'Classic') {
       return player.ruoliClassic?.length ? player.ruoliClassic : player.ruoli
     } else {
       return player.ruoliMantra?.length ? player.ruoliMantra : player.ruoli
@@ -62,8 +78,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   }
 
   useEffect(() => {
-    loadUserData()
-    loadParticipants()
+    if (currentLeague) {
+      loadUserData()
+      loadParticipants()
+    }
     
     // Listen for participants updates
     const handleParticipantsUpdate = () => {
@@ -75,14 +93,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     return () => {
       window.removeEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
     }
-  }, [])
+  }, [currentLeague])
 
   const loadUserData = async () => {
     try {
       console.log('🔄 Loading players from backend database...')
       
-      const token = localStorage.getItem('fantaaiuto_token')
-      if (!token) {
+      if (!currentLeague) {
         setIsLoading(false)
         return
       }
@@ -92,9 +109,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       const timeoutId = setTimeout(() => controller.abort(), 15000)
       
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers: createApiHeaders(),
         signal: controller.signal
       })
       
@@ -159,16 +174,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const loadParticipants = async () => {
     try {
-      const token = localStorage.getItem('fantaaiuto_token')
-      if (!token) return
+      if (!currentLeague) return
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
       
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/participants', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers: createApiHeaders(),
         signal: controller.signal
       })
       
@@ -231,11 +243,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     // Define role priority order based on game mode
     const mantraRoleOrder = ['Por', 'Ds', 'Dd', 'Dc', 'B', 'E', 'M', 'C', 'W', 'T', 'A', 'Pc']
     const classicRoleOrder = ['P', 'D', 'C', 'A']
-    const roleOrder = settings.gameMode === 'Classic' ? classicRoleOrder : mantraRoleOrder
+    const roleOrder = gameMode === 'Classic' ? classicRoleOrder : mantraRoleOrder
     
     // Get primary role for sorting (first role in array)
-    const roleA = getPlayerRoles(a)?.[0] || (settings.gameMode === 'Classic' ? 'A' : 'A')
-    const roleB = getPlayerRoles(b)?.[0] || (settings.gameMode === 'Classic' ? 'A' : 'A')
+    const roleA = getPlayerRoles(a)?.[0] || (gameMode === 'Classic' ? 'A' : 'A')
+    const roleB = getPlayerRoles(b)?.[0] || (gameMode === 'Classic' ? 'A' : 'A')
     
     // First sort by role
     const roleIndexA = roleOrder.indexOf(roleA)
@@ -275,18 +287,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       ))
 
       // Then sync with backend
-      const token = localStorage.getItem('fantaaiuto_token')
-      if (!token) return
+      if (!currentLeague) return
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
       
       await fetch(`https://fantaaiuto-backend.onrender.com/api/players/${playerId}/status`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: createApiHeaders(),
         body: JSON.stringify({
           status: updates.status,
           costoReale: updates.prezzoEffettivo || updates.costoReale || 0,
@@ -333,10 +341,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     try {
       console.log('📤 Starting fast batch upload:', newPlayers.length, 'players')
       
-      const token = localStorage.getItem('fantaaiuto_token')
-      if (!token) {
-        console.log('📊 No token found, using local mode only')
-        setProgressState(prev => ({ ...prev, currentStep: 'Nessun token - modalità locale' }))
+      if (!currentLeague) {
+        console.log('📊 No league selected, using local mode only')
+        setProgressState(prev => ({ ...prev, currentStep: 'Nessuna lega selezionata - modalità locale' }))
         return
       }
 
@@ -373,10 +380,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/players/import/batch', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: createApiHeaders(),
         body: JSON.stringify({ 
           players: newPlayers.map(p => ({
             nome: p.nome,
@@ -455,9 +459,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setCurrentView('participants')
   }
 
-  const handleShowFormationImages = () => {
-    setCurrentView('images')
-  }
 
   const handleShowRemovedPlayers = () => {
     setCurrentView('removed')
@@ -465,6 +466,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const handleShowSettings = () => {
     setCurrentView('settings')
+  }
+
+  const handleShowLeagueManagement = () => {
+    setCurrentView('league-management')
   }
 
   const handleBackToPlayers = () => {
@@ -476,7 +481,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       {/* Mobile Header */}
       <div className="md:hidden bg-white border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">FantaAiuto</h2>
+          <div className="flex items-center space-x-3">
+            <h2 className="text-lg font-semibold text-gray-900">FantaAiuto</h2>
+            {currentLeague && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">•</span>
+                <span className="text-sm font-medium text-gray-700">{currentLeague.name}</span>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  currentLeague.gameMode === 'Mantra' 
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'bg-orange-100 text-orange-700'
+                }`}>
+                  {currentLeague.gameMode}
+                </span>
+              </div>
+            )}
+          </div>
           <div className="flex items-center space-x-2">
             <input
               ref={mobileFileInputRef}
@@ -669,11 +689,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             />
           )}
 
-          {currentView === 'images' && (
-            <FormationImages 
-              onBackToPlayers={handleBackToPlayers}
-            />
-          )}
 
           {currentView === 'removed' && (
             <div className="space-y-6">
@@ -711,6 +726,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               }}
             />
           )}
+          {currentView === 'league-management' && (
+            <LeagueManagement 
+              onClose={handleBackToPlayers}
+            />
+          )}
         </div>
       </main>
 
@@ -722,9 +742,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         onShowOwnedPlayers={handleShowOwnedPlayers}
         onShowFormations={handleShowFormations}
         onShowParticipants={handleShowParticipants}
-        onShowFormationImages={handleShowFormationImages}
         onShowRemovedPlayers={handleShowRemovedPlayers}
         onShowSettings={handleShowSettings}
+        onShowLeagueManagement={handleShowLeagueManagement}
       />
 
       {/* Progress Overlay for Excel Upload */}

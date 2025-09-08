@@ -4,11 +4,58 @@ import { LoginForm } from './components/auth/LoginForm'
 import { RegisterForm } from './components/auth/RegisterForm'
 import { Dashboard } from './components/Dashboard'
 import { LoadingScreen } from './components/ui/LoadingScreen'
+import { LeagueSelector } from './components/leagues/LeagueSelector'
+import { LeagueProvider, useLeague } from './contexts/LeagueContext'
 
 interface User {
   id: string
   username: string
   email?: string
+}
+
+interface AuthenticatedAppProps {
+  user: User
+  onLogout: () => void
+}
+
+const AuthenticatedApp: React.FC<AuthenticatedAppProps> = ({ user, onLogout }) => {
+  const { currentLeague, isLoading } = useLeague()
+
+  if (isLoading) {
+    return <LoadingScreen />
+  }
+
+  // If no league is selected, show league selector
+  if (!currentLeague) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-6 text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">⚽ FantaAiuto</h1>
+            <p className="text-gray-600">Benvenuto, {user.username}! Seleziona o crea una lega per iniziare.</p>
+            <div className="mt-4">
+              <button
+                onClick={onLogout}
+                className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors"
+              >
+                🚪 Esci
+              </button>
+            </div>
+          </div>
+          
+          <LeagueSelector 
+            onLeagueSelect={() => {
+              // League selection is handled by the context
+            }}
+            currentLeague={currentLeague}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // League selected, show main dashboard
+  return <Dashboard user={user} onLogout={onLogout} />
 }
 
 function App() {
@@ -159,10 +206,10 @@ function App() {
   }
 
   return (
-    <>
-      <Dashboard user={user!} onLogout={handleLogout} />
+    <LeagueProvider userId={user?.id || null}>
+      <AuthenticatedApp user={user!} onLogout={handleLogout} />
       <Toaster />
-    </>
+    </LeagueProvider>
   )
 }
 

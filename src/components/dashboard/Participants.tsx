@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { PlayerData } from '../../types/Player'
 import { useNotifications } from '../../hooks/useNotifications'
-import { useAppSettings } from './Settings'
+import { useLeague } from '../../contexts/LeagueContext'
 
 interface Participant {
   id: string
@@ -26,11 +26,28 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   const [showPlayersModal, setShowPlayersModal] = useState(false)
   const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null)
   const { success, error: showError } = useNotifications()
-  const settings = useAppSettings()
+  const { currentLeague } = useLeague()
+
+  // Helper function to create headers with league ID
+  const createApiHeaders = () => {
+    const token = localStorage.getItem('fantaaiuto_token')
+    const headers: HeadersInit = {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+    
+    if (currentLeague?.id) {
+      headers['x-league-id'] = currentLeague.id.toString()
+    }
+    
+    return headers
+  }
 
   useEffect(() => {
-    loadParticipants()
-  }, [])
+    if (currentLeague) {
+      loadParticipants()
+    }
+  }, [currentLeague])
 
   // Calculate spent budget for a participant
   const getParticipantSpending = (participantName: string): number => {
@@ -42,22 +59,19 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   // Calculate remaining budget for a participant
   const getParticipantRemainingBudget = (participant: Participant): number => {
     const spent = getParticipantSpending(participant.name)
-    const budget = participant.budget || settings.defaultBudget || 0
+    const budget = participant.budget || currentLeague?.totalBudget || 500
     return budget - spent
   }
 
   const loadParticipants = async () => {
     try {
-      const token = localStorage.getItem('fantaaiuto_token')
-      if (!token) return
+      if (!currentLeague) return
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
 
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/participants', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers: createApiHeaders(),
         signal: controller.signal
       })
 
@@ -72,7 +86,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
           id: p.id,
           name: p.name,
           squadra: p.name, // Use name as squadra for compatibility
-          budget: settings.defaultBudget, // Use settings budget since backend doesn't store it
+          budget: currentLeague?.totalBudget || 500, // Use league budget since backend doesn't store it
           playersCount: p.playersCount || 0,
           createdAt: p.createdAt
         }))
@@ -100,17 +114,13 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
     const name = newParticipantName.trim()
 
     try {
-      const token = localStorage.getItem('fantaaiuto_token')
-      if (!token) return
+      if (!currentLeague) return
 
       console.log('🔄 Creating participant:', { name })
 
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/participants', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: createApiHeaders(),
         body: JSON.stringify({ name })
       })
 
@@ -122,7 +132,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
         const newParticipant = {
           ...data.participant,
           squadra: name, // Use name as team name for display
-          budget: settings.defaultBudget // Use settings budget for display
+          budget: currentLeague?.totalBudget || 500 // Use league budget for display
         }
         
         setParticipants(prev => [...prev, newParticipant])
@@ -147,14 +157,11 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
     if (!confirm('Sei sicuro di voler eliminare questo partecipante?')) return
 
     try {
-      const token = localStorage.getItem('fantaaiuto_token')
-      if (!token) return
+      if (!currentLeague) return
 
       const response = await fetch(`https://fantaaiuto-backend.onrender.com/api/participants/${participantId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: createApiHeaders()
       })
 
       if (response.ok) {
@@ -179,9 +186,8 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
     const trimmedName = newName.trim()
 
     try {
-      const token = localStorage.getItem('fantaaiuto_token')
-      if (!token) {
-        showError('❌ Token di autenticazione non trovato')
+      if (!currentLeague) {
+        showError('❌ Nessuna lega selezionata')
         return
       }
 
@@ -189,10 +195,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
 
       const response = await fetch(`https://fantaaiuto-backend.onrender.com/api/participants/${participant.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: createApiHeaders(),
         body: JSON.stringify({ 
           name: trimmedName
         })
@@ -339,7 +342,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-500">Budget Iniziale</span>
                   <span className="text-sm font-bold text-green-600">
-                    {new Intl.NumberFormat('it-IT').format(participant.budget || settings.defaultBudget)}
+                    {new Intl.NumberFormat('it-IT').format(participant.budget || currentLeague?.totalBudget || 500)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -357,7 +360,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-medium text-gray-500">Giocatori Presi</span>
                   <span className="text-sm font-medium text-gray-900">
-                    {players.filter(p => p.status === 'taken_by_other' && p.acquistatore === participant.name).length} / {settings.maxPlayersPerTeam}
+                    {players.filter(p => p.status === 'taken_by_other' && p.acquistatore === participant.name).length} / {currentLeague?.maxPlayersPerTeam || 25}
                   </span>
                 </div>
               </div>
@@ -407,10 +410,10 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
               
               <div className="bg-blue-50 p-3 rounded-lg">
                 <p className="text-sm text-blue-700">
-                  💰 Budget iniziale: <strong>€{new Intl.NumberFormat('it-IT').format(settings.defaultBudget)}</strong>
+                  💰 Budget iniziale: <strong>€{new Intl.NumberFormat('it-IT').format(currentLeague?.totalBudget || 500)}</strong>
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  Il budget sarà quello impostato nelle preferenze
+                  Il budget sarà quello impostato per la lega corrente
                 </p>
               </div>
 
@@ -472,7 +475,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                   <div>
                     <p className="text-xs text-gray-500">Budget Iniziale</p>
                     <p className="text-lg font-bold text-green-600">
-                      {new Intl.NumberFormat('it-IT').format(selectedParticipant.budget || settings.defaultBudget)}
+                      {new Intl.NumberFormat('it-IT').format(selectedParticipant.budget || currentLeague?.totalBudget || 500)}
                     </p>
                   </div>
                   <div>
@@ -490,7 +493,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
                   <div>
                     <p className="text-xs text-gray-500">Giocatori</p>
                     <p className="text-lg font-bold text-purple-600">
-                      {participantPlayers.length} / {settings.maxPlayersPerTeam}
+                      {participantPlayers.length} / {currentLeague?.maxPlayersPerTeam || 25}
                     </p>
                   </div>
                 </div>
