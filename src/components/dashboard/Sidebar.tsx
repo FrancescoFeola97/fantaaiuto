@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react'
 import { PlayerData } from '../../types/Player'
 import { useNotifications } from '../../hooks/useNotifications'
 import { usePermissions } from '../../hooks/usePermissions'
+import { useLeague } from '../../contexts/LeagueContext'
 
 interface SidebarProps {
   onImportExcel: (players: PlayerData[]) => void
@@ -13,6 +14,7 @@ interface SidebarProps {
   onShowRemovedPlayers: () => void
   onShowSettings: () => void
   onShowLeagueManagement: () => void
+  onShowLeagueSelector: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -24,13 +26,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onShowParticipants, 
   onShowRemovedPlayers,
   onShowSettings,
-  onShowLeagueManagement
+  onShowLeagueManagement,
+  onShowLeagueSelector
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = React.useState(false)
   const [xlsxProgress, setXlsxProgress] = useState(0)
   const { success, error: showError } = useNotifications()
   const { isMaster, canManageData } = usePermissions()
+  const { currentLeague } = useLeague()
 
   const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -241,9 +245,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className="w-64 bg-white border-l border-gray-200 flex-shrink-0 hidden xl:block">
+      {/* League Management Section */}
+      <div className="p-4 border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">🏆 Leghe</h3>
+        <div className="space-y-2">
+          {currentLeague && (
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="text-xs font-medium text-blue-900 mb-1">Lega Attiva</div>
+              <div className="text-sm font-semibold text-blue-800">{currentLeague.name}</div>
+              <div className="text-xs text-blue-600">
+                {currentLeague.gameMode} • {currentLeague.code}
+              </div>
+            </div>
+          )}
+          
+          <button 
+            onClick={onShowLeagueSelector}
+            className="w-full px-4 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition-colors text-left">
+            {currentLeague ? '🔄 Cambia Lega' : '➕ Crea o Unisciti a Lega'}
+          </button>
+          
+          {currentLeague && isMaster() && (
+            <button 
+              onClick={onShowLeagueManagement}
+              className="w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 transition-colors text-left">
+              🏆 Gestione Lega
+            </button>
+          )}
+        </div>
+      </div>
+      
       {/* Management Section */}
       <div className="p-4 border-b border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Gestione</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">📊 Gestione Dati</h3>
         <div className="space-y-2">
           <button 
             onClick={onShowOwnedPlayers}
@@ -274,14 +308,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="w-full px-4 py-3 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg border border-orange-200 transition-colors text-left">
             ⚙️ Impostazioni
           </button>
-          
-          {isMaster() && (
-            <button 
-              onClick={onShowLeagueManagement}
-              className="w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg border border-purple-200 transition-colors text-left">
-              🏆 Gestione Lega
-            </button>
-          )}
         </div>
       </div>
       

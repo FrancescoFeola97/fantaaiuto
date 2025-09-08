@@ -9,6 +9,7 @@ import { Formations } from './dashboard/Formations'
 import { Participants } from './dashboard/Participants'
 import { Settings } from './dashboard/Settings'
 import { LeagueManagement } from './leagues/LeagueManagement'
+import { LeagueSelector } from './leagues/LeagueSelector'
 import { ProgressOverlay } from './ui/ProgressOverlay'
 import { PlayerData } from '../types/Player'
 import { useNotifications } from '../hooks/useNotifications'
@@ -34,7 +35,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [interestFilter, setInterestFilter] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isImporting, setIsImporting] = useState(false)
-  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'removed' | 'settings' | 'league-management'>('players')
+  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'removed' | 'settings' | 'league-management' | 'league-selector'>('players')
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
   const { success, error } = useNotifications()
   
@@ -279,6 +280,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setInterestFilter(false)
   }
 
+  // Navigation handlers
+  const handleBackToPlayers = () => {
+    setCurrentView('players')
+  }
+
+  const handleShowLeagueSelector = () => {
+    setCurrentView('league-selector')
+  }
+
   const updatePlayer = async (playerId: string, updates: Partial<PlayerData>) => {
     try {
       // Update locally first for immediate UI feedback
@@ -472,10 +482,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     setCurrentView('league-management')
   }
 
-  const handleBackToPlayers = () => {
-    setCurrentView('players')
-  }
-
   return (
     <div className="flex flex-col md:flex-row h-screen bg-gray-50 overflow-hidden">
       {/* Mobile Header */}
@@ -552,17 +558,67 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">⚽ Tracker Fantacalcio Mantra</h1>
-          <span className="text-sm text-gray-500">👤 {user.username}</span>
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">⚽ FantaAiuto</h1>
+              {currentLeague ? (
+                <div className="flex items-center space-x-3">
+                  <span className="text-gray-300">|</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg font-semibold text-gray-800">{currentLeague.name}</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      currentLeague.gameMode === 'Mantra' 
+                        ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                        : 'bg-orange-100 text-orange-700 border border-orange-200'
+                    }`}>
+                      {currentLeague.gameMode}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      Codice: <span className="font-mono font-medium text-gray-700">{currentLeague.code}</span>
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <span className="text-gray-300">|</span>
+                  <span className="text-gray-500 text-sm">Nessuna lega selezionata</span>
+                  <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                    Usa la sidebar per creare o selezionare una lega
+                  </span>
+                </div>
+              )}
+            </div>
+            <span className="text-sm text-gray-500">👤 {user.username}</span>
+          </div>
         </div>
         
         {/* Dashboard Content */}
         <div className="flex-1 p-6 space-y-6">
-          <StatsCards players={players} />
-          
-          {/* Taken Players Summary */}
-          {currentView === 'players' && (
+          {!currentLeague ? (
+            // No league selected - show welcome message
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+              <div className="text-center py-12">
+                <div className="text-gray-400 text-6xl mb-4">🏆</div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">Benvenuto in FantaAiuto!</h2>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Per iniziare, seleziona una lega esistente o creane una nuova utilizzando 
+                  il pulsante nella barra laterale destra.
+                </p>
+                <button
+                  onClick={handleShowLeagueSelector}
+                  className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+                >
+                  🏆 Gestisci Leghe
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <StatsCards players={players} />
+              
+              {/* Taken Players Summary */}
+              {currentView === 'players' && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">🏆 Riassunto Giocatori Presi</h3>
               {(() => {
@@ -645,7 +701,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
             </div>
           )}
 
-{currentView === 'players' && (
+          {currentView === 'players' && (
             <>
               <SearchFilters
                 searchQuery={searchQuery}
@@ -666,7 +722,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               />
             </>
           )}
+            </>
+          )}
 
+          {/* View-specific content (available regardless of league selection) */}
           {currentView === 'owned' && (
             <OwnedPlayers 
               players={players}
@@ -731,6 +790,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               onClose={handleBackToPlayers}
             />
           )}
+
+          {currentView === 'league-selector' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">🏆 Gestione Leghe</h2>
+                    <p className="text-sm text-gray-600">Crea una nuova lega o unisciti a una esistente</p>
+                  </div>
+                  <button
+                    onClick={handleBackToPlayers}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors"
+                  >
+                    ← Torna al Dashboard
+                  </button>
+                </div>
+
+                <LeagueSelector 
+                  onLeagueSelect={() => {
+                    // League selection is handled by the context
+                    setCurrentView('players')
+                  }}
+                  currentLeague={currentLeague}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
@@ -745,6 +831,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         onShowRemovedPlayers={handleShowRemovedPlayers}
         onShowSettings={handleShowSettings}
         onShowLeagueManagement={handleShowLeagueManagement}
+        onShowLeagueSelector={handleShowLeagueSelector}
       />
 
       {/* Progress Overlay for Excel Upload */}
