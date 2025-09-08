@@ -456,13 +456,16 @@ export const LeagueSettings: React.FC<LeagueSettingsProps> = ({ onBackToPlayers 
                   Budget Totale (€)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={settings.totalBudget}
-                  onChange={(e) => updateSetting('totalBudget', parseInt(e.target.value) || 500)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '')
+                    const numValue = value === '' ? 500 : parseInt(value)
+                    updateSetting('totalBudget', numValue)
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  min="100"
-                  max="2000"
-                  step="50"
+                  placeholder="500"
                   disabled={!isMaster}
                 />
                 <p className="text-xs text-gray-500 mt-1">Budget iniziale per tutti i membri della lega</p>
@@ -473,15 +476,21 @@ export const LeagueSettings: React.FC<LeagueSettingsProps> = ({ onBackToPlayers 
                   Max Giocatori per Squadra
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={settings.maxPlayersPerTeam}
-                  onChange={(e) => updateSetting('maxPlayersPerTeam', parseInt(e.target.value) || 25)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '')
+                    const numValue = value === '' ? 25 : parseInt(value)
+                    if (numValue >= 11 && numValue <= 50) {
+                      updateSetting('maxPlayersPerTeam', numValue)
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  min="11"
-                  max="50"
+                  placeholder="25"
                   disabled={!isMaster}
                 />
-                <p className="text-xs text-gray-500 mt-1">Numero massimo di giocatori per ogni squadra</p>
+                <p className="text-xs text-gray-500 mt-1">Numero massimo di giocatori per ogni squadra (11-50)</p>
               </div>
 
               <div>
@@ -489,15 +498,21 @@ export const LeagueSettings: React.FC<LeagueSettingsProps> = ({ onBackToPlayers 
                   Max Membri Lega
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={settings.maxMembers}
-                  onChange={(e) => updateSetting('maxMembers', parseInt(e.target.value) || 20)}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '')
+                    const numValue = value === '' ? 20 : parseInt(value)
+                    if (numValue >= 2 && numValue <= 50) {
+                      updateSetting('maxMembers', numValue)
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  min="2"
-                  max="50"
+                  placeholder="20"
                   disabled={!isMaster}
                 />
-                <p className="text-xs text-gray-500 mt-1">Numero massimo di membri che possono unirsi alla lega</p>
+                <p className="text-xs text-gray-500 mt-1">Numero massimo di membri che possono unirsi alla lega (2-50)</p>
               </div>
             </div>
 

@@ -84,8 +84,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   useEffect(() => {
     if (currentLeague) {
+      console.log(`🔄 League changed to: ${currentLeague.name} (${currentLeague.id}) - Reloading all data`)
+      // Clear existing data first to show loading state
+      setPlayers([])
+      setParticipants([])
+      setIsLoading(true)
+      
+      // Load fresh data for the new league
       loadUserData()
       loadParticipants()
+    } else {
+      console.log('🔄 No league selected - Clearing all data')
+      setPlayers([])
+      setParticipants([])
+      setIsLoading(false)
     }
     
     // Listen for participants updates
@@ -98,7 +110,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     return () => {
       window.removeEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
     }
-  }, [currentLeague])
+  }, [currentLeague?.id]) // Use currentLeague.id to ensure it triggers on league changes
 
   const loadUserData = async () => {
     try {

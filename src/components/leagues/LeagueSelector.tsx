@@ -44,6 +44,8 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
       const token = localStorage.getItem('fantaaiuto_token')
       if (!token) return
 
+      console.log('🏆 Creating league with data:', createForm)
+
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/leagues', {
         method: 'POST',
         headers: {
@@ -294,37 +296,56 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Budget Totale</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={createForm.totalBudget}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, totalBudget: parseInt(e.target.value) || 500 }))}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '')
+                      const numValue = value === '' ? 500 : parseInt(value)
+                      setCreateForm(prev => ({ ...prev, totalBudget: numValue }))
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
-                    min={100}
-                    max={2000}
+                    placeholder="500"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Crediti disponibili per tutti i membri (es. 500)</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max Membri</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={createForm.maxMembers}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, maxMembers: parseInt(e.target.value) || 8 }))}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '')
+                      const numValue = value === '' ? 8 : parseInt(value)
+                      if (numValue >= 2 && numValue <= 50) {
+                        setCreateForm(prev => ({ ...prev, maxMembers: numValue }))
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
-                    min={2}
-                    max={50}
+                    placeholder="8"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Numero massimo partecipanti (2-50)</p>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Max Giocatori per Team</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={createForm.maxPlayersPerTeam}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, maxPlayersPerTeam: parseInt(e.target.value) || 25 }))}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '')
+                    const numValue = value === '' ? 25 : parseInt(value)
+                    if (numValue >= 11 && numValue <= 50) {
+                      setCreateForm(prev => ({ ...prev, maxPlayersPerTeam: numValue }))
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
-                  min={11}
-                  max={50}
+                  placeholder="25"
                 />
+                <p className="text-xs text-gray-500 mt-1">Numero massimo di giocatori per squadra (11-50)</p>
               </div>
 
               <div>
