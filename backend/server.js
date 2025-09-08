@@ -55,17 +55,31 @@ const allowedOrigins = [
   'http://localhost:8084',
   'http://localhost:8085', 
   'http://localhost:8086',
-  'https://fantaiuto.netlify.app',
-  'https://fantaaiuto.netlify.app',
+  'https://fantaiuto.netlify.app', // Single 'a' version
+  'https://fantaaiuto.netlify.app', // Double 'a' version
   'https://fantaaiuto-v2.netlify.app',
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log(`✅ CORS allowed for origin: ${origin}`);
+      callback(null, true);
+    } else {
+      console.log(`❌ CORS denied for origin: ${origin}`);
+      console.log(`🔧 Allowed origins:`, allowedOrigins);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-league-id'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 }));
 
 // Rate limiting
@@ -139,6 +153,7 @@ async function startServer() {
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🌐 API available at: http://localhost:${PORT}/api`);
       console.log(`💖 Health check: http://localhost:${PORT}/health`);
+      console.log(`🔧 CORS allowed origins:`, allowedOrigins);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
