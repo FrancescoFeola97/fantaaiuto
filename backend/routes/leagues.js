@@ -34,7 +34,7 @@ router.get('/', async (req, res, next) => {
       FROM leagues l
       JOIN league_members lm ON l.id = lm.league_id
       LEFT JOIN users u ON l.owner_id = u.id
-      WHERE lm.user_id = ?1
+      WHERE lm.user_id = ?
       ORDER BY l.created_at DESC
     `, [userId]);
 
@@ -79,7 +79,7 @@ router.get('/:leagueId', async (req, res, next) => {
     const membership = await db.get(`
       SELECT lm.role, lm.team_name, lm.budget_used, lm.players_count
       FROM league_members lm
-      WHERE lm.league_id = ?1 AND lm.user_id = ?2
+      WHERE lm.league_id = ? AND lm.user_id = ?
     `, [leagueId, userId]);
 
     if (!membership) {
@@ -191,7 +191,7 @@ router.post('/', [
       WHERE l.id = ?
     `, [leagueId]);
 
-    console.log(`🏆 New league created: ?{name} (ID: ?{leagueId}, Code: ?{createdLeague.code}) by user ?{userId}`);
+    console.log(`🏆 New league created: ${name} (ID: ${leagueId}, Code: ${createdLeague.code}) by user ${userId}`);
 
     res.status(201).json({
       message: 'League created successfully',
@@ -298,7 +298,7 @@ router.put('/:leagueId', [
 
     await db.run(`
       UPDATE leagues 
-      SET ?{updates.join(', ')}
+      SET ${updates.join(', ')}
       WHERE id = ?
     `, values);
 
@@ -429,7 +429,7 @@ router.post('/join', [
       VALUES (?, ?, 'member', ?)
     `, [league.id, userId, teamName || 'My Team']);
 
-    console.log(`👥 User ?{userId} joined league ?{league.name} (ID: ?{league.id})`);
+    console.log(`👥 User ${userId} joined league ${league.name} (ID: ${league.id})`);
 
     res.status(201).json({
       message: 'Successfully joined league',
@@ -474,7 +474,7 @@ router.delete('/:leagueId/leave', async (req, res, next) => {
     // Remove user from league (CASCADE will clean up related data)
     await db.run(`DELETE FROM league_members WHERE id = ?`, [membership.id]);
 
-    console.log(`👥 User ?{userId} left league ?{leagueId}`);
+    console.log(`👥 User ${userId} left league ${leagueId}`);
 
     res.json({
       message: 'Successfully left league'
@@ -514,7 +514,7 @@ router.delete('/:leagueId', async (req, res, next) => {
     // Delete league (CASCADE will clean up all related data)
     await db.run(`DELETE FROM leagues WHERE id = ?`, [leagueId]);
 
-    console.log(`🏆 League deleted: ?{league.name} (ID: ?{leagueId}) by user ?{userId}`);
+    console.log(`🏆 League deleted: ${league.name} (ID: ${leagueId}) by user ${userId}`);
 
     res.json({
       message: 'League deleted successfully'
@@ -594,7 +594,7 @@ router.post('/:leagueId/invite/username', [
         l.id, l.name, l.max_members, l.status,
         (SELECT COUNT(*) FROM league_members lm WHERE lm.league_id = l.id) as members_count
       FROM leagues l
-      WHERE l.id = ?1 AND l.owner_id = ?2 AND l.status = 'active'
+      WHERE l.id = ? AND l.owner_id = ? AND l.status = 'active'
     `, [leagueId, userId]);
 
     if (!league) {
@@ -613,7 +613,7 @@ router.post('/:leagueId/invite/username', [
     }
 
     // Find user by username
-    const invitedUser = await db.get('SELECT id, username FROM users WHERE username = ?1', [username]);
+    const invitedUser = await db.get('SELECT id, username FROM users WHERE username = ?', [username]);
     if (!invitedUser) {
       return res.status(404).json({
         error: 'User not found',
@@ -623,7 +623,7 @@ router.post('/:leagueId/invite/username', [
 
     // Check if user is already a member
     const existingMember = await db.get(
-      'SELECT id FROM league_members WHERE league_id = ?1 AND user_id = ?2',
+      'SELECT id FROM league_members WHERE league_id = ? AND user_id = ?',
       [leagueId, invitedUser.id]
     );
 
@@ -636,11 +636,11 @@ router.post('/:leagueId/invite/username', [
 
     // Add user to league
     await db.run(
-      'INSERT INTO league_members (league_id, user_id, role, team_name) VALUES (?1, ?2, ?3, ?4)',
+      'INSERT INTO league_members (league_id, user_id, role, team_name) VALUES (?, ?, ?, ?)',
       [leagueId, invitedUser.id, 'member', teamName || invitedUser.username]
     );
 
-    console.log(`📨 User ?{invitedUser.username} invited to league ?{league.name} by master ?{req.user.username}`);
+    console.log(`📨 User ${invitedUser.username} invited to league ${league.name} by master ${req.user.username}`);
 
     res.status(201).json({
       message: 'User successfully added to league',

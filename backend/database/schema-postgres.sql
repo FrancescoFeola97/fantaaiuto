@@ -255,12 +255,12 @@ CREATE TABLE IF NOT EXISTS league_user_settings (
 -- Function to generate unique league codes
 CREATE OR REPLACE FUNCTION generate_league_code() RETURNS VARCHAR(10) AS $$
 DECLARE
-    code VARCHAR(10);
-    exists BOOLEAN;
+    new_code VARCHAR(10);
+    code_exists BOOLEAN;
 BEGIN
     LOOP
         -- Generate 6-character alphanumeric code
-        code := UPPER(
+        new_code := UPPER(
             substring(
                 md5(random()::text || clock_timestamp()::text) 
                 from 1 for 6
@@ -268,10 +268,10 @@ BEGIN
         );
         
         -- Check if code already exists
-        SELECT EXISTS(SELECT 1 FROM leagues WHERE leagues.code = code) INTO exists;
+        SELECT EXISTS(SELECT 1 FROM leagues WHERE code = new_code) INTO code_exists;
         
-        IF NOT exists THEN
-            RETURN code;
+        IF NOT code_exists THEN
+            RETURN new_code;
         END IF;
     END LOOP;
 END;
