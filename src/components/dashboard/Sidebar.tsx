@@ -15,6 +15,7 @@ interface SidebarProps {
   onShowSettings: () => void
   onShowLeagueManagement: () => void
   onShowLeagueSelector: () => void
+  onShowDataImport: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -27,7 +28,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onShowRemovedPlayers,
   onShowSettings,
   onShowLeagueManagement,
-  onShowLeagueSelector
+  onShowLeagueSelector,
+  onShowDataImport
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = React.useState(false)
@@ -346,6 +348,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
           
+          
+          {currentLeague && (
+            <button 
+              onClick={onShowDataImport}
+              className="w-full px-4 py-3 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-lg border border-cyan-200 transition-colors text-left"
+            >
+              📥 Import da Altre Leghe
+            </button>
+          )}
           
           <button 
             onClick={handleResetData}

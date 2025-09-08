@@ -8,6 +8,7 @@ import { OwnedPlayers } from './dashboard/OwnedPlayers'
 import { Formations } from './dashboard/Formations'
 import { Participants } from './dashboard/Participants'
 import { Settings } from './dashboard/Settings'
+import { DataImport } from './dashboard/DataImport'
 import { LeagueManagement } from './leagues/LeagueManagement'
 import { LeagueSelector } from './leagues/LeagueSelector'
 import { ProgressOverlay } from './ui/ProgressOverlay'
@@ -35,7 +36,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [interestFilter, setInterestFilter] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isImporting, setIsImporting] = useState(false)
-  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'removed' | 'settings' | 'league-management' | 'league-selector'>('players')
+  const [currentView, setCurrentView] = useState<'players' | 'owned' | 'formations' | 'participants' | 'removed' | 'settings' | 'data-import' | 'league-management' | 'league-selector'>('players')
   const mobileFileInputRef = useRef<HTMLInputElement>(null)
   const { success, error } = useNotifications()
   
@@ -64,6 +65,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     
     if (currentLeague?.id) {
       headers['x-league-id'] = currentLeague.id.toString()
+      console.log('🔗 Adding league header:', currentLeague.id)
+    } else {
+      console.log('⚠️ No league selected for API call')
     }
     
     return headers
@@ -101,6 +105,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       console.log('🔄 Loading players from backend database...')
       
       if (!currentLeague) {
+        console.log('📊 No league selected, skipping player load')
+        setPlayers([])
         setIsLoading(false)
         return
       }
@@ -175,7 +181,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const loadParticipants = async () => {
     try {
-      if (!currentLeague) return
+      if (!currentLeague) {
+        console.log('📊 No league selected, skipping participants load')
+        setParticipants([])
+        return
+      }
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
@@ -297,26 +307,47 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       ))
 
       // Then sync with backend
-      if (!currentLeague) return
+      if (!currentLeague) {
+        console.log('📊 No league selected, skipping backend sync')
+        return
+      }
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
       
-      await fetch(`https://fantaaiuto-backend.onrender.com/api/players/${playerId}/status`, {
+      const updateData = {
+        status: updates.status,
+        costoReale: updates.prezzoEffettivo || updates.costoReale,
+        note: updates.note || null,
+        prezzoAtteso: updates.prezzoAtteso,
+        acquistatore: updates.acquistatore,
+        interessante: updates.interessante
+      }
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key as keyof typeof updateData] === undefined) {
+          delete updateData[key as keyof typeof updateData]
+        }
+      })
+
+      console.log('🔄 Updating player:', playerId, updateData)
+      
+      const response = await fetch(`https://fantaaiuto-backend.onrender.com/api/players/${playerId}/status`, {
         method: 'PATCH',
         headers: createApiHeaders(),
-        body: JSON.stringify({
-          status: updates.status,
-          costoReale: updates.prezzoEffettivo || updates.costoReale || 0,
-          note: updates.note || null,
-          prezzoAtteso: updates.prezzoAtteso,
-          acquistatore: updates.acquistatore
-        }),
+        body: JSON.stringify(updateData),
         signal: controller.signal
       })
       
       clearTimeout(timeoutId)
-      console.log('✅ Player updated in backend')
+      
+      if (response.ok) {
+        console.log('✅ Player updated in backend')
+      } else {
+        const errorText = await response.text()
+        console.error('❌ Backend update failed:', response.status, errorText)
+      }
     } catch (error) {
       console.error('❌ Failed to sync player update with backend:', error)
       // Keep local change even if backend fails
@@ -324,6 +355,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   }
 
   const importPlayersFromExcel = async (newPlayers: PlayerData[]) => {
+    if (!currentLeague) {
+      error('❌ Seleziona una lega prima di importare i giocatori')
+      return
+    }
+
     setIsImporting(true)
     
     // Initialize progress overlay
@@ -480,6 +516,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const handleShowLeagueManagement = () => {
     setCurrentView('league-management')
+  }
+
+  const handleShowDataImport = () => {
+    setCurrentView('data-import')
   }
 
   return (
@@ -785,6 +825,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               }}
             />
           )}
+
+          {currentView === 'data-import' && (
+            <DataImport 
+              onBackToPlayers={handleBackToPlayers}
+              onDataImported={() => {
+                // Ricarica i dati dopo l'importazione
+                loadUserData()
+                loadParticipants()
+                setCurrentView('players')
+              }}
+            />
+          )}
           {currentView === 'league-management' && (
             <LeagueManagement 
               onClose={handleBackToPlayers}
@@ -832,6 +884,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         onShowSettings={handleShowSettings}
         onShowLeagueManagement={handleShowLeagueManagement}
         onShowLeagueSelector={handleShowLeagueSelector}
+        onShowDataImport={handleShowDataImport}
       />
 
       {/* Progress Overlay for Excel Upload */}

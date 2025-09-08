@@ -60,28 +60,21 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
         
         console.log(`🏆 Loaded ${userLeagues.length} leagues`)
         
-        // If no current league is selected and user has leagues, select the first one
-        if (!currentLeague && userLeagues.length > 0) {
+        // Only auto-select if no saved league exists and no current league
+        if (!currentLeague && userLeagues.length > 0 && !localStorage.getItem('fantaaiuto_current_league')) {
           const defaultLeague = userLeagues[0]
           setCurrentLeague(defaultLeague)
-          
-          // Save the selected league in localStorage for persistence
           localStorage.setItem('fantaaiuto_current_league', JSON.stringify(defaultLeague))
           console.log(`🏆 Auto-selected league: ${defaultLeague.name}`)
         }
-        // If current league is set, verify it still exists
+        // If current league is set, verify it still exists in the loaded leagues
         else if (currentLeague) {
           const stillExists = userLeagues.find((l: League) => l.id === currentLeague.id)
           if (!stillExists) {
-            // Current league no longer exists, select first available or null
-            const newLeague = userLeagues.length > 0 ? userLeagues[0] : null
-            setCurrentLeague(newLeague)
-            
-            if (newLeague) {
-              localStorage.setItem('fantaaiuto_current_league', JSON.stringify(newLeague))
-            } else {
-              localStorage.removeItem('fantaaiuto_current_league')
-            }
+            // Current league no longer exists, clear it
+            setCurrentLeague(null)
+            localStorage.removeItem('fantaaiuto_current_league')
+            console.log('🏆 Current league no longer exists, cleared selection')
           }
         }
       } else {
@@ -146,8 +139,10 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
     }
   }
 
-  // Load saved league on component mount
+  // Load saved league on component mount, but only if we have userId
   useEffect(() => {
+    if (!userId) return
+    
     const savedLeague = localStorage.getItem('fantaaiuto_current_league')
     if (savedLeague && !currentLeague) {
       try {
@@ -159,7 +154,7 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
         localStorage.removeItem('fantaaiuto_current_league')
       }
     }
-  }, [])
+  }, [userId, currentLeague])
 
   const value: LeagueContextType = {
     currentLeague,
