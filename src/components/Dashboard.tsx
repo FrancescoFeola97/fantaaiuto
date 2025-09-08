@@ -90,25 +90,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       setParticipants([])
       setIsLoading(true)
       
-      // Load fresh data for the new league
-      loadUserData()
-      loadParticipants()
+      // Small delay to ensure UI updates and avoid race conditions
+      const loadTimer = setTimeout(() => {
+        // Load fresh data for the new league
+        loadUserData()
+        loadParticipants()
+      }, 100)
+      
+      // Listen for participants updates
+      const handleParticipantsUpdate = () => {
+        loadParticipants()
+      }
+      
+      window.addEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
+      
+      return () => {
+        clearTimeout(loadTimer)
+        window.removeEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
+      }
     } else {
       console.log('🔄 No league selected - Clearing all data')
       setPlayers([])
       setParticipants([])
       setIsLoading(false)
-    }
-    
-    // Listen for participants updates
-    const handleParticipantsUpdate = () => {
-      loadParticipants()
-    }
-    
-    window.addEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
-    
-    return () => {
-      window.removeEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
     }
   }, [currentLeague?.id]) // Use currentLeague.id to ensure it triggers on league changes
 
@@ -136,6 +140,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       
       if (response.ok) {
         const data = await response.json()
+        
+        // Verify we're still on the same league (prevent race conditions)
+        if (!currentLeague || currentLeague.id.toString() !== data.leagueId?.toString()) {
+          console.log('⚠️ League changed during data load, discarding stale data')
+          setIsLoading(false)
+          return
+        }
+        
+        console.log(`📊 Backend returned ${data.players?.length || 0} players for league ${currentLeague.id}`)
+        
         if (data.players && data.players.length > 0) {
           const mappedPlayers = data.players.map((p: any) => {
             // Parse roles from backend - try both detailed (RM) and basic (R)
@@ -174,7 +188,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           })
           
           setPlayers(mappedPlayers)
-          console.log('✅ Loaded players from PostgreSQL database:', mappedPlayers.length)
+          console.log(`✅ Loaded ${mappedPlayers.length} players from PostgreSQL for league ${currentLeague.id}`)
+          console.log(`📊 Interesting players: ${mappedPlayers.filter((p: any) => p.interessante).length}`)
+          console.log(`📊 Owned players: ${mappedPlayers.filter((p: any) => p.status === 'owned').length}`)
         } else {
           console.log('📊 No players found in database')
           setPlayers([])
@@ -211,13 +227,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       
       if (response.ok) {
         const data = await response.json()
+        
+        // Verify we're still on the same league (prevent race conditions)
+        if (!currentLeague || currentLeague.id.toString() !== data.leagueId?.toString()) {
+          console.log('⚠️ League changed during participants load, discarding stale data')
+          return
+        }
+        
         const mappedParticipants = (data.participants || []).map((p: any) => ({
           id: p.id,
           name: p.name,
           squadra: p.squadra
         }))
         setParticipants(mappedParticipants)
-        console.log('📊 Loaded participants:', mappedParticipants.length)
+        console.log(`📊 Loaded ${mappedParticipants.length} participants for league ${currentLeague.id}`)
       }
     } catch (error) {
       console.error('❌ Failed to load participants:', error)
@@ -313,16 +336,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
   const updatePlayer = async (playerId: string, updates: Partial<PlayerData>) => {
     try {
-      // Update locally first for immediate UI feedback
-      setPlayers(prev => prev.map(p => 
-        p.id === playerId ? { ...p, ...updates } : p
-      ))
-
-      // Then sync with backend
+      // Check league first before any updates
       if (!currentLeague) {
-        console.log('📊 No league selected, skipping backend sync')
+        console.log('📊 No league selected, skipping player update')
         return
       }
+
+      console.log(`🔄 Updating player ${playerId} in league ${currentLeague.id}:`, updates)
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
@@ -343,7 +363,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         }
       })
 
-      console.log('🔄 Updating player:', playerId, updateData)
+      console.log('📤 Sending update to backend:', playerId, updateData)
       
       const response = await fetch(`https://fantaaiuto-backend.onrender.com/api/players/${playerId}/status`, {
         method: 'PATCH',
@@ -355,14 +375,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       clearTimeout(timeoutId)
       
       if (response.ok) {
-        console.log('✅ Player updated in backend')
+        console.log('✅ Player updated in backend, updating local state')
+        // Only update locally after successful backend update
+        setPlayers(prev => prev.map(p => 
+          p.id === playerId ? { ...p, ...updates } : p
+        ))
       } else {
         const errorText = await response.text()
         console.error('❌ Backend update failed:', response.status, errorText)
+        // Don't update local state if backend failed
       }
     } catch (error) {
       console.error('❌ Failed to sync player update with backend:', error)
-      // Keep local change even if backend fails
+      // Don't update local state if API call failed
     }
   }
 

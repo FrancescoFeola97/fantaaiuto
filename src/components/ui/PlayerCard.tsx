@@ -21,6 +21,19 @@ const PlayerCard: React.FC<PlayerCardProps> = React.memo(({ player, onUpdate, pa
   const [showPurchaseModal, setShowPurchaseModal] = React.useState(false)
   const [purchaseType, setPurchaseType] = React.useState<'me' | 'other'>('me')
 
+  // Update local state when player data changes (important for league switching)
+  React.useEffect(() => {
+    setPrezzoAtteso(player.prezzoAtteso || player.prezzo || '')
+    setAcquistatore(player.acquistatore || '')
+    setPrezzoEffettivoEdit(player.prezzoEffettivo?.toString() || '')
+    
+    // Reset editing states when player data changes
+    setIsEditingPrezzoAtteso(false)
+    setIsEditingAcquistatore(false)
+    setIsEditingPrezzoEffettivo(false)
+    setShowPurchaseModal(false)
+  }, [player.id, player.prezzoAtteso, player.acquistatore, player.prezzoEffettivo])
+
   // Get roles based on current game mode
   const getCurrentRoles = () => {
     if (gameMode === 'Classic') {
