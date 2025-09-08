@@ -74,8 +74,14 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
         setCurrentLeague(newLeague)
         success(`🏆 Lega "${newLeague.name}" creata con successo! Codice invito: ${newLeague.code}`)
       } else {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Errore creazione lega')
+        const errorText = await response.text()
+        console.error('❌ League creation failed:', response.status, errorText)
+        try {
+          const errorData = JSON.parse(errorText || '{}')
+          throw new Error(errorData.error || errorData.message || 'Validation failed')
+        } catch (parseError) {
+          throw new Error('Validation failed: ' + errorText)
+        }
       }
     } catch (error: any) {
       console.error('❌ Error creating league:', error)
@@ -298,11 +304,15 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
                   <input
                     type="text"
                     inputMode="numeric"
-                    value={createForm.totalBudget}
+                    value={createForm.totalBudget.toString()}
                     onChange={(e) => {
                       const value = e.target.value.replace(/[^0-9]/g, '')
-                      const numValue = value === '' ? 500 : parseInt(value)
-                      setCreateForm(prev => ({ ...prev, totalBudget: numValue }))
+                      if (value === '') {
+                        setCreateForm(prev => ({ ...prev, totalBudget: 500 }))
+                      } else {
+                        const numValue = parseInt(value)
+                        setCreateForm(prev => ({ ...prev, totalBudget: numValue }))
+                      }
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
                     placeholder="500"
@@ -314,12 +324,16 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
                   <input
                     type="text"
                     inputMode="numeric"
-                    value={createForm.maxMembers}
+                    value={createForm.maxMembers.toString()}
                     onChange={(e) => {
                       const value = e.target.value.replace(/[^0-9]/g, '')
-                      const numValue = value === '' ? 8 : parseInt(value)
-                      if (numValue >= 2 && numValue <= 50) {
-                        setCreateForm(prev => ({ ...prev, maxMembers: numValue }))
+                      if (value === '') {
+                        setCreateForm(prev => ({ ...prev, maxMembers: 8 }))
+                      } else {
+                        const numValue = parseInt(value)
+                        if (numValue >= 2 && numValue <= 50) {
+                          setCreateForm(prev => ({ ...prev, maxMembers: numValue }))
+                        }
                       }
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
@@ -334,12 +348,16 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={createForm.maxPlayersPerTeam}
+                  value={createForm.maxPlayersPerTeam.toString()}
                   onChange={(e) => {
                     const value = e.target.value.replace(/[^0-9]/g, '')
-                    const numValue = value === '' ? 25 : parseInt(value)
-                    if (numValue >= 11 && numValue <= 50) {
-                      setCreateForm(prev => ({ ...prev, maxPlayersPerTeam: numValue }))
+                    if (value === '') {
+                      setCreateForm(prev => ({ ...prev, maxPlayersPerTeam: 25 }))
+                    } else {
+                      const numValue = parseInt(value)
+                      if (numValue >= 11 && numValue <= 50) {
+                        setCreateForm(prev => ({ ...prev, maxPlayersPerTeam: numValue }))
+                      }
                     }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"

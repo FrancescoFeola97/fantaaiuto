@@ -154,7 +154,7 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
         localStorage.removeItem('fantaaiuto_current_league')
       }
     }
-  }, [userId, currentLeague])
+  }, [userId]) // Remove currentLeague from dependencies to prevent loop
 
   const value: LeagueContextType = {
     currentLeague,
