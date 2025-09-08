@@ -142,7 +142,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         const data = await response.json()
         
         // Verify we're still on the same league (prevent race conditions)
-        if (!currentLeague || currentLeague.id.toString() !== data.leagueId?.toString()) {
+        // Only check if leagueId is provided by backend
+        if (data.leagueId && currentLeague && currentLeague.id.toString() !== data.leagueId.toString()) {
           console.log('⚠️ League changed during data load, discarding stale data')
           setIsLoading(false)
           return
@@ -229,7 +230,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         const data = await response.json()
         
         // Verify we're still on the same league (prevent race conditions)
-        if (!currentLeague || currentLeague.id.toString() !== data.leagueId?.toString()) {
+        // Only check if leagueId is provided by backend
+        if (data.leagueId && currentLeague && currentLeague.id.toString() !== data.leagueId.toString()) {
           console.log('⚠️ League changed during participants load, discarding stale data')
           return
         }
@@ -344,11 +346,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
 
       console.log(`🔄 Updating player ${playerId} in league ${currentLeague.id}:`, updates)
 
+      // Find the current player to get existing values
+      const currentPlayer = players.find(p => p.id === playerId)
+      if (!currentPlayer) {
+        console.error('❌ Player not found in current state:', playerId)
+        return
+      }
+
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
       
       const updateData = {
-        status: updates.status,
+        // Always include current status to avoid validation errors
+        status: updates.status || currentPlayer.status || 'available',
         costoReale: updates.prezzoEffettivo || updates.costoReale,
         note: updates.note || null,
         prezzoAtteso: updates.prezzoAtteso,
@@ -416,8 +426,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
       totalBatches
     })
     
-    // Show players immediately for better UX (optimistic UI)  
-    setPlayers(newPlayers)
+    // CRITICAL: Do NOT add temporary players to state immediately
+    // The newPlayers have temporary IDs that cause 500 errors if users interact with them
+    // Wait for backend import to complete and reload with proper persistent IDs
+    console.log('🔄 Starting Excel import without showing temporary players to prevent ID conflicts')
     
     let progressInterval: NodeJS.Timeout | null = null
     
@@ -498,10 +510,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         
         // Wait a moment to show completion
         setTimeout(async () => {
-          // Hide progress overlay
+          // Hide progress overlay and reload data immediately
           setProgressState(prev => ({ ...prev, isVisible: false }))
           
-          // Reload data from backend to get any server-side updates
+          // Clear any temporary player data and reload from backend to get proper IDs
+          console.log('🔄 Clearing temporary data and reloading from backend...')
+          setPlayers([]) // Clear temporary IDs immediately
+          setIsLoading(true)
+          
+          // Reload data from backend to get persistent IDs
           await loadUserData()
           
           // Success notification
