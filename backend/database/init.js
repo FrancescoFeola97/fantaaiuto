@@ -2,6 +2,7 @@ import sqlite3 from 'sqlite3';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { logger, healthLogger, dbLogger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,7 +51,8 @@ class Database {
         
         this.db = new sqlite3.Database(DATABASE_PATH, (err) => {
           if (err) {
-            console.error('❌ Error connecting to database:', err);
+            healthLogger.databaseConnection(false, err);
+            dbLogger.logError(err, 'SQLite database connection', { databasePath: DATABASE_PATH });
             reject(err);
           } else {
             console.log('🔗 Connected to SQLite database');
@@ -77,7 +79,10 @@ class Database {
       
       console.log('✅ Database schema initialized');
     } catch (error) {
-      console.error('❌ Error initializing schema:', error);
+      dbLogger.logError(error, 'Database schema initialization', {
+        component: 'database-init',
+        schemaPath: SCHEMA_PATH
+      });
       throw error;
     }
   }
@@ -106,7 +111,10 @@ class Database {
       
       console.log('✅ Database migrations completed');
     } catch (error) {
-      console.error('❌ Error running migrations:', error);
+      dbLogger.logError(error, 'Database migrations', {
+        component: 'database-init',
+        action: 'migrations'
+      });
       throw error;
     }
   }
@@ -150,7 +158,10 @@ class Database {
         console.log('✅ Default data seeded');
       }
     } catch (error) {
-      console.error('❌ Error seeding default data:', error);
+      dbLogger.logError(error, 'Database seeding', {
+        component: 'database-init',
+        action: 'seed-default-data'
+      });
       throw error;
     }
   }

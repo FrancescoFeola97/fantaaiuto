@@ -1,5 +1,7 @@
+import { errorTracker } from '../utils/logger.js';
+
 export function errorHandler(err, req, res, next) {
-  console.error('Error:', err);
+  errorTracker.captureException(err, req);
 
   // Default error response
   let status = 500;

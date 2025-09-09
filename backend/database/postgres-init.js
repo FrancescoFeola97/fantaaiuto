@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dns from 'dns';
+import { logger, healthLogger, dbLogger } from '../utils/logger.js';
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -60,13 +61,22 @@ export async function initializeDatabase() {
     
     return pool;
   } catch (error) {
-    console.error('❌ Database initialization failed:', error);
-    console.error('Error details:', {
-      code: error.code,
-      errno: error.errno,
-      syscall: error.syscall,
-      address: error.address,
-      port: error.port
+    healthLogger.databaseConnection(false, error);
+    dbLogger.logError(error, 'Database initialization', {
+      component: 'postgres-init',
+      action: 'initialization',
+      connectionConfig: {
+        host: connectionConfig.host,
+        port: connectionConfig.port,
+        database: connectionConfig.database
+      },
+      errorDetails: {
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        address: error.address,
+        port: error.port
+      }
     });
     throw error;
   }

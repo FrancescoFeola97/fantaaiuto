@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, validationResult, query } from 'express-validator';
 import { getDatabase } from '../database/postgres-init.js';
+import { logger, errorTracker, dbLogger } from '../utils/logger.js';
 
 const router = express.Router();
 
@@ -36,7 +37,12 @@ const validateLeagueAccess = async (req, res, next) => {
     next();
     
   } catch (error) {
-    console.error('❌ League validation error:', error);
+    errorTracker.captureError(error, {
+      component: 'players-route',
+      action: 'league-validation',
+      userId: req.user?.id,
+      leagueId: req.headers['x-league-id']
+    });
     res.status(500).json({
       error: 'League validation failed',
       message: error.message
@@ -81,46 +87,57 @@ router.delete('/reset', async (req, res, next) => {
     });
     
   } catch (error) {
-    console.error('❌ Reset data error:', error);
+    errorTracker.captureError(error, {
+      component: 'players-route',
+      action: 'reset-data',
+      userId: req.user?.id,
+      leagueId: req.leagueId
+    });
     next(error);
   }
 });
 
-// Debug endpoint to check database connection
-router.get('/debug', async (req, res) => {
-  try {
-    const db = getDatabase();
-    const userId = req.user.id;
-    const leagueId = req.leagueId;
-    
-    
-    // Test basic query
-    const testQuery = await db.get('SELECT COUNT(*) as count FROM users WHERE id = $1', [userId]);
-    
-    // Test master_players table
-    const playersCount = await db.get('SELECT COUNT(*) as count FROM master_players');
-    
-    // Test league membership
-    const membership = await db.get('SELECT * FROM league_members WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
-    
-    res.json({
-      success: true,
-      userId,
-      leagueId,
-      userExists: testQuery,
-      playersCount: playersCount,
-      membership: membership
-    });
-    
-  } catch (error) {
-    console.error('❌ Debug endpoint error:', error);
-    res.status(500).json({
-      error: 'Debug failed',
-      message: error.message,
+// Debug endpoint to check database connection (disabled in production)
+if (process.env.NODE_ENV !== 'production') {
+  router.get('/debug', async (req, res) => {
+    try {
+      const db = getDatabase();
+      const userId = req.user.id;
+      const leagueId = req.leagueId;
+      
+      // Test basic query
+      const testQuery = await db.get('SELECT COUNT(*) as count FROM users WHERE id = $1', [userId]);
+      
+      // Test master_players table
+      const playersCount = await db.get('SELECT COUNT(*) as count FROM master_players');
+      
+      // Test league membership
+      const membership = await db.get('SELECT * FROM league_members WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
+      
+      res.json({
+        success: true,
+        userId,
+        leagueId,
+        userExists: testQuery,
+        playersCount: playersCount,
+        membership: membership
+      });
+      
+    } catch (error) {
+      errorTracker.captureError(error, {
+        component: 'players-route',
+        action: 'debug-endpoint',
+        userId: req.user?.id,
+        leagueId: req.leagueId
+      });
+      res.status(500).json({
+        error: 'Debug failed',
+        message: error.message,
       stack: error.stack
-    });
-  }
-});
+      });
+    }
+  });
+}
 
 // Get all players for the authenticated user
 router.get('/', [
@@ -346,7 +363,15 @@ router.post('/import', [
         }
 
       } catch (playerError) {
-        console.error(`Error importing player ${playerData.nome}:`, playerError);
+        logger.error('Error importing individual player', {
+          component: 'players-route',
+          action: 'batch-import',
+          playerName: playerData.nome,
+          error: playerError.message,
+          stack: playerError.stack,
+          userId: req.user?.id,
+          leagueId: req.leagueId
+        });
         // Continue with other players
       }
     }
@@ -601,7 +626,12 @@ router.post('/import/batch', [
     });
 
   } catch (error) {
-    console.error('❌ Batch import error:', error);
+    errorTracker.captureError(error, {
+      component: 'players-route',
+      action: 'batch-import',
+      userId: req.user?.id,
+      leagueId: req.leagueId
+    });
     next(error);
   }
 });

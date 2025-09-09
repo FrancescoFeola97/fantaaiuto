@@ -2,6 +2,7 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { getDatabase } from '../database/postgres-init.js';
 import { uploadFormationImage, handleUploadError } from '../middleware/upload.js';
+import { errorTracker } from '../utils/logger.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -39,7 +40,12 @@ const validateLeagueAccess = async (req, res, next) => {
     next();
     
   } catch (error) {
-    console.error('❌ League validation error:', error);
+    errorTracker.captureError(error, {
+      component: 'formations-route',
+      action: 'league-validation',
+      userId: req.user?.id,
+      leagueId: req.headers['x-league-id']
+    });
     res.status(500).json({
       error: 'League validation failed',
       message: error.message

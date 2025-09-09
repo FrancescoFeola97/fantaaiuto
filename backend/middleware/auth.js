@@ -1,10 +1,14 @@
 import jwt from 'jsonwebtoken';
 import { getDatabase } from '../database/postgres-init.js';
+import { logger, authLogger, errorTracker } from '../utils/logger.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
-  console.error('❌ FATAL: JWT_SECRET environment variable is required for security');
+  logger.error('FATAL: JWT_SECRET environment variable is required for security', {
+    component: 'auth-middleware',
+    required_env_var: 'JWT_SECRET'
+  });
   process.exit(1);
 }
 
@@ -46,7 +50,13 @@ export function authenticateToken(req, res, next) {
       req.user = user;
       next();
     } catch (error) {
-      console.error('Auth middleware error:', error);
+      errorTracker.captureError(error, {
+        component: 'auth-middleware',
+        action: 'token-verification',
+        userId: decoded?.userId,
+        userAgent: req.get('User-Agent'),
+        ip: req.ip
+      });
       return res.status(500).json({ 
         error: 'Authentication error',
         code: 'AUTH_ERROR'

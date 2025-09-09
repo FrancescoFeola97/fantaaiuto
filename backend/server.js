@@ -18,6 +18,9 @@ import leaguesRoutes from './routes/leagues.js';
 import { authenticateToken } from './middleware/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './middleware/logger.js';
+import { logger as structuredLogger, healthLogger } from './utils/logger.js';
+import { performanceMonitoring, memoryMonitor } from './middleware/performance.js';
+import { setupErrorTracking, errorTrackingMiddleware } from './middleware/errorTracking.js';
 
 // Import database initialization
 import { initializeDatabase } from './database/postgres-init.js';
@@ -39,16 +42,26 @@ function validateEnvironment() {
   const missingVars = requiredVars.filter(varName => !process.env[varName]);
   
   if (missingVars.length > 0) {
-    console.error('❌ FATAL: Missing required environment variables:', missingVars.join(', '));
-    console.error('📋 Please set the following environment variables:');
+    structuredLogger.error('FATAL: Missing required environment variables', {
+      component: 'server-startup',
+      missingVars,
+      requiredVars,
+      environment: process.env.NODE_ENV || 'development'
+    });
     missingVars.forEach(varName => {
-      console.error(`   ${varName}=${varName === 'JWT_SECRET' ? 'your-secure-random-secret' : 'your-value'}`);
+      structuredLogger.error('Missing environment variable', {
+        variable: varName,
+        example: varName === 'JWT_SECRET' ? 'your-secure-random-secret' : 'your-value'
+      });
     });
     process.exit(1);
   }
 }
 
 validateEnvironment();
+
+// Setup error tracking
+setupErrorTracking();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -123,6 +136,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Logging middleware
 app.use(logger);
 
+// Performance monitoring middleware
+app.use(performanceMonitoring);
+
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -152,37 +168,55 @@ app.use('/api/*', (req, res) => {
   });
 });
 
+// Error tracking middleware (before error handler)
+app.use(errorTrackingMiddleware);
+
 // Global error handler
 app.use(errorHandler);
 
 // Initialize database and start server
 async function startServer() {
   try {
-    console.log('🔄 Initializing PostgreSQL database...');
+    // Log system startup
+    healthLogger.systemStart();
+    
+    structuredLogger.info('🔄 Initializing PostgreSQL database...');
     await initializeDatabase();
-    console.log('✅ PostgreSQL database initialized successfully');
+    healthLogger.databaseConnection(true);
+    structuredLogger.info('✅ PostgreSQL database initialized successfully');
 
     app.listen(PORT, () => {
-      console.log(`🚀 FantaAiuto Backend Server running on port ${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🌐 API available at: http://localhost:${PORT}/api`);
-      console.log(`💖 Health check: http://localhost:${PORT}/health`);
-      console.log(`🔧 CORS allowed origins:`, allowedOrigins);
+      structuredLogger.info('🚀 FantaAiuto Backend Server Started', {
+        port: PORT,
+        environment: process.env.NODE_ENV || 'development',
+        apiUrl: `http://localhost:${PORT}/api`,
+        healthUrl: `http://localhost:${PORT}/health`,
+        corsOrigins: allowedOrigins
+      });
+      
+      // Start memory monitoring (every 5 minutes)
+      setInterval(() => {
+        memoryMonitor();
+      }, 5 * 60 * 1000);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    structuredLogger.error('❌ Failed to start server', {
+      error: error.message,
+      stack: error.stack
+    });
+    healthLogger.databaseConnection(false, error);
     process.exit(1);
   }
 }
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully');
+  structuredLogger.info('🛑 SIGTERM received, shutting down gracefully');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('🛑 SIGINT received, shutting down gracefully');
+  structuredLogger.info('🛑 SIGINT received, shutting down gracefully');
   process.exit(0);
 });
 

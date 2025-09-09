@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { getDatabase } from '../database/postgres-init.js';
+import { errorTracker } from '../utils/logger.js';
 
 const router = express.Router();
 
@@ -36,7 +37,12 @@ const validateLeagueAccess = async (req, res, next) => {
     next();
     
   } catch (error) {
-    console.error('❌ League validation error:', error);
+    errorTracker.captureError(error, {
+      component: 'participants-route',
+      action: 'league-validation',
+      userId: req.user?.id,
+      leagueId: req.headers['x-league-id']
+    });
     res.status(500).json({
       error: 'League validation failed',
       message: error.message
