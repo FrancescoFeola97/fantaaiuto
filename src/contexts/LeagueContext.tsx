@@ -48,9 +48,8 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
       const token = localStorage.getItem('fantaaiuto_token')
       if (!token) return
 
-      console.log('🏆 Loading user leagues...')
       
-      timeoutId = setTimeout(() => controller.abort(), 25000) // Extended timeout for leagues
+      timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout for leagues
       
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/leagues', {
         headers: {
@@ -66,14 +65,12 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
         const userLeagues = data.leagues || []
         setLeagues(userLeagues)
         
-        console.log(`🏆 Loaded ${userLeagues.length} leagues`)
         
         // Only auto-select if no saved league exists and no current league
         if (!currentLeague && userLeagues.length > 0 && !localStorage.getItem('fantaaiuto_current_league')) {
           const defaultLeague = userLeagues[0]
           setCurrentLeague(defaultLeague)
           localStorage.setItem('fantaaiuto_current_league', JSON.stringify(defaultLeague))
-          console.log(`🏆 Auto-selected league: ${defaultLeague.name}`)
         }
         // If current league is set, verify it still exists in the loaded leagues
         else if (currentLeague) {
@@ -82,7 +79,6 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
             // Current league no longer exists, clear it
             setCurrentLeague(null)
             localStorage.removeItem('fantaaiuto_current_league')
-            console.log('🏆 Current league no longer exists, cleared selection')
           }
         }
       } else {
@@ -145,10 +141,8 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
     
     if (league) {
       localStorage.setItem('fantaaiuto_current_league', JSON.stringify(league))
-      console.log(`🏆 Selected league: ${league.name} (${league.gameMode})`)
     } else {
       localStorage.removeItem('fantaaiuto_current_league')
-      console.log('🏆 No league selected')
     }
   }
 
@@ -161,7 +155,6 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
       try {
         const league = JSON.parse(savedLeague)
         setCurrentLeague(league)
-        console.log('🏆 Restored saved league:', league.name)
       } catch (error) {
         console.error('❌ Error parsing saved league:', error)
         localStorage.removeItem('fantaaiuto_current_league')

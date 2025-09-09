@@ -54,20 +54,15 @@ router.delete('/reset', async (req, res, next) => {
     const userId = req.user.id;
     const leagueId = req.leagueId;
     
-    console.log('🔄 Resetting all league data for user:', userId, 'in league:', leagueId);
     
     // Delete user-specific league data in correct order (foreign keys)
     await db.run('DELETE FROM league_participant_players WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
-    console.log('✅ Deleted league_participant_players for user:', userId);
     
     await db.run('DELETE FROM league_user_players WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
-    console.log('✅ Deleted league_user_players for user:', userId);
     
     await db.run('DELETE FROM league_participants WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
-    console.log('✅ Deleted league_participants for user:', userId);
     
     await db.run('DELETE FROM league_formations WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
-    console.log('✅ Deleted league_formations for user:', userId);
     
     // Optional: Clean up master_players that are no longer referenced
     // (This keeps master players for other users/leagues, only removes orphaned ones)
@@ -79,7 +74,6 @@ router.delete('/reset', async (req, res, next) => {
         WHERE master_player_id IS NOT NULL
       )
     `);
-    console.log('✅ Cleaned up orphaned master_players');
     
     res.json({
       success: true,
@@ -99,19 +93,15 @@ router.get('/debug', async (req, res) => {
     const userId = req.user.id;
     const leagueId = req.leagueId;
     
-    console.log('🔍 Debug: user ID:', userId, 'league ID:', leagueId);
     
     // Test basic query
     const testQuery = await db.get('SELECT COUNT(*) as count FROM users WHERE id = $1', [userId]);
-    console.log('🔍 Debug: user exists:', testQuery);
     
     // Test master_players table
     const playersCount = await db.get('SELECT COUNT(*) as count FROM master_players');
-    console.log('🔍 Debug: master_players count:', playersCount);
     
     // Test league membership
     const membership = await db.get('SELECT * FROM league_members WHERE user_id = $1 AND league_id = $2', [userId, leagueId]);
-    console.log('🔍 Debug: league membership:', membership);
     
     res.json({
       success: true,
@@ -361,7 +351,6 @@ router.post('/import', [
       }
     }
 
-    console.log(`📊 Player import completed for user ${userId} in league ${leagueId}: ${importedCount} new, ${updatedCount} updated`);
 
     res.json({
       message: 'Players imported successfully',
@@ -554,7 +543,6 @@ router.post('/import/batch', [
     const leagueId = req.leagueId;
     const db = getDatabase();
     
-    console.log(`🚀 Fast batch import for user ${userId} in league ${leagueId}: ${players.length} players in batches of ${batchSize}`);
     
     let processedCount = 0;
     const startTime = Date.now();
@@ -565,7 +553,6 @@ router.post('/import/batch', [
       const batchNum = Math.floor(i/batchSize) + 1;
       const totalBatches = Math.ceil(players.length/batchSize);
       
-      console.log(`📦 Processing batch ${batchNum}/${totalBatches} (${batch.length} players)`);
       
       // Prepare batch insert values for master_players
       const masterPlayersValues = [];
@@ -599,11 +586,9 @@ router.post('/import/batch', [
       await db.all(batchInsertSQL, masterPlayersParams);
       processedCount += batch.length;
       
-      console.log(`✅ Batch ${batchNum}/${totalBatches} completed (${processedCount}/${players.length})`);
     }
 
     const duration = Date.now() - startTime;
-    console.log(`🎉 Fast batch import completed in ${duration}ms: ${processedCount} total players`);
 
     res.json({
       success: true,

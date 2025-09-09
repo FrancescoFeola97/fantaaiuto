@@ -88,7 +88,7 @@ router.post('/register', validateRegister, async (req, res, next) => {
     const token = generateToken(userId, username);
 
     // Log registration
-    console.log(`✅ New user registered: ${username} (ID: ${userId})`);
+    console.log(`✅ New user registered: ${username}`);
 
     res.status(201).json({
       message: 'User created successfully',
@@ -159,7 +159,7 @@ router.post('/login', validateLogin, async (req, res, next) => {
     const token = generateToken(user.id, user.username);
 
     // Log login
-    console.log(`🔐 User logged in: ${user.username} (ID: ${user.id})`);
+    console.log(`🔐 User logged in: ${user.username}`);
 
     res.json({
       message: 'Login successful',
@@ -192,7 +192,14 @@ router.post('/verify', async (req, res, next) => {
 
     // Verify token manually
     const jwt = await import('jsonwebtoken');
-    const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-in-production';
+    const JWT_SECRET = process.env.JWT_SECRET;
+    
+    if (!JWT_SECRET) {
+      return res.status(500).json({
+        error: 'Server configuration error',
+        code: 'JWT_SECRET_MISSING'
+      });
+    }
     
     try {
       const decoded = jwt.default.verify(token, JWT_SECRET);

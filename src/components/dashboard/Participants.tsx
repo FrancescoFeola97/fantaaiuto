@@ -79,7 +79,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
 
       if (response.ok) {
         const data = await response.json()
-        console.log('📊 Participants loaded:', data)
         
         // Map backend data to frontend structure
         const mappedParticipants = (data.participants || []).map((p: any) => ({
@@ -116,7 +115,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
     try {
       if (!currentLeague) return
 
-      console.log('🔄 Creating participant:', { name })
 
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/participants', {
         method: 'POST',
@@ -126,7 +124,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
 
       if (response.ok) {
         const data = await response.json()
-        console.log('✅ Participant created successfully:', data)
         
         // Add the new participant with default values for squadra and budget
         const newParticipant = {
@@ -191,7 +188,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
         return
       }
 
-      console.log('🔄 Updating participant:', { id: participant.id, name: trimmedName })
 
       const response = await fetch(`https://fantaaiuto-backend.onrender.com/api/participants/${participant.id}`, {
         method: 'PUT',
@@ -203,7 +199,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
 
       if (response.ok) {
         const updatedData = await response.json()
-        console.log('✅ Participant updated successfully:', updatedData)
         
         // Update only the name field since backend doesn't support squadra/budget
         setParticipants(prev => prev.map(p => 

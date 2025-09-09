@@ -69,7 +69,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onRegister, onBackTo
       const result = await response.json()
       
       localStorage.setItem('fantaaiuto_token', result.token)
-      console.log('✅ Registration successful')
       onRegister(result.user)
     } catch (error: any) {
       console.error('❌ Registration error:', error)

@@ -1,7 +1,12 @@
 import jwt from 'jsonwebtoken';
 import { getDatabase } from '../database/postgres-init.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.error('❌ FATAL: JWT_SECRET environment variable is required for security');
+  process.exit(1);
+}
 
 export function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];

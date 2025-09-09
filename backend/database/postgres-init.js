@@ -27,14 +27,6 @@ let pool;
 export async function initializeDatabase() {
   try {
     console.log('Using Supabase PostgreSQL Session Pooler (IPv4-optimized)...');
-    console.log('🔧 DNS order set to:', dns.getDefaultResultOrder());
-    console.log('🔧 Using Session Pooler connection string');
-    console.log('🔧 Connection config:', {
-      pooler: 'aws-1-eu-central-2.pooler.supabase.com',
-      ssl: !!connectionConfig.ssl,
-      max: connectionConfig.max,
-      timeout: connectionConfig.connectionTimeoutMillis
-    });
 
     console.log('🔄 Initializing PostgreSQL database...');
     

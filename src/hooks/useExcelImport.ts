@@ -56,15 +56,12 @@ export const useExcelImport = (createApiHeaders: () => HeadersInit, loadUserData
     // CRITICAL: Do NOT add temporary players to state immediately
     // The newPlayers have temporary IDs that cause 500 errors if users interact with them
     // Wait for backend import to complete and reload with proper persistent IDs
-    console.log('🔄 Starting Excel import without showing temporary players to prevent ID conflicts')
     
     let progressInterval: NodeJS.Timeout | null = null
     
     try {
-      console.log('📤 Starting fast batch upload:', newPlayers.length, 'players')
       
       if (!currentLeague) {
-        console.log('📊 No league selected, using local mode only')
         setProgressState(prev => ({ ...prev, currentStep: 'Nessuna lega selezionata - modalità locale' }))
         return
       }
@@ -122,7 +119,6 @@ export const useExcelImport = (createApiHeaders: () => HeadersInit, loadUserData
       
       if (response.ok) {
         const result = await response.json()
-        console.log('✅ Fast batch import completed:', result)
         
         // Update progress to completion
         setProgressState(prev => ({ 
@@ -140,7 +136,6 @@ export const useExcelImport = (createApiHeaders: () => HeadersInit, loadUserData
           setProgressState(prev => ({ ...prev, isVisible: false }))
           
           // Clear any temporary player data and reload from backend to get proper IDs
-          console.log('🔄 Clearing temporary data and reloading from backend...')
           
           // Reload data from backend to get persistent IDs
           await loadUserData()

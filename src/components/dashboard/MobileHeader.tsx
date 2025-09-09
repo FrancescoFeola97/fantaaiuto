@@ -37,7 +37,6 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ user, onLogout, onEr
             onChange={(e) => {
               const file = e.target.files?.[0]
               if (file) {
-                console.log('📱 Mobile Excel upload triggered')
                 onError('📱 Per caricare file Excel su mobile, usa un dispositivo desktop o ruota in modalità landscape.')
               }
             }}

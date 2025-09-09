@@ -44,7 +44,6 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
       const token = localStorage.getItem('fantaaiuto_token')
       if (!token) return
 
-      console.log('🏆 Creating league with data:', createForm)
 
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/leagues', {
         method: 'POST',

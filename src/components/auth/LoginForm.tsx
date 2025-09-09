@@ -55,7 +55,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
       result = await response.json()
 
       localStorage.setItem('fantaaiuto_token', result.token)
-      console.log('✅ Backend login successful')
       onLogin(result.user)
     } catch (error: any) {
       console.error('❌ Login error:', error)

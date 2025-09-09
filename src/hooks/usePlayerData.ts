@@ -37,10 +37,8 @@ export const usePlayerData = () => {
 
   const loadUserData = useCallback(async () => {
     try {
-      console.log('🔄 Loading players from backend database...')
       
       if (!currentLeague) {
-        console.log('📊 No league selected, skipping player load')
         setPlayers([])
         setIsLoading(false)
         return
@@ -61,12 +59,10 @@ export const usePlayerData = () => {
         
         // Verify we're still on the same league (prevent race conditions)
         if (data.leagueId && currentLeague && currentLeague.id.toString() !== data.leagueId.toString()) {
-          console.log('⚠️ League changed during data load, discarding stale data')
           setIsLoading(false)
           return
         }
         
-        console.log(`📊 Backend returned ${data.players?.length || 0} players for league ${currentLeague.id}`)
         
         if (data.players && data.players.length > 0) {
           const mappedPlayers = data.players.map((p: BackendPlayerData) => {
@@ -106,9 +102,7 @@ export const usePlayerData = () => {
           })
           
           setPlayers(mappedPlayers)
-          console.log(`✅ Loaded ${mappedPlayers.length} players from PostgreSQL for league ${currentLeague.id}`)
         } else {
-          console.log('📊 No players found in database')
           setPlayers([])
         }
       } else {
@@ -126,11 +120,9 @@ export const usePlayerData = () => {
   const updatePlayer = useCallback(async (playerId: string, updates: Partial<PlayerData>) => {
     try {
       if (!currentLeague) {
-        console.log('📊 No league selected, skipping player update')
         return
       }
 
-      console.log(`🔄 Updating player ${playerId} in league ${currentLeague.id}:`, updates)
 
       // Find the current player to get existing values
       const currentPlayer = players.find(p => p.id === playerId)
@@ -163,7 +155,6 @@ export const usePlayerData = () => {
 
       if (response.ok) {
         const updatedPlayer = await response.json()
-        console.log('✅ Player updated successfully:', updatedPlayer)
         
         // Update local state with server response
         setPlayers(prevPlayers => 
@@ -187,7 +178,6 @@ export const usePlayerData = () => {
   // Load data when league changes
   useEffect(() => {
     if (currentLeague) {
-      console.log(`🔄 League changed to: ${currentLeague.name} (${currentLeague.id}) - Reloading all data`)
       setPlayers([])
       setIsLoading(true)
       
@@ -197,7 +187,6 @@ export const usePlayerData = () => {
       
       return () => clearTimeout(loadTimer)
     } else {
-      console.log('🔄 No league selected - Clearing all data')
       setPlayers([])
       setIsLoading(false)
     }

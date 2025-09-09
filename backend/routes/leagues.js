@@ -191,7 +191,7 @@ router.post('/', [
       WHERE l.id = ?
     `, [leagueId]);
 
-    console.log(`🏆 New league created: ${name} (ID: ${leagueId}, Code: ${createdLeague.code}) by user ${userId}`);
+    console.log(`🏆 New league created: ${name}`);
 
     res.status(201).json({
       message: 'League created successfully',
@@ -429,7 +429,7 @@ router.post('/join', [
       VALUES (?, ?, 'member', ?)
     `, [league.id, userId, teamName || 'My Team']);
 
-    console.log(`👥 User ${userId} joined league ${league.name} (ID: ${league.id})`);
+    console.log(`👥 User joined league ${league.name}`);
 
     res.status(201).json({
       message: 'Successfully joined league',
@@ -474,7 +474,7 @@ router.delete('/:leagueId/leave', async (req, res, next) => {
     // Remove user from league (CASCADE will clean up related data)
     await db.run(`DELETE FROM league_members WHERE id = ?`, [membership.id]);
 
-    console.log(`👥 User ${userId} left league ${leagueId}`);
+    console.log(`👥 User left league`);
 
     res.json({
       message: 'Successfully left league'
@@ -514,7 +514,7 @@ router.delete('/:leagueId', async (req, res, next) => {
     // Delete league (CASCADE will clean up all related data)
     await db.run(`DELETE FROM leagues WHERE id = ?`, [leagueId]);
 
-    console.log(`🏆 League deleted: ${league.name} (ID: ${leagueId}) by user ${userId}`);
+    console.log(`🏆 League deleted: ${league.name}`);
 
     res.json({
       message: 'League deleted successfully'
@@ -640,7 +640,7 @@ router.post('/:leagueId/invite/username', [
       [leagueId, invitedUser.id, 'member', teamName || invitedUser.username]
     );
 
-    console.log(`📨 User ${invitedUser.username} invited to league ${league.name} by master ${req.user.username}`);
+    console.log(`📨 User invited to league ${league.name}`);
 
     res.status(201).json({
       message: 'User successfully added to league',

@@ -113,7 +113,7 @@ router.post('/', [
       isActive: false
     };
 
-    console.log(`⚽ New formation created: ${name} (${schema}) for user ${userId}`);
+    console.log(`⚽ New formation created: ${name} (${schema})`);
 
     res.status(201).json({
       message: 'Formation created successfully',
@@ -236,7 +236,7 @@ router.delete('/:formationId', async (req, res, next) => {
     // Delete formation
     await db.run('DELETE FROM league_formations WHERE id = $1', [formationId]);
 
-    console.log(`⚽ Formation deleted: ${formation.name} (ID: ${formationId}) for user ${userId} in league ${leagueId}`);
+    console.log(`⚽ Formation deleted: ${formation.name}`);
 
     res.json({
       message: 'Formation deleted successfully',

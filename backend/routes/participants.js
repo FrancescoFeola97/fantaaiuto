@@ -131,7 +131,7 @@ router.post('/', [
       playersCount: 0
     };
 
-    console.log(`👥 New participant created: ${name} (ID: ${result.lastID}) for user ${userId}`);
+    console.log(`👥 New participant created: ${name}`);
 
     res.status(201).json({
       message: 'Participant created successfully',
@@ -231,7 +231,7 @@ router.delete('/:participantId', async (req, res, next) => {
     // Delete participant (CASCADE will delete related player assignments)
     await db.run('DELETE FROM league_participants WHERE id = $1', [participantId]);
 
-    console.log(`👥 Participant deleted: ${participant.name} (ID: ${participantId}) for user ${userId} in league ${leagueId}`);
+    console.log(`👥 Participant deleted: ${participant.name}`);
 
     res.json({
       message: 'Participant deleted successfully',

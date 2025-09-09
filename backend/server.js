@@ -33,6 +33,23 @@ if (process.env.NODE_ENV === 'production') {
   dotenv.config({ path: '.env.production' });
 }
 
+// Validate critical environment variables
+function validateEnvironment() {
+  const requiredVars = ['JWT_SECRET'];
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missingVars.length > 0) {
+    console.error('❌ FATAL: Missing required environment variables:', missingVars.join(', '));
+    console.error('📋 Please set the following environment variables:');
+    missingVars.forEach(varName => {
+      console.error(`   ${varName}=${varName === 'JWT_SECRET' ? 'your-secure-random-secret' : 'your-value'}`);
+    });
+    process.exit(1);
+  }
+}
+
+validateEnvironment();
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -67,11 +84,8 @@ app.use(cors({
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log(`✅ CORS allowed for origin: ${origin}`);
       callback(null, true);
     } else {
-      console.log(`❌ CORS denied for origin: ${origin}`);
-      console.log(`🔧 Allowed origins:`, allowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   },

@@ -98,12 +98,10 @@ class Database {
       
       if (!hasAtteso) {
         await runQuery(this.db, 'ALTER TABLE user_players ADD COLUMN prezzo_atteso INTEGER DEFAULT 0');
-        console.log('✅ Added prezzo_atteso column');
       }
       
       if (!hasAcquistatore) {
         await runQuery(this.db, 'ALTER TABLE user_players ADD COLUMN acquistatore VARCHAR(100)');
-        console.log('✅ Added acquistatore column');
       }
       
       console.log('✅ Database migrations completed');
@@ -150,7 +148,6 @@ class Database {
         ]);
 
         console.log('✅ Default data seeded');
-        console.log('🔐 Default admin user: admin / password');
       }
     } catch (error) {
       console.error('❌ Error seeding default data:', error);

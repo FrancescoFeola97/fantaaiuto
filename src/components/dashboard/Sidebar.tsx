@@ -45,7 +45,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setIsUploading(true)
     
     try {
-      console.log('📋 Processing Excel file:', file.name)
       
       // Validate file type
       if (!file.name.match(/\.(xlsx?|csv)$/i)) {
@@ -76,8 +75,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         throw new Error('File Excel vuoto o formato non valido')
       }
 
-      console.log('📋 Total Excel rows:', jsonData.length)
-      console.log('📋 Sample Excel row:', jsonData[0])
 
       const rawPlayers = jsonData.map((row: any, index) => {
         const ruoliMantra = parseRolesMantra(row.RM || '')
@@ -98,12 +95,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }
       })
 
-      console.log('📋 Raw players before filtering:', rawPlayers.length)
       
       const players: PlayerData[] = rawPlayers.filter(p => {
         const isValid = p.nome.trim().length > 0 && p.nome !== 'Nome' && p.nome !== '' && p.nome !== 'undefined'
         if (!isValid) {
-          console.log('📋 Filtering out invalid player:', p)
         }
         return isValid
       })
@@ -112,8 +107,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         throw new Error('Nessun giocatore valido trovato. Verifica le colonne (Nome, Squadra, Ruoli, FVM, Prezzo)')
       }
 
-      console.log(`✅ Imported ${players.length} players from Excel`)
-      console.log(`📋 Filtered out ${rawPlayers.length - players.length} invalid entries`)
       
       setXlsxProgress(100)
       onImportExcel(players)

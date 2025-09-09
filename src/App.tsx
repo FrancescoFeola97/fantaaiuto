@@ -72,9 +72,7 @@ function App() {
           const result = await response.json()
           setUser(result.user)
           setIsAuthenticated(true)
-          console.log('✅ Backend authentication successful')
         } else {
-          console.log('❌ Token invalid, clearing...')
           localStorage.removeItem('fantaaiuto_token')
           setError('Sessione scaduta. Effettua nuovamente il login.')
         }
@@ -108,7 +106,6 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      console.log('🚪 Logging out from backend...')
       
       const token = localStorage.getItem('fantaaiuto_token')
       
@@ -126,7 +123,6 @@ function App() {
           signal: controller.signal
         })
         clearTimeout(timeoutId)
-        console.log('✅ Backend logout successful')
       } catch (error) {
         clearTimeout(timeoutId)
         console.warn('⚠️ Backend logout failed, continuing with local logout')
