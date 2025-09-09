@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { body, validationResult } from 'express-validator';
 import { getDatabase } from '../database/postgres-init.js';
 import { generateToken } from '../middleware/auth.js';
+import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
@@ -88,7 +89,7 @@ router.post('/register', validateRegister, async (req, res, next) => {
     const token = generateToken(userId, username);
 
     // Log registration
-    console.log(`✅ New user registered: ${username}`);
+    logger.info('New user registered', { username, userId });
 
     res.status(201).json({
       message: 'User created successfully',
@@ -159,7 +160,7 @@ router.post('/login', validateLogin, async (req, res, next) => {
     const token = generateToken(user.id, user.username);
 
     // Log login
-    console.log(`🔐 User logged in: ${user.username}`);
+    logger.info('User logged in', { username: user.username, userId: user.id });
 
     res.json({
       message: 'Login successful',

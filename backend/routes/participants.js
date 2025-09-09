@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { getDatabase } from '../database/postgres-init.js';
-import { errorTracker } from '../utils/logger.js';
+import { errorTracker, logger } from '../utils/logger.js';
 
 const router = express.Router();
 
@@ -137,7 +137,7 @@ router.post('/', [
       playersCount: 0
     };
 
-    console.log(`👥 New participant created: ${name}`);
+    logger.info('New participant created', { participantName: name, userId, leagueId });
 
     res.status(201).json({
       message: 'Participant created successfully',
@@ -237,7 +237,7 @@ router.delete('/:participantId', async (req, res, next) => {
     // Delete participant (CASCADE will delete related player assignments)
     await db.run('DELETE FROM league_participants WHERE id = $1', [participantId]);
 
-    console.log(`👥 Participant deleted: ${participant.name}`);
+    logger.info('Participant deleted', { participantName: participant.name, userId, leagueId });
 
     res.json({
       message: 'Participant deleted successfully',

@@ -27,31 +27,30 @@ let pool;
 
 export async function initializeDatabase() {
   try {
-    console.log('Using Supabase PostgreSQL Session Pooler (IPv4-optimized)...');
-
-    console.log('🔄 Initializing PostgreSQL database...');
+    dbLogger.logConnection('Using Supabase PostgreSQL Session Pooler (IPv4-optimized)');
+    dbLogger.logConnection('🔄 Initializing PostgreSQL database...');
     
     // Create connection pool
     pool = new Pool(connectionConfig);
     
     // Test connection with timeout
-    console.log('🔗 Attempting database connection...');
+    dbLogger.logConnection('🔗 Attempting database connection...');
     const client = await pool.connect();
-    console.log('✅ Connected to PostgreSQL database');
+    dbLogger.logConnection('✅ Connected to PostgreSQL database');
     
     // Check if database is already initialized
     try {
       const result = await client.query('SELECT COUNT(*) FROM users');
-      console.log('✅ Database schema already exists, skipping initialization');
+      dbLogger.logConnection('✅ Database schema already exists, skipping initialization');
     } catch (error) {
       // Database not initialized, create schema
-      console.log('🔧 Database schema not found, initializing...');
+      dbLogger.logConnection('🔧 Database schema not found, initializing...');
       
       const schemaPath = path.join(__dirname, 'schema-postgres.sql');
       const schemaSQL = await fs.readFile(schemaPath, 'utf8');
       
       await client.query(schemaSQL);
-      console.log('✅ Database schema initialized');
+      dbLogger.logConnection('✅ Database schema initialized');
     }
     
     // Load and execute demo data only if no users exist
@@ -62,12 +61,12 @@ export async function initializeDatabase() {
         const seedSQL = await fs.readFile(seedPath, 'utf8');
         
         await client.query(seedSQL);
-        console.log('✅ Demo data initialized');
+        dbLogger.logConnection('✅ Demo data initialized');
       } else {
-        console.log('✅ Demo data already exists, skipping seeding');
+        dbLogger.logConnection('✅ Demo data already exists, skipping seeding');
       }
     } catch (seedError) {
-      console.log('⚠️ Demo data seeding skipped:', seedError.message);
+      logger.warn('Demo data seeding skipped', { error: seedError.message });
     }
     
     client.release();
@@ -157,7 +156,7 @@ export function getDatabase() {
 export async function closeDatabase() {
   if (pool) {
     await pool.end();
-    console.log('✅ Database connection pool closed');
+    dbLogger.logConnection('✅ Database connection pool closed');
   }
 }
 

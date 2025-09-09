@@ -154,6 +154,10 @@ const errorTracker = {
 
 // Database operation logging
 const dbLogger = {
+  logConnection: (message, meta = {}) => {
+    logger.info(message, meta);
+  },
+  
   logQuery: (query, params, duration) => {
     logger.debug('Database Query', {
       query: query.substring(0, 200) + (query.length > 200 ? '...' : ''),
