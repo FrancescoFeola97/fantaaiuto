@@ -3,7 +3,7 @@
 // Test script to verify all API endpoints work correctly
 import { initializeDatabase } from './database/postgres-init.js';
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3002/api';
 
 async function testEndpoints() {
   try {
@@ -18,7 +18,7 @@ async function testEndpoints() {
     // Test 1: Health check
     console.log('1️⃣ Testing health endpoint...');
     try {
-      const response = await fetch('http://localhost:3001/health');
+      const response = await fetch('http://localhost:3002/health');
       const data = await response.json();
       console.log(`✅ Health check: ${response.status} - Status: ${data.status}`);
     } catch (error) {
