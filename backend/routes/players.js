@@ -25,16 +25,10 @@ const validateLeagueAccess = async (req, res, next) => {
       [leagueId, userId]
     );
     
-    // Debug logging for membership issues
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`🔍 League validation - User: ${userId}, League: ${leagueId}, Membership:`, membership);
-    }
-    
     if (!membership) {
       return res.status(403).json({
         error: 'Access denied',
-        message: 'You are not a member of this league',
-        debug: process.env.NODE_ENV !== 'production' ? { userId, leagueId } : undefined
+        message: 'You are not a member of this league'
       });
     }
     

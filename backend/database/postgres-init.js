@@ -39,22 +39,35 @@ export async function initializeDatabase() {
     const client = await pool.connect();
     console.log('✅ Connected to PostgreSQL database');
     
-    // Load and execute schema
-    const schemaPath = path.join(__dirname, 'schema-postgres.sql');
-    const schemaSQL = await fs.readFile(schemaPath, 'utf8');
-    
-    await client.query(schemaSQL);
-    console.log('✅ Database schema initialized');
-    
-    // Load and execute demo data
+    // Check if database is already initialized
     try {
-      const seedPath = path.join(__dirname, 'seed-demo.sql');
-      const seedSQL = await fs.readFile(seedPath, 'utf8');
+      const result = await client.query('SELECT COUNT(*) FROM users');
+      console.log('✅ Database schema already exists, skipping initialization');
+    } catch (error) {
+      // Database not initialized, create schema
+      console.log('🔧 Database schema not found, initializing...');
       
-      await client.query(seedSQL);
-      console.log('✅ Demo data initialized');
+      const schemaPath = path.join(__dirname, 'schema-postgres.sql');
+      const schemaSQL = await fs.readFile(schemaPath, 'utf8');
+      
+      await client.query(schemaSQL);
+      console.log('✅ Database schema initialized');
+    }
+    
+    // Load and execute demo data only if no users exist
+    try {
+      const userCount = await client.query('SELECT COUNT(*) as count FROM users');
+      if (userCount.rows[0].count == 0) {
+        const seedPath = path.join(__dirname, 'seed-demo.sql');
+        const seedSQL = await fs.readFile(seedPath, 'utf8');
+        
+        await client.query(seedSQL);
+        console.log('✅ Demo data initialized');
+      } else {
+        console.log('✅ Demo data already exists, skipping seeding');
+      }
     } catch (seedError) {
-      console.log('⚠️ Demo data seeding skipped (file may not exist or already exists)');
+      console.log('⚠️ Demo data seeding skipped:', seedError.message);
     }
     
     client.release();
