@@ -4,7 +4,9 @@ import { LoginForm } from './components/auth/LoginForm'
 import { RegisterForm } from './components/auth/RegisterForm'
 import { Dashboard } from './components/Dashboard'
 import { LoadingScreen } from './components/ui/LoadingScreen'
+import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { LeagueProvider, useLeague } from './contexts/LeagueContext'
+import { buildApiUrl, API_ENDPOINTS } from './config/api'
 
 interface User {
   id: string
@@ -47,14 +49,14 @@ function App() {
         return
       }
 
-      console.log('🔐 Found authentication token, verifying with backend...')
+      // Token verification - removed sensitive logging
       
-      // Backend-only authentication with proper timeout for Render
+      // Backend-only authentication with extended timeout for Render cold start
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s for Render cold start
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s for Render cold start
       
       try {
-        const response = await fetch('https://fantaaiuto-backend.onrender.com/api/auth/verify', {
+        const response = await fetch(buildApiUrl(API_ENDPOINTS.AUTH.VERIFY), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -115,7 +117,7 @@ function App() {
       const timeoutId = setTimeout(() => controller.abort(), 5000)
       
       try {
-        await fetch('https://fantaaiuto-backend.onrender.com/api/auth/logout', {
+        await fetch(buildApiUrl('/api/auth/logout'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -176,10 +178,12 @@ function App() {
   }
 
   return (
-    <LeagueProvider userId={user?.id || null}>
-      <AuthenticatedApp user={user!} onLogout={handleLogout} />
-      <Toaster />
-    </LeagueProvider>
+    <ErrorBoundary>
+      <LeagueProvider userId={user?.id || null}>
+        <AuthenticatedApp user={user!} onLogout={handleLogout} />
+        <Toaster />
+      </LeagueProvider>
+    </ErrorBoundary>
   )
 }
 

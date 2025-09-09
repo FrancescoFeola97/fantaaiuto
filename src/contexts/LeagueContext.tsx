@@ -40,6 +40,9 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
       return
     }
 
+    const controller = new AbortController()
+    let timeoutId: NodeJS.Timeout | null = null
+
     try {
       setIsLoading(true)
       const token = localStorage.getItem('fantaaiuto_token')
@@ -47,11 +50,16 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
 
       console.log('🏆 Loading user leagues...')
       
+      timeoutId = setTimeout(() => controller.abort(), 25000) // Extended timeout for leagues
+      
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/leagues', {
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
+        signal: controller.signal
       })
+      
+      if (timeoutId) clearTimeout(timeoutId)
 
       if (response.ok) {
         const data = await response.json()
@@ -81,11 +89,16 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
         console.error('❌ Failed to load leagues')
         setLeagues([])
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error loading leagues:', error)
+      if (error.name === 'AbortError') {
+        console.error('❌ Leagues request timed out')
+      }
       setLeagues([])
+      if (timeoutId) clearTimeout(timeoutId)
     } finally {
       setIsLoading(false)
+      if (timeoutId) clearTimeout(timeoutId)
     }
   }
 

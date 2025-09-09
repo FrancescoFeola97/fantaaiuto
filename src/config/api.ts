@@ -1,9 +1,15 @@
 // API Configuration
 export const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_URL || 'https://fantaaiuto-backend.onrender.com',
-  TIMEOUT: 15000, // 15 seconds (reduced from 30s)
+  TIMEOUT: {
+    AUTH: 30000,        // 30 seconds for authentication (cold start)
+    API: 20000,         // 20 seconds for standard API calls
+    LEAGUES: 25000,     // 25 seconds for leagues loading
+    UPLOAD: 300000,     // 5 minutes for Excel uploads
+    PLAYERS: 15000,     // 15 seconds for players
+    PARTICIPANTS: 20000, // 20 seconds for participants
+  },
   RETRY_ATTEMPTS: 3,
-  UPLOAD_TIMEOUT: 180000, // 3 minutes for Excel uploads
 } as const
 
 // API Endpoints
