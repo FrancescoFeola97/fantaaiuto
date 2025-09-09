@@ -20,6 +20,9 @@ export const useParticipants = () => {
     
     if (currentLeague?.id) {
       headers['x-league-id'] = currentLeague.id.toString()
+      console.log('🔍 Participants API Headers:', { leagueId: currentLeague.id, hasToken: !!token })
+    } else {
+      console.warn('⚠️ Participants: No current league available for API call')
     }
     
     return headers
