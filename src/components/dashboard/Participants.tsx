@@ -198,8 +198,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
       })
 
       if (response.ok) {
-        const updatedData = await response.json()
-        
         // Update only the name field since backend doesn't support squadra/budget
         setParticipants(prev => prev.map(p => 
           p.id === participant.id ? { ...p, name: trimmedName, squadra: trimmedName } : p
