@@ -21,9 +21,6 @@ export const usePlayerData = () => {
     
     if (currentLeague?.id) {
       headers['x-league-id'] = currentLeague.id.toString()
-      console.log('🔍 API Headers:', { leagueId: currentLeague.id, hasToken: !!token })
-    } else {
-      console.warn('⚠️ No current league available for API call')
     }
     
     return headers
