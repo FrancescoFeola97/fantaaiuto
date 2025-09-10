@@ -1,6 +1,6 @@
 import React from 'react'
 import { StatsCards } from './StatsCards'
-import { PlayerCounts } from './PlayerCounts'
+import { OwnedPlayersOverview } from './OwnedPlayersOverview'
 import { SearchFilters } from './SearchFilters'
 import { PlayersGrid } from './PlayersGrid'
 import { OwnedPlayers } from './OwnedPlayers'
@@ -100,7 +100,7 @@ export const MainContent: React.FC<MainContentProps> = ({
         return (
           <div className="space-y-6">
             <StatsCards players={filteredPlayers} />
-            <PlayerCounts players={filteredPlayers} />
+            <OwnedPlayersOverview players={players} />
             <SearchFilters
               searchQuery={searchQuery}
               roleFilter={roleFilter}

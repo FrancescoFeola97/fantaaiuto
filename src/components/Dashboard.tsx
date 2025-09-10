@@ -1,8 +1,8 @@
 import React from 'react'
-import { Sidebar } from './dashboard/Sidebar'
 import { MobileHeader } from './dashboard/MobileHeader'
 import { DesktopNavigation } from './dashboard/DesktopNavigation'
 import { MainContent } from './dashboard/MainContent'
+import { PlayerCounts } from './dashboard/PlayerCounts'
 import { ProgressOverlay } from './ui/ProgressOverlay'
 import { usePlayerData } from '../hooks/usePlayerData'
 import { useParticipants } from '../hooks/useParticipants'
@@ -146,6 +146,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           currentView="league-selector"
           navigationItems={navigationItems}
           onLogout={onLogout}
+          onImportExcel={undefined}
+          playersCount={0}
+          isImporting={false}
         />
 
         {/* Main Content - League Selector */}
@@ -199,6 +202,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         currentView={currentView}
         navigationItems={navigationItems}
         onLogout={onLogout}
+        onImportExcel={importPlayersFromExcel}
+        playersCount={players.length}
+        isImporting={isImporting}
       />
 
       {/* Main Content */}
@@ -220,20 +226,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         onDataImported={handleDataImported}
       />
 
-      {/* Right Sidebar Actions */}
-      <Sidebar 
-        onImportExcel={importPlayersFromExcel}
-        playersCount={players.length}
-        isImporting={isImporting}
-        onShowOwnedPlayers={handleShowOwnedPlayers}
-        onShowFormations={handleShowFormations}
-        onShowParticipants={handleShowParticipants}
-        onShowRemovedPlayers={handleShowRemovedPlayers}
-        onShowSettings={handleShowSettings}
-        onShowLeagueManagement={handleShowLeagueManagement}
-        onShowLeagueSelector={handleShowLeagueSelector}
-        onShowDataImport={handleShowDataImport}
-      />
+      {/* Right Panel - Player Counts (Role Filter) */}
+      <aside className="w-64 bg-white border-l border-gray-200 flex-shrink-0 hidden xl:block">
+        <div className="p-4">
+          <PlayerCounts
+            players={players}
+            currentRoleFilter={roleFilter}
+            onRoleFilterChange={handleRoleFilterChange}
+            onBackToPlayers={handleBackToPlayers}
+          />
+        </div>
+      </aside>
 
       {/* Progress Overlay for Excel Upload */}
       <ProgressOverlay
