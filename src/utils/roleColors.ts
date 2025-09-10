@@ -40,11 +40,21 @@ export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Cl
       }
     } else {
       switch (role) {
+        // Portieri
         case 'Por': return '#FF8C00' // Dark orange (mandarino)
-        case 'Dc': case 'Ds': case 'Dd': case 'B': return '#32CD32' // Lime green (distinguibile dal campo)
-        case 'E': case 'M': case 'C': return '#1E90FF' // Dodger blue
-        case 'W': case 'T': return '#8A2BE2' // Blue violet
-        case 'A': case 'Pc': return '#DC143C' // Crimson red
+        
+        // Difensori - Verde lime
+        case 'Dc': case 'Ds': case 'Dd': case 'B': return '#32CD32'
+        
+        // Centrocampisti - Blu
+        case 'E': case 'M': case 'C': return '#1E90FF'
+        
+        // Fantasisti - Viola
+        case 'W': case 'T': return '#8A2BE2'
+        
+        // Attaccanti - Rosso
+        case 'A': case 'Pc': return '#DC143C'
+        
         default: return '#9CA3AF' // gray-400
       }
     }
