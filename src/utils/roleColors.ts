@@ -28,24 +28,24 @@ export const getRoleColor = (role: string, gameMode: 'Classic' | 'Mantra') => {
 export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Classic' | 'Mantra'): { backgroundColor?: string; background?: string; className: string } => {
   if (allowedRoles.length === 0) return { className: 'bg-gray-300' }
   
-  // Get unique color categories for the allowed roles
+  // Get unique color categories for the allowed roles with more vibrant colors
   const colorMap = (role: string) => {
     if (gameMode === 'Classic') {
       switch (role) {
-        case 'P': return '#fed7aa' // orange-200
-        case 'D': return '#bbf7d0' // green-200  
-        case 'C': return '#bfdbfe' // blue-200
-        case 'A': return '#fecaca' // red-200
-        default: return '#e5e7eb' // gray-200
+        case 'P': return '#FF8C00' // Dark orange (mandarino)
+        case 'D': return '#32CD32' // Lime green (distinguibile dal campo)
+        case 'C': return '#1E90FF' // Dodger blue
+        case 'A': return '#DC143C' // Crimson red
+        default: return '#9CA3AF' // gray-400
       }
     } else {
       switch (role) {
-        case 'Por': return '#fed7aa' // orange-200
-        case 'Dc': case 'Ds': case 'Dd': case 'B': return '#bbf7d0' // green-200
-        case 'E': case 'M': case 'C': return '#bfdbfe' // blue-200
-        case 'W': case 'T': return '#e9d5ff' // purple-200
-        case 'A': case 'Pc': return '#fecaca' // red-200
-        default: return '#e5e7eb' // gray-200
+        case 'Por': return '#FF8C00' // Dark orange (mandarino)
+        case 'Dc': case 'Ds': case 'Dd': case 'B': return '#32CD32' // Lime green (distinguibile dal campo)
+        case 'E': case 'M': case 'C': return '#1E90FF' // Dodger blue
+        case 'W': case 'T': return '#8A2BE2' // Blue violet
+        case 'A': case 'Pc': return '#DC143C' // Crimson red
+        default: return '#9CA3AF' // gray-400
       }
     }
   }
@@ -57,24 +57,30 @@ export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Cl
     return { backgroundColor: uniqueColors[0], className: '' }
   }
 
-  // Multiple colors - create gradient
+  // Multiple colors - create vertical split gradient (90deg = vertical)
   if (uniqueColors.length === 2) {
     return { 
-      background: `linear-gradient(to right, ${uniqueColors[0]}, ${uniqueColors[1]})`,
+      background: `linear-gradient(90deg, ${uniqueColors[0]} 50%, ${uniqueColors[1]} 50%)`,
       className: ''
     }
   }
 
   if (uniqueColors.length === 3) {
     return { 
-      background: `linear-gradient(to right, ${uniqueColors[0]}, ${uniqueColors[1]}, ${uniqueColors[2]})`,
+      background: `linear-gradient(90deg, ${uniqueColors[0]} 33.33%, ${uniqueColors[1]} 33.33%, ${uniqueColors[1]} 66.66%, ${uniqueColors[2]} 66.66%)`,
       className: ''
     }
   }
 
-  // More than 3 colors, use a multi-color gradient
+  // More than 3 colors, use equal vertical segments
+  const segments = uniqueColors.map((color, index) => {
+    const start = (index / uniqueColors.length) * 100
+    const end = ((index + 1) / uniqueColors.length) * 100
+    return `${color} ${start}%, ${color} ${end}%`
+  }).join(', ')
+  
   return { 
-    background: `linear-gradient(to right, ${uniqueColors[0]}, ${uniqueColors[1]}, ${uniqueColors[2] || uniqueColors[0]})`,
+    background: `linear-gradient(90deg, ${segments})`,
     className: ''
   }
 }
