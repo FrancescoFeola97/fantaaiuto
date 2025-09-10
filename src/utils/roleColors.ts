@@ -60,32 +60,36 @@ export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Cl
     }
   }
 
-  const uniqueColors = [...new Set(allowedRoles.map(colorMap))]
+  // Map each role to its color (without removing duplicates)
+  const roleColors = allowedRoles.map(colorMap)
+  
+  // Get unique colors to check if we need gradients
+  const uniqueColors = [...new Set(roleColors)]
 
-  // Single color
-  if (uniqueColors.length === 1) {
+  // Single role OR all roles have same color
+  if (allowedRoles.length === 1 || uniqueColors.length === 1) {
     return { backgroundColor: uniqueColors[0], className: '' }
   }
 
-  // Multiple colors - create vertical split gradient (90deg = vertical)
-  if (uniqueColors.length === 2) {
+  // Multiple roles with different colors - create vertical split gradient
+  if (allowedRoles.length === 2) {
     return { 
-      background: `linear-gradient(90deg, ${uniqueColors[0]} 50%, ${uniqueColors[1]} 50%)`,
+      background: `linear-gradient(90deg, ${roleColors[0]} 50%, ${roleColors[1]} 50%)`,
       className: ''
     }
   }
 
-  if (uniqueColors.length === 3) {
+  if (allowedRoles.length === 3) {
     return { 
-      background: `linear-gradient(90deg, ${uniqueColors[0]} 33.33%, ${uniqueColors[1]} 33.33%, ${uniqueColors[1]} 66.66%, ${uniqueColors[2]} 66.66%)`,
+      background: `linear-gradient(90deg, ${roleColors[0]} 33.33%, ${roleColors[0]} 33.33%, ${roleColors[1]} 33.33%, ${roleColors[1]} 66.66%, ${roleColors[2]} 66.66%, ${roleColors[2]} 100%)`,
       className: ''
     }
   }
 
-  // More than 3 colors, use equal vertical segments
-  const segments = uniqueColors.map((color, index) => {
-    const start = (index / uniqueColors.length) * 100
-    const end = ((index + 1) / uniqueColors.length) * 100
+  // More than 3 roles, use equal vertical segments
+  const segments = roleColors.map((color, index) => {
+    const start = (index / roleColors.length) * 100
+    const end = ((index + 1) / roleColors.length) * 100
     return `${color} ${start}%, ${color} ${end}%`
   }).join(', ')
   
