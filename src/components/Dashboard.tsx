@@ -31,7 +31,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     isLoading,
     loadUserData,
     updatePlayer,
-    getPlayerRoles
+    getPlayerRoles,
+    createApiHeaders
   } = usePlayerData()
   
   const { participants } = useParticipants()
@@ -51,7 +52,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
     isImporting,
     progressState,
     importPlayersFromExcel
-  } = useExcelImport(() => ({}), loadUserData)
+  } = useExcelImport(createApiHeaders, loadUserData)
   
   const {
     currentView,
