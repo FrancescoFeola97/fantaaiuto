@@ -40,10 +40,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const {
     searchQuery,
     roleFilter,
+    teamFilter,
     interestFilter,
     filteredPlayers,
     handleSearchChange,
     handleRoleFilterChange,
+    handleTeamFilterChange,
     handleInterestFilterToggle,
     handleClearFilters
   } = usePlayerFilters(players, getPlayerRoles)
@@ -170,9 +172,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
                   isLoading={false}
                   searchQuery=""
                   roleFilter=""
+                  teamFilter=""
                   interestFilter={false}
                   onSearchChange={() => {}}
                   onRoleFilterChange={() => {}}
+                  onTeamFilterChange={() => {}}
                   onInterestFilterToggle={() => {}}
                   onClearFilters={() => {}}
                   onBackToPlayers={() => {}}
@@ -216,9 +220,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         isLoading={isLoading}
         searchQuery={searchQuery}
         roleFilter={roleFilter}
+        teamFilter={teamFilter}
         interestFilter={interestFilter}
         onSearchChange={handleSearchChange}
         onRoleFilterChange={handleRoleFilterChange}
+        onTeamFilterChange={handleTeamFilterChange}
         onInterestFilterToggle={handleInterestFilterToggle}
         onClearFilters={handleClearFilters}
         onBackToPlayers={handleBackToPlayers}
@@ -232,7 +238,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <PlayerCounts
             players={players}
             currentRoleFilter={roleFilter}
+            currentTeamFilter={teamFilter}
             onRoleFilterChange={handleRoleFilterChange}
+            onTeamFilterChange={handleTeamFilterChange}
             onBackToPlayers={handleBackToPlayers}
           />
         </div>

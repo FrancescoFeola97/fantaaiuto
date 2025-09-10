@@ -6,11 +6,20 @@ import { RoleCircle } from '../../utils/roleColors'
 interface PlayerCountsProps {
   players: PlayerData[]
   currentRoleFilter?: string
+  currentTeamFilter?: string
   onRoleFilterChange?: (role: string) => void
+  onTeamFilterChange?: (team: string) => void
   onBackToPlayers?: () => void
 }
 
-export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRoleFilter, onRoleFilterChange, onBackToPlayers }) => {
+export const PlayerCounts: React.FC<PlayerCountsProps> = ({ 
+  players, 
+  currentRoleFilter, 
+  currentTeamFilter, 
+  onRoleFilterChange, 
+  onTeamFilterChange, 
+  onBackToPlayers 
+}) => {
   const gameMode = useGameMode()
   
   const mantraRoles = [
@@ -49,25 +58,79 @@ export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRole
     }).length
   }
 
+  // Get unique teams for team filter
+  const getTeams = () => {
+    const teams = [...new Set(players.map(p => p.squadra).filter(Boolean))].sort()
+    return teams
+  }
+
+  const getCountByTeam = (team: string) => {
+    return players.filter(p => p.squadra === team).length
+  }
+
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-gray-900 mb-3">📊 Giocatori per Ruolo</h3>
-      
-      {/* All Players */}
-      <button 
-        onClick={() => {
-          onRoleFilterChange?.('all')
-          onBackToPlayers?.()
-        }}
-        className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
-          currentRoleFilter === 'all' || !currentRoleFilter 
-            ? 'bg-blue-100 border border-blue-200' 
-            : 'bg-gray-50 hover:bg-gray-100'
-        }`}
-      >
-        <span className="text-sm font-medium text-gray-700">🏠 Tutti i giocatori</span>
-        <span className="text-sm font-bold text-gray-900">{players.length}</span>
-      </button>
+    <div className="space-y-4">
+      {/* Team Filter Section */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">🏟️ Filtra per Squadra</h3>
+        
+        {/* All Teams */}
+        <button 
+          onClick={() => {
+            onTeamFilterChange?.('all')
+            onBackToPlayers?.()
+          }}
+          className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
+            currentTeamFilter === 'all' || !currentTeamFilter 
+              ? 'bg-green-100 border border-green-200' 
+              : 'bg-gray-50 hover:bg-gray-100'
+          }`}
+        >
+          <span className="text-sm font-medium text-gray-700">🏠 Tutte le squadre</span>
+          <span className="text-sm font-bold text-gray-900">{players.length}</span>
+        </button>
+        
+        {/* Team List */}
+        <div className="max-h-32 overflow-y-auto space-y-1">
+          {getTeams().map(team => {
+            const count = getCountByTeam(team)
+            return (
+              <button 
+                key={team}
+                onClick={() => onTeamFilterChange?.(team)}
+                className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors text-xs ${
+                  currentTeamFilter === team 
+                    ? 'bg-green-100 border border-green-200' 
+                    : 'hover:bg-gray-50'
+                }`}
+              >
+                <span className="text-gray-600 truncate">{team}</span>
+                <span className="text-gray-900 font-medium">{count}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Role Filter Section */}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-gray-900 mb-3">📊 Filtra per Ruolo</h3>
+        
+        {/* All Players */}
+        <button 
+          onClick={() => {
+            onRoleFilterChange?.('all')
+            onBackToPlayers?.()
+          }}
+          className={`w-full flex items-center justify-between p-2 rounded-lg transition-colors ${
+            currentRoleFilter === 'all' || !currentRoleFilter 
+              ? 'bg-blue-100 border border-blue-200' 
+              : 'bg-gray-50 hover:bg-gray-100'
+          }`}
+        >
+          <span className="text-sm font-medium text-gray-700">⚽ Tutti i ruoli</span>
+          <span className="text-sm font-bold text-gray-900">{players.length}</span>
+        </button>
       
       {/* Role Counts */}
       {currentRoles.map(role => {
@@ -90,6 +153,7 @@ export const PlayerCounts: React.FC<PlayerCountsProps> = ({ players, currentRole
           </button>
         )
       })}
+      </div>
     </div>
   )
 }

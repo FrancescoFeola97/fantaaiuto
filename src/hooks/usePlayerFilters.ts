@@ -7,6 +7,7 @@ export const usePlayerFilters = (players: PlayerData[], getPlayerRoles: (player:
   const gameMode = useGameMode()
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
+  const [teamFilter, setTeamFilter] = useState('all')
   const [interestFilter, setInterestFilter] = useState(false)
   
   // Debounce search query to improve performance
@@ -31,6 +32,13 @@ export const usePlayerFilters = (players: PlayerData[], getPlayerRoles: (player:
     if (roleFilter !== 'all') {
       const playerRoles = getPlayerRoles(player)
       if (!playerRoles || !playerRoles.includes(roleFilter)) {
+        return false
+      }
+    }
+
+    // Team filter
+    if (teamFilter !== 'all') {
+      if (player.squadra !== teamFilter) {
         return false
       }
     }
@@ -67,7 +75,7 @@ export const usePlayerFilters = (players: PlayerData[], getPlayerRoles: (player:
     
     // Then sort by FVM (highest first)
     return (b.fvm || 0) - (a.fvm || 0)
-  }), [players, debouncedSearchQuery, roleFilter, interestFilter, gameMode, getPlayerRoles])
+  }), [players, debouncedSearchQuery, roleFilter, teamFilter, interestFilter, gameMode, getPlayerRoles])
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query)
@@ -77,6 +85,10 @@ export const usePlayerFilters = (players: PlayerData[], getPlayerRoles: (player:
     setRoleFilter(role)
   }
 
+  const handleTeamFilterChange = (team: string) => {
+    setTeamFilter(team)
+  }
+
   const handleInterestFilterToggle = () => {
     setInterestFilter(!interestFilter)
   }
@@ -84,16 +96,19 @@ export const usePlayerFilters = (players: PlayerData[], getPlayerRoles: (player:
   const handleClearFilters = () => {
     setSearchQuery('')
     setRoleFilter('all')
+    setTeamFilter('all')
     setInterestFilter(false)
   }
 
   return {
     searchQuery,
     roleFilter,
+    teamFilter,
     interestFilter,
     filteredPlayers,
     handleSearchChange,
     handleRoleFilterChange,
+    handleTeamFilterChange,
     handleInterestFilterToggle,
     handleClearFilters
   }

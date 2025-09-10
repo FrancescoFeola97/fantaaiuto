@@ -22,9 +22,11 @@ interface MainContentProps {
   isLoading: boolean
   searchQuery: string
   roleFilter: string
+  teamFilter: string
   interestFilter: boolean
   onSearchChange: (query: string) => void
   onRoleFilterChange: (role: string) => void
+  onTeamFilterChange: (team: string) => void
   onInterestFilterToggle: () => void
   onClearFilters: () => void
   onBackToPlayers: () => void
@@ -40,9 +42,11 @@ export const MainContent: React.FC<MainContentProps> = ({
   isLoading,
   searchQuery,
   roleFilter,
+  teamFilter: _teamFilter,
   interestFilter,
   onSearchChange,
   onRoleFilterChange,
+  onTeamFilterChange: _onTeamFilterChange,
   onInterestFilterToggle,
   onClearFilters,
   onBackToPlayers,

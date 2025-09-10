@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { PlayerData } from '../../types/Player'
 import { useGameMode } from '../../contexts/LeagueContext'
 import { RoleCircle } from '../../utils/roleColors'
+import { PlayerDetailModal } from '../ui/PlayerDetailModal'
 
 interface OwnedPlayersOverviewProps {
   players: PlayerData[]
@@ -9,9 +10,21 @@ interface OwnedPlayersOverviewProps {
 
 export const OwnedPlayersOverview: React.FC<OwnedPlayersOverviewProps> = ({ players }) => {
   const gameMode = useGameMode()
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerData | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   
   // Get only owned players
   const ownedPlayers = players.filter(p => p.status === 'owned' && p.acquistatore)
+
+  const handlePlayerClick = (player: PlayerData) => {
+    setSelectedPlayer(player)
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedPlayer(null)
+  }
   
   const mantraRoles = [
     { key: 'Por', label: 'Portieri' },
@@ -96,12 +109,16 @@ export const OwnedPlayersOverview: React.FC<OwnedPlayersOverviewProps> = ({ play
                   </div>
                   <div className="space-y-1">
                     {rolePlayers.slice(0, 3).map(player => (
-                      <div key={player.id} className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1">
+                      <button
+                        key={player.id}
+                        onClick={() => handlePlayerClick(player)}
+                        className="w-full text-left text-xs text-gray-600 bg-gray-50 hover:bg-gray-100 rounded px-2 py-1 transition-colors"
+                      >
                         <div className="font-medium">{player.nome}</div>
                         <div className="text-gray-500">
                           {player.squadra} • {(player.costoReale || player.prezzo || 0).toFixed(1)}M
                         </div>
-                      </div>
+                      </button>
                     ))}
                     {rolePlayers.length > 3 && (
                       <div className="text-xs text-gray-400 text-center py-1">
@@ -134,6 +151,13 @@ export const OwnedPlayersOverview: React.FC<OwnedPlayersOverviewProps> = ({ play
           </div>
         </div>
       )}
+
+      {/* Player Detail Modal */}
+      <PlayerDetailModal
+        player={selectedPlayer}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   )
 }

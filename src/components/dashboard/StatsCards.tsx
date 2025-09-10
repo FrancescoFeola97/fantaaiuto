@@ -1,16 +1,17 @@
 import React from 'react'
 import { PlayerData } from '../../types/Player'
-import { useAppSettings } from './Settings'
+import { useLeague } from '../../contexts/LeagueContext'
 
 interface StatsCardsProps {
   players: PlayerData[]
 }
 
 export const StatsCards: React.FC<StatsCardsProps> = ({ players }) => {
-  const settings = useAppSettings()
+  const { currentLeague } = useLeague()
   const ownedPlayers = players.filter(p => p.status === 'owned')
   const totalSpent = ownedPlayers.reduce((sum, p) => sum + (p.prezzoEffettivo || p.costoReale || 0), 0)
-  const totalBudget = settings.defaultBudget
+  const totalBudget = currentLeague?.totalBudget || 500
+  const maxPlayersPerTeam = currentLeague?.maxPlayersPerTeam || 25
   const remainingCredits = totalBudget - totalSpent
   const availablePlayers = players.filter(p => p.status === 'available').length
   const takenByOthers = players.filter(p => p.status === 'taken_by_other').length
@@ -38,7 +39,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ players }) => {
         }`}>
           {new Intl.NumberFormat('it-IT').format(remainingCredits)}
         </div>
-        {budgetWarning && settings.enableNotifications && (
+        {budgetWarning && (
           <div className="text-xs text-amber-600 mt-1">
             ⚠️ Budget basso ({Math.round((remainingCredits / totalBudget) * 100)}%)
           </div>
@@ -48,12 +49,12 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ players }) => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="text-sm font-medium text-gray-500">Miei Giocatori</div>
         <div className={`text-2xl font-bold ${
-          ownedPlayers.length >= settings.maxPlayersPerTeam ? 'text-red-600' : 
-          ownedPlayers.length >= settings.maxPlayersPerTeam * 0.8 ? 'text-amber-600' : 'text-blue-600'
+          ownedPlayers.length >= maxPlayersPerTeam ? 'text-red-600' : 
+          ownedPlayers.length >= maxPlayersPerTeam * 0.8 ? 'text-amber-600' : 'text-blue-600'
         }`}>
-          {ownedPlayers.length}/{settings.maxPlayersPerTeam}
+          {ownedPlayers.length}/{maxPlayersPerTeam}
         </div>
-        {ownedPlayers.length >= settings.maxPlayersPerTeam && (
+        {ownedPlayers.length >= maxPlayersPerTeam && (
           <div className="text-xs text-red-600 mt-1">
             🚫 Limite raggiunto
           </div>
