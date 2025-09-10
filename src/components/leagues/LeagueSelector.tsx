@@ -125,7 +125,14 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
   }
 
   const leaveLeague = async (leagueId: number) => {
-    if (!confirm('Sei sicuro di voler uscire da questa lega? Questa azione non può essere annullata.')) {
+    const league = leagues.find(l => parseInt(l.id) === leagueId)
+    
+    let confirmMessage = 'Sei sicuro di voler uscire da questa lega? Questa azione non può essere annullata.'
+    if (league?.isOwner) {
+      confirmMessage = 'Sei sicuro di voler abbandonare questa lega? Il membro più anziano diventerà il nuovo proprietario. Questa azione non può essere annullata.'
+    }
+    
+    if (!confirm(confirmMessage)) {
       return
     }
 
@@ -149,13 +156,58 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
         
         // Reload leagues
         await loadLeagues()
-        success('👋 Sei uscito dalla lega con successo!')
+        
+        if (league?.isOwner) {
+          success('👑 Hai abbandonato la lega e trasferito il controllo al membro più anziano!')
+        } else {
+          success('👋 Sei uscito dalla lega con successo!')
+        }
       } else {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || 'Errore uscita lega')
       }
     } catch (error: any) {
       console.error('❌ Error leaving league:', error)
+      showError(`❌ Errore: ${error.message}`)
+    }
+  }
+
+  const deleteLeague = async (leagueId: number) => {
+    if (!confirm('⚠️ ATTENZIONE: Sei sicuro di voler CANCELLARE definitivamente questa lega? Tutti i membri verranno rimossi e tutti i dati andranno persi. Questa azione NON può essere annullata!')) {
+      return
+    }
+
+    if (!confirm('Conferma di nuovo: CANCELLARE DEFINITIVAMENTE la lega e tutti i suoi dati?')) {
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('fantaaiuto_token')
+      if (!token) return
+
+      const response = await fetch(`https://fantaaiuto-backend.onrender.com/api/leagues/${leagueId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        // If deleting the current league, clear it
+        if (currentLeague?.id === leagueId.toString()) {
+          setCurrentLeague(null)
+        }
+        
+        // Reload leagues
+        await loadLeagues()
+        success('🗑️ Lega cancellata definitivamente!')
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Errore cancellazione lega')
+      }
+    } catch (error: any) {
+      console.error('❌ Error deleting league:', error)
       showError(`❌ Errore: ${error.message}`)
     }
   }
@@ -296,9 +348,30 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
                 </div>
               )}
 
-              {/* Leave league button */}
-              {!league.isOwner && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
+              {/* League actions */}
+              <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                {league.isOwner ? (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        leaveLeague(parseInt(league.id))
+                      }}
+                      className="w-full text-xs py-1 px-2 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded border border-orange-200 transition-colors"
+                    >
+                      🚪 Abbandona lega (trasferisci ownership)
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteLeague(parseInt(league.id))
+                      }}
+                      className="w-full text-xs py-1 px-2 bg-red-50 hover:bg-red-100 text-red-600 rounded border border-red-200 transition-colors"
+                    >
+                      🗑️ Cancella lega
+                    </button>
+                  </>
+                ) : (
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -308,8 +381,8 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
                   >
                     🚪 Esci dalla lega
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ))}
         </div>
