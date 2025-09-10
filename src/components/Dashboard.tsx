@@ -238,9 +238,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <PlayerCounts
             players={players}
             currentRoleFilter={roleFilter}
-            currentTeamFilter={teamFilter}
             onRoleFilterChange={handleRoleFilterChange}
-            onTeamFilterChange={handleTeamFilterChange}
             onBackToPlayers={handleBackToPlayers}
           />
         </div>

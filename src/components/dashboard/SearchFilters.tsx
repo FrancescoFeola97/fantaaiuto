@@ -5,9 +5,12 @@ import { RoleCircle } from '../../utils/roleColors'
 interface SearchFiltersProps {
   searchQuery: string
   roleFilter: string
+  teamFilter: string
   interestFilter: boolean
+  players: any[]
   onSearchChange: (query: string) => void
   onRoleFilterChange: (role: string) => void
+  onTeamFilterChange: (team: string) => void
   onInterestFilterToggle: () => void
   onClearFilters: () => void
   isSearching?: boolean
@@ -16,9 +19,12 @@ interface SearchFiltersProps {
 export const SearchFilters: React.FC<SearchFiltersProps> = ({
   searchQuery,
   roleFilter,
+  teamFilter,
   interestFilter,
+  players,
   onSearchChange,
   onRoleFilterChange,
+  onTeamFilterChange,
   onInterestFilterToggle,
   onClearFilters,
   isSearching = false
@@ -50,6 +56,13 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   ]
 
   const currentRoleOptions = gameMode === 'Classic' ? getClassicRoleOptions() : getMantraRoleOptions()
+
+  // Get unique teams for team filter
+  const getTeams = () => {
+    const teams = [...new Set(players.map(p => p.squadra).filter(Boolean))].sort()
+    return teams
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
@@ -77,15 +90,6 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         
         {/* Filters */}
         <div className="flex flex-wrap gap-3">
-          {(roleFilter !== 'all' || interestFilter || searchQuery) && (
-            <button 
-              onClick={onClearFilters}
-              className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg border border-blue-300 transition-colors"
-            >
-              🏠 Home
-            </button>
-          )}
-          
           <button 
             onClick={onInterestFilterToggle}
             className={`px-4 py-2 rounded-lg border transition-colors ${
@@ -96,6 +100,20 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           >
             ⭐ Solo Interessanti
           </button>
+
+          {/* Team Filter */}
+          <select 
+            value={teamFilter}
+            onChange={(e) => onTeamFilterChange(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">🏟️ Tutte le squadre</option>
+            {getTeams().map(team => (
+              <option key={team} value={team}>
+                {team}
+              </option>
+            ))}
+          </select>
           
           <div className="flex items-center gap-2">
             {roleFilter !== 'all' && (

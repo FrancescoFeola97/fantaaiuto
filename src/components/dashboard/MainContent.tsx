@@ -108,9 +108,12 @@ export const MainContent: React.FC<MainContentProps> = ({
             <SearchFilters
               searchQuery={searchQuery}
               roleFilter={roleFilter}
+              teamFilter={_teamFilter}
               interestFilter={interestFilter}
+              players={players}
               onSearchChange={onSearchChange}
               onRoleFilterChange={onRoleFilterChange}
+              onTeamFilterChange={_onTeamFilterChange}
               onInterestFilterToggle={onInterestFilterToggle}
               onClearFilters={onClearFilters}
             />
