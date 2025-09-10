@@ -124,6 +124,42 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
     }
   }
 
+  const leaveLeague = async (leagueId: number) => {
+    if (!confirm('Sei sicuro di voler uscire da questa lega? Questa azione non può essere annullata.')) {
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('fantaaiuto_token')
+      if (!token) return
+
+      const response = await fetch(`https://fantaaiuto-backend.onrender.com/api/leagues/${leagueId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        // If leaving the current league, clear it
+        if (currentLeague?.id === leagueId.toString()) {
+          setCurrentLeague(null)
+        }
+        
+        // Reload leagues
+        await loadLeagues()
+        success('👋 Sei uscito dalla lega con successo!')
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Errore uscita lega')
+      }
+    } catch (error: any) {
+      console.error('❌ Error leaving league:', error)
+      showError(`❌ Errore: ${error.message}`)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -257,6 +293,21 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
                   <p className="text-xs text-gray-600 truncate" title={league.description}>
                     {league.description}
                   </p>
+                </div>
+              )}
+
+              {/* Leave league button */}
+              {!league.isOwner && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      leaveLeague(parseInt(league.id))
+                    }}
+                    className="w-full text-xs py-1 px-2 bg-red-50 hover:bg-red-100 text-red-600 rounded border border-red-200 transition-colors"
+                  >
+                    🚪 Esci dalla lega
+                  </button>
                 </div>
               )}
             </div>

@@ -107,24 +107,19 @@ export const OwnedPlayersOverview: React.FC<OwnedPlayersOverviewProps> = ({ play
                   <div className="text-xs text-gray-500 mb-2">
                     Costo: {roleCost.toFixed(1)}M
                   </div>
-                  <div className="space-y-1">
-                    {rolePlayers.slice(0, 3).map(player => (
+                  <div className="grid grid-cols-2 gap-1">
+                    {rolePlayers.map(player => (
                       <button
                         key={player.id}
                         onClick={() => handlePlayerClick(player)}
-                        className="w-full text-left text-xs text-gray-600 bg-gray-50 hover:bg-gray-100 rounded px-2 py-1 transition-colors"
+                        className="text-left text-xs bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border border-blue-200 rounded-lg px-2 py-2 transition-all duration-200 shadow-sm hover:shadow-md"
                       >
-                        <div className="font-medium">{player.nome}</div>
-                        <div className="text-gray-500">
-                          {player.squadra} • {(player.costoReale || player.prezzo || 0).toFixed(1)}M
+                        <div className="font-medium text-gray-800 truncate">{player.nome}</div>
+                        <div className="text-blue-600 font-semibold">
+                          {(player.costoReale || player.prezzo || 0).toFixed(1)}M
                         </div>
                       </button>
                     ))}
-                    {rolePlayers.length > 3 && (
-                      <div className="text-xs text-gray-400 text-center py-1">
-                        +{rolePlayers.length - 3} altri
-                      </div>
-                    )}
                   </div>
                 </>
               )}

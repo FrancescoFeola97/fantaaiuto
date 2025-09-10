@@ -370,7 +370,7 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
                     ))}
                   </div>
                   
-                  <p className="text-sm text-gray-600">{formation.positions.length} posizioni</p>
+                  <p className="text-sm text-gray-600">{formation.displayName}</p>
                 </div>
               </div>
             ))}
