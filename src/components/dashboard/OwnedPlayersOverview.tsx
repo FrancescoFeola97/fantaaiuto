@@ -114,9 +114,11 @@ export const OwnedPlayersOverview: React.FC<OwnedPlayersOverviewProps> = ({ play
                         onClick={() => handlePlayerClick(player)}
                         className="text-left text-xs bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border border-blue-200 rounded-lg px-2 py-2 transition-all duration-200 shadow-sm hover:shadow-md"
                       >
-                        <div className="font-medium text-gray-800 truncate">{player.nome}</div>
-                        <div className="text-blue-600 font-semibold">
-                          {(player.costoReale || player.prezzo || 0).toFixed(1)}M
+                        <div className="font-medium text-gray-800 truncate">
+                          {player.nome} 
+                          <span className="text-blue-600 font-semibold ml-1">
+                            {Math.round(player.costoReale || player.prezzo || 0)}
+                          </span>
                         </div>
                       </button>
                     ))}

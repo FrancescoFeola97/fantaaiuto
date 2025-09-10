@@ -24,6 +24,61 @@ export const getRoleColor = (role: string, gameMode: 'Classic' | 'Mantra') => {
   }
 }
 
+// Get background style for position circles in formations
+export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Classic' | 'Mantra'): { backgroundColor?: string; background?: string; className: string } => {
+  if (allowedRoles.length === 0) return { className: 'bg-gray-300' }
+  
+  // Get unique color categories for the allowed roles
+  const colorMap = (role: string) => {
+    if (gameMode === 'Classic') {
+      switch (role) {
+        case 'P': return '#fed7aa' // orange-200
+        case 'D': return '#bbf7d0' // green-200  
+        case 'C': return '#bfdbfe' // blue-200
+        case 'A': return '#fecaca' // red-200
+        default: return '#e5e7eb' // gray-200
+      }
+    } else {
+      switch (role) {
+        case 'Por': return '#fed7aa' // orange-200
+        case 'Dc': case 'Ds': case 'Dd': case 'B': return '#bbf7d0' // green-200
+        case 'E': case 'M': case 'C': return '#bfdbfe' // blue-200
+        case 'W': case 'T': return '#e9d5ff' // purple-200
+        case 'A': case 'Pc': return '#fecaca' // red-200
+        default: return '#e5e7eb' // gray-200
+      }
+    }
+  }
+
+  const uniqueColors = [...new Set(allowedRoles.map(colorMap))]
+
+  // Single color
+  if (uniqueColors.length === 1) {
+    return { backgroundColor: uniqueColors[0], className: '' }
+  }
+
+  // Multiple colors - create gradient
+  if (uniqueColors.length === 2) {
+    return { 
+      background: `linear-gradient(to right, ${uniqueColors[0]}, ${uniqueColors[1]})`,
+      className: ''
+    }
+  }
+
+  if (uniqueColors.length === 3) {
+    return { 
+      background: `linear-gradient(to right, ${uniqueColors[0]}, ${uniqueColors[1]}, ${uniqueColors[2]})`,
+      className: ''
+    }
+  }
+
+  // More than 3 colors, use a multi-color gradient
+  return { 
+    background: `linear-gradient(to right, ${uniqueColors[0]}, ${uniqueColors[1]}, ${uniqueColors[2] || uniqueColors[0]})`,
+    className: ''
+  }
+}
+
 // Component for role circle
 export const RoleCircle: React.FC<{
   role: string

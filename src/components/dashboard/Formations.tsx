@@ -3,6 +3,7 @@ import { PlayerData } from '../../types/Player'
 import { Formation, FORMATIONS, Lineup } from '../../types/Formation'
 import { useLeague } from '../../contexts/LeagueContext'
 import { useNotifications } from '../../hooks/useNotifications'
+import { getPositionBackgroundStyle } from '../../utils/roleColors'
 
 interface FormationsProps {
   players: PlayerData[]
@@ -21,6 +22,9 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
   const [formationName, setFormationName] = useState('')
 
   const ownedPlayers = players.filter(p => p.status === 'owned')
+  
+  // Get game mode for role colors
+  const gameMode = currentLeague?.gameMode || 'Mantra'
   
   // Calculate maximum bench size: maxPlayersPerTeam - 11 starters
   const maxBenchSize = Math.max(0, (currentLeague?.maxPlayersPerTeam || 25) - 11)
@@ -358,16 +362,21 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
                     <div className="absolute bottom-2 left-1/2 w-8 h-1 bg-white/30 transform -translate-x-1/2"></div>
                     
                     {/* Position dots */}
-                    {formation.positions.map(position => (
-                      <div
-                        key={position.id}
-                        className="absolute w-2 h-2 bg-white rounded-full transform -translate-x-1/2 -translate-y-1/2"
-                        style={{
-                          left: `${position.x}%`,
-                          top: `${position.y}%`
-                        }}
-                      />
-                    ))}
+                    {formation.positions.map(position => {
+                      const bgStyle = getPositionBackgroundStyle(position.allowedRoles, gameMode)
+                      return (
+                        <div
+                          key={position.id}
+                          className={`absolute w-2 h-2 rounded-full transform -translate-x-1/2 -translate-y-1/2 border border-white/50 ${bgStyle.className}`}
+                          style={{
+                            left: `${position.x}%`,
+                            top: `${position.y}%`,
+                            backgroundColor: bgStyle.backgroundColor,
+                            background: bgStyle.background
+                          }}
+                        />
+                      )
+                    })}
                   </div>
                   
                   <p className="text-sm text-gray-600">{formation.displayName}</p>
@@ -442,6 +451,7 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
           {/* Positions */}
           {selectedFormation.positions.map(position => {
             const assignedPlayer = getPlayerInPosition(position.id)
+            const bgStyle = getPositionBackgroundStyle(position.allowedRoles, gameMode)
             return (
               <div
                 key={position.id}
@@ -453,7 +463,13 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
               >
                 <div className="relative flex flex-col items-center">
                   {/* Position Circle - Always shows role */}
-                  <div className="bg-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg border-2 border-blue-500 cursor-pointer hover:scale-110 transition-transform">
+                  <div 
+                    className={`rounded-full w-12 h-12 flex items-center justify-center shadow-lg border-2 border-blue-500 cursor-pointer hover:scale-110 transition-transform ${bgStyle.className}`}
+                    style={{
+                      backgroundColor: bgStyle.backgroundColor,
+                      background: bgStyle.background
+                    }}
+                  >
                     <span className="text-xs font-bold text-gray-800 text-center leading-none">
                       {position.name}
                     </span>
