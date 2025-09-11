@@ -85,6 +85,34 @@ router.post('/register', validateRegister, async (req, res, next) => {
       ]
     );
 
+    // Create DEMO league for new user
+    try {
+      const demoLeagueResult = await db.get(`
+        INSERT INTO leagues (name, owner_id, game_mode, description) 
+        VALUES ($1, $2, $3, $4) 
+        RETURNING id, name, code
+      `, [
+        'Lega DEMO',
+        userId, 
+        'Mantra',
+        'Lega di prova per familiarizzare con FantaAiuto'
+      ]);
+
+      logger.info('Demo league created for new user', { 
+        username, 
+        userId, 
+        leagueId: demoLeagueResult.id,
+        leagueCode: demoLeagueResult.code 
+      });
+    } catch (leagueError) {
+      logger.error('Failed to create demo league for new user', { 
+        username, 
+        userId, 
+        error: leagueError.message 
+      });
+      // Don't fail registration if demo league creation fails
+    }
+
     // Generate token
     const token = generateToken(userId, username);
 

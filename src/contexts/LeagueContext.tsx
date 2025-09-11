@@ -25,11 +25,19 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
 
   useEffect(() => {
     if (userId) {
+      // Clear any previous user's league data first
+      const savedLeague = localStorage.getItem('fantaaiuto_current_league')
+      if (savedLeague) {
+        // Always clear saved league data when switching users to prevent cross-user contamination
+        localStorage.removeItem('fantaaiuto_current_league')
+        setCurrentLeague(null)
+      }
       loadLeagues()
     } else {
       // Clear data when user logs out
       setCurrentLeague(null)
       setLeagues([])
+      localStorage.removeItem('fantaaiuto_current_league')
       setIsLoading(false)
     }
   }, [userId])
@@ -146,21 +154,8 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
     }
   }
 
-  // Load saved league on component mount, but only if we have userId
-  useEffect(() => {
-    if (!userId) return
-    
-    const savedLeague = localStorage.getItem('fantaaiuto_current_league')
-    if (savedLeague && !currentLeague) {
-      try {
-        const league = JSON.parse(savedLeague)
-        setCurrentLeague(league)
-      } catch (error) {
-        console.error('❌ Error parsing saved league:', error)
-        localStorage.removeItem('fantaaiuto_current_league')
-      }
-    }
-  }, [userId]) // Remove currentLeague from dependencies to prevent loop
+  // Note: We no longer load saved league on mount since we clear it when user changes
+  // This prevents league data from persisting across different users
 
   const value: LeagueContextType = {
     currentLeague,

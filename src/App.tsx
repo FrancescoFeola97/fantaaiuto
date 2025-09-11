@@ -131,6 +131,7 @@ function App() {
       // Clear all local data
       localStorage.removeItem('fantaaiuto_token')
       localStorage.removeItem('fantaaiuto_data')
+      localStorage.removeItem('fantaaiuto_current_league')
       
       setUser(null)
       setIsAuthenticated(false)
