@@ -35,7 +35,7 @@ export function authenticateToken(req, res, next) {
       // Verify user still exists and is active
       const db = getDatabase();
       const user = await db.get(
-        'SELECT id, username, email, display_name, is_active FROM users WHERE id = ? AND is_active = ?',
+        'SELECT id, username, email, display_name, is_active FROM users WHERE id = $1 AND is_active = $2',
         [decoded.userId, true]
       );
 

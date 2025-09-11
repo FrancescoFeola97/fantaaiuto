@@ -269,6 +269,28 @@ router.post('/verify', async (req, res, next) => {
   }
 });
 
+// Logout user
+router.post('/logout', async (req, res, next) => {
+  try {
+    // For now, just log the logout event
+    // In a full implementation, you might want to maintain a blacklist of tokens
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token) {
+      // Could decode token to get user info for logging
+      logger.info('User logged out', { timestamp: new Date().toISOString() });
+    }
+
+    res.json({
+      message: 'Logout successful'
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Change password
 router.post('/change-password', async (req, res, next) => {
   try {
