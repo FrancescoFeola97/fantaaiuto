@@ -416,8 +416,8 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
                   onChange={(e) => setCreateForm(prev => ({ ...prev, gameMode: e.target.value as 'Classic' | 'Mantra' }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
                 >
-                  <option value="Mantra">Mantra (ruoli dettagliati)</option>
-                  <option value="Classic">Classic (ruoli base)</option>
+                  <option value="Mantra">Mantra</option>
+                  <option value="Classic">Classic</option>
                 </select>
               </div>
 
@@ -425,38 +425,34 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Budget Totale</label>
                   <input
-                    type="text"
-                    inputMode="numeric"
-                    value={createForm.totalBudget.toString()}
+                    type="number"
+                    min="100"
+                    max="2000"
+                    step="1"
+                    value={createForm.totalBudget}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, '')
-                      if (value === '') {
-                        setCreateForm(prev => ({ ...prev, totalBudget: 500 }))
-                      } else {
-                        const numValue = parseInt(value)
+                      const numValue = parseInt(e.target.value) || 500
+                      if (numValue >= 100 && numValue <= 2000) {
                         setCreateForm(prev => ({ ...prev, totalBudget: numValue }))
                       }
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
                     placeholder="500"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Crediti disponibili per tutti i membri (es. 500)</p>
+                  <p className="text-xs text-gray-500 mt-1">Crediti disponibili per tutti i membri (100-2000)</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max Membri</label>
                   <input
-                    type="text"
-                    inputMode="numeric"
-                    value={createForm.maxMembers.toString()}
+                    type="number"
+                    min="2"
+                    max="50"
+                    step="1"
+                    value={createForm.maxMembers}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, '')
-                      if (value === '') {
-                        setCreateForm(prev => ({ ...prev, maxMembers: 8 }))
-                      } else {
-                        const numValue = parseInt(value)
-                        if (numValue >= 2 && numValue <= 50) {
-                          setCreateForm(prev => ({ ...prev, maxMembers: numValue }))
-                        }
+                      const numValue = parseInt(e.target.value) || 8
+                      if (numValue >= 2 && numValue <= 50) {
+                        setCreateForm(prev => ({ ...prev, maxMembers: numValue }))
                       }
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
@@ -469,18 +465,15 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Max Giocatori per Team</label>
                 <input
-                  type="text"
-                  inputMode="numeric"
-                  value={createForm.maxPlayersPerTeam.toString()}
+                  type="number"
+                  min="11"
+                  max="50"
+                  step="1"
+                  value={createForm.maxPlayersPerTeam}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9]/g, '')
-                    if (value === '') {
-                      setCreateForm(prev => ({ ...prev, maxPlayersPerTeam: 25 }))
-                    } else {
-                      const numValue = parseInt(value)
-                      if (numValue >= 11 && numValue <= 50) {
-                        setCreateForm(prev => ({ ...prev, maxPlayersPerTeam: numValue }))
-                      }
+                    const numValue = parseInt(e.target.value) || 25
+                    if (numValue >= 11 && numValue <= 50) {
+                      setCreateForm(prev => ({ ...prev, maxPlayersPerTeam: numValue }))
                     }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200"
