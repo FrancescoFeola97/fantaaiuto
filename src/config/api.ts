@@ -3,8 +3,8 @@ const PRODUCTION_BASE_URL = 'https://fantaaiuto-backend.onrender.com'
 const LOCAL_BASE_URL = 'http://localhost:3002'
 
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || LOCAL_BASE_URL, // Temporarily use local backend
-  FALLBACK_URL: PRODUCTION_BASE_URL,
+  BASE_URL: import.meta.env.VITE_API_URL || PRODUCTION_BASE_URL, // Back to production backend
+  FALLBACK_URL: LOCAL_BASE_URL,
   TIMEOUT: {
     AUTH: 30000,        // 30 seconds for authentication (cold start)
     API: 20000,         // 20 seconds for standard API calls
