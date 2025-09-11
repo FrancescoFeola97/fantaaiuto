@@ -49,6 +49,9 @@ export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Cl
         case 'Ds': 
         case 'Dd': 
         case 'B': 
+        case 'DC':
+        case 'DS': 
+        case 'DD': 
           return '#32CD32'
         
         // Centrocampisti - Blu
@@ -65,6 +68,7 @@ export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Cl
         // Attaccanti - Rosso
         case 'A': 
         case 'Pc': 
+        case 'PC':
           return '#DC143C'
         
         default: 
