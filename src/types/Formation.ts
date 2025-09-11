@@ -129,7 +129,7 @@ export const FORMATIONS: Formation[] = [
       { id: 'm1', name: 'M', allowedRoles: ['M'], x: 30, y: 50 },
       { id: 'm2', name: 'M/C', allowedRoles: ['M', 'C'], x: 50, y: 45 },
       { id: 'c1', name: 'C', allowedRoles: ['C'], x: 70, y: 50 },
-      { id: 'e2', name: 'E', allowedRoles: ['E'], x: 85, y: 55 },
+      { id: 'e2', name: 'E/W', allowedRoles: ['E','W'], x: 85, y: 55 },
       
       // Forwards (2)
       { id: 'a1', name: 'A/PC', allowedRoles: ['A', 'Pc'], x: 40, y: 20 },
@@ -155,7 +155,7 @@ export const FORMATIONS: Formation[] = [
       { id: 'ew1', name: 'E/W', allowedRoles: ['E', 'W'], x: 15, y: 55 },
       { id: 'm1', name: 'M', allowedRoles: ['M'], x: 30, y: 50 },
       { id: 'c1', name: 'C', allowedRoles: ['C'], x: 50, y: 45 },
-      { id: 'm2', name: 'M/C', allowedRoles: ['M', 'C'], x: 70, y: 50 },
+      { id: 'm2', name: 'M', allowedRoles: ['M'], x: 70, y: 50 },
       { id: 'ew2', name: 'E/W', allowedRoles: ['E', 'W'], x: 85, y: 55 },
       
       // Attacking Midfielder (1)
@@ -176,10 +176,10 @@ export const FORMATIONS: Formation[] = [
       { id: 'gk', name: 'P', allowedRoles: ['Por'], x: 50, y: 90 },
       
       // Defenders (4)
-      { id: 'dd1', name: 'DD', allowedRoles: ['Dd'], x: 20, y: 75 },
+      { id: 'dd1', name: 'DS', allowedRoles: ['Ds'], x: 20, y: 75 },
       { id: 'dc1', name: 'DC', allowedRoles: ['Dc'], x: 40, y: 75 },
       { id: 'dc2', name: 'DC', allowedRoles: ['Dc'], x: 60, y: 75 },
-      { id: 'ds1', name: 'DS', allowedRoles: ['Ds'], x: 80, y: 75 },
+      { id: 'ds1', name: 'DD', allowedRoles: ['Dd'], x: 80, y: 75 },
       
       // Midfielders (3)
       { id: 'm1', name: 'M/C', allowedRoles: ['M', 'C'], x: 35, y: 50 },
