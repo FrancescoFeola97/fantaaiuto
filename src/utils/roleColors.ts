@@ -41,21 +41,35 @@ export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Cl
     } else {
       switch (role) {
         // Portieri
-        case 'Por': return '#FF8C00' // Dark orange (mandarino)
+        case 'Por': 
+          return '#FF8C00' // Dark orange (mandarino)
         
         // Difensori - Verde lime
-        case 'Dc': case 'Ds': case 'Dd': case 'B': return '#32CD32'
+        case 'Dc': 
+        case 'Ds': 
+        case 'Dd': 
+        case 'B': 
+          return '#32CD32'
         
         // Centrocampisti - Blu
-        case 'E': case 'M': case 'C': return '#1E90FF'
+        case 'E': 
+        case 'M': 
+        case 'C': 
+          return '#1E90FF'
         
         // Fantasisti - Viola
-        case 'W': case 'T': return '#8A2BE2'
+        case 'W': 
+        case 'T': 
+          return '#8A2BE2'
         
         // Attaccanti - Rosso
-        case 'A': case 'Pc': return '#DC143C'
+        case 'A': 
+        case 'Pc': 
+          return '#DC143C'
         
-        default: return '#9CA3AF' // gray-400
+        default: 
+          console.warn(`Role '${role}' not mapped to color, using default gray`)
+          return '#9CA3AF' // gray-400
       }
     }
   }
