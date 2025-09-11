@@ -227,11 +227,12 @@ CREATE TABLE IF NOT EXISTS league_formations (
     id SERIAL PRIMARY KEY,
     league_id INTEGER NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    formation_id VARCHAR(50) NOT NULL, -- e.g., "4-3-3", "3-5-2"
-    lineup_data JSONB NOT NULL, -- Stores the formation lineup as JSON
+    name VARCHAR(100) NOT NULL,
+    schema VARCHAR(20) NOT NULL, -- e.g., "4-3-3", "3-5-2"
+    players TEXT, -- JSON array of player IDs and positions
+    is_active BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(league_id, user_id, formation_id) -- Each user can have one lineup per formation per league
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- League-specific settings (per user, per league)

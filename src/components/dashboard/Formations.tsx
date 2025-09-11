@@ -371,7 +371,6 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
                           style={{
                             left: `${position.x}%`,
                             top: `${position.y}%`,
-                            backgroundColor: bgStyle.backgroundColor,
                             background: bgStyle.background
                           }}
                         />
@@ -466,7 +465,6 @@ export const Formations: React.FC<FormationsProps> = ({ players, onBackToPlayers
                   <div 
                     className={`rounded-full w-12 h-12 flex items-center justify-center shadow-lg border-2 border-blue-500 cursor-pointer hover:scale-110 transition-transform ${bgStyle.className}`}
                     style={{
-                      backgroundColor: bgStyle.backgroundColor,
                       background: bgStyle.background
                     }}
                   >

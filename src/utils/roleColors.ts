@@ -25,7 +25,7 @@ export const getRoleColor = (role: string, gameMode: 'Classic' | 'Mantra') => {
 }
 
 // Get background style for position circles in formations
-export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Classic' | 'Mantra'): { backgroundColor?: string; background?: string; className: string } => {
+export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Classic' | 'Mantra'): { background?: string; className: string } => {
   if (allowedRoles.length === 0) return { className: 'bg-gray-300' }
   
   // Get unique color categories for the allowed roles with more vibrant colors
@@ -82,7 +82,7 @@ export const getPositionBackgroundStyle = (allowedRoles: string[], gameMode: 'Cl
 
   // Single role OR all roles have same color
   if (allowedRoles.length === 1 || uniqueColors.length === 1) {
-    return { backgroundColor: uniqueColors[0], className: '' }
+    return { background: uniqueColors[0], className: '' }
   }
 
   // Multiple roles with different colors - create vertical split gradient
