@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { PlayerData } from '../../types/Player'
 import { useNotifications } from '../../hooks/useNotifications'
 import { useLeague } from '../../contexts/LeagueContext'
-import { activateGlobalRateLimit } from '../../utils/rateLimitManager'
 
 interface Participant {
   id: string
@@ -98,9 +97,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
         setParticipants(mappedParticipants)
         console.log('✅ Successfully loaded', mappedParticipants.length, 'participants')
       } else if (response.status === 429) {
-        console.warn('⚠️ Rate limited - activating global protection')
-        // Attiva rate limiting globale
-        activateGlobalRateLimit(1 * 60 * 1000)
+        console.warn('⚠️ Rate limited - too many requests to participants API')
         // Non impostare errore per rate limiting, mantieni i dati esistenti
       } else {
         throw new Error('Errore caricamento partecipanti')
@@ -122,7 +119,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
     if (currentLeague) {
       loadParticipants()
     }
-  }, [currentLeague?.id, loadParticipants])
+  }, [currentLeague?.id]) // Non dipendere da loadParticipants per evitare loop
 
   const openCreateModal = () => {
     setNewParticipantName('')

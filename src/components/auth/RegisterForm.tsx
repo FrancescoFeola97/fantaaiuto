@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 
 interface User {
   id: string
@@ -20,7 +20,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onRegister, onBackTo
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isRegisterInProgress, setIsRegisterInProgress] = useState(false)
-  const lastRegisterAttempt = useRef<number>(0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,20 +39,10 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onRegister, onBackTo
       return
     }
 
-    // Previeni chiamate multiple simultanee con protezione avanzata
-    const now = Date.now()
     if (isRegisterInProgress) {
       console.log('⚠️ Registration already in progress, skipping...')
       return
     }
-    
-    // Previeni tentativi di registrazione troppo frequenti (minimo 1 secondo tra tentativi)
-    if (now - lastRegisterAttempt.current < 1000) {
-      console.log('⚠️ Registration attempted too frequently, skipping...')
-      return
-    }
-    
-    lastRegisterAttempt.current = now
 
     setIsRegisterInProgress(true)
     setIsLoading(true)

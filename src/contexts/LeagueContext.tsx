@@ -23,7 +23,6 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
   const [leagues, setLeagues] = useState<League[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const isLoadingLeagues = useRef(false)
-  const lastLeagueLoad = useRef<number>(0)
 
   const loadLeagues = useCallback(async () => {
     if (!userId) {
@@ -31,14 +30,12 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
       return
     }
 
-    // Previeni chiamate multiple simultanee (solo protezione base)
     if (isLoadingLeagues.current) {
       console.log('⚠️ League loading already in progress, skipping...')
       return
     }
 
     isLoadingLeagues.current = true
-    lastLeagueLoad.current = Date.now()
 
     const controller = new AbortController()
     let timeoutId: NodeJS.Timeout | null = null

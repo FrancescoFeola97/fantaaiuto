@@ -1,5 +1,4 @@
-import React, { useState, useRef } from 'react'
-import { activateGlobalRateLimit } from '../../utils/rateLimitManager'
+import React, { useState } from 'react'
 
 interface User {
   id: string
@@ -18,9 +17,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isLoginInProgress, setIsLoginInProgress] = useState(false)
-  const lastLoginAttempt = useRef<number>(0)
-  const loginRetryCount = useRef<number>(0)
-  const loginRateLimitedUntil = useRef<number>(0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,30 +26,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
       return
     }
 
-    // Previeni chiamate multiple simultanee con protezione avanzata
-    const now = Date.now()
     if (isLoginInProgress) {
       console.log('⚠️ Login already in progress, skipping...')
       return
     }
-    
-    // Controlla se siamo ancora in rate limiting
-    if (now < loginRateLimitedUntil.current) {
-      const remainingTime = Math.ceil((loginRateLimitedUntil.current - now) / 1000)
-      console.log(`⚠️ Login still rate limited for ${remainingTime}s, skipping...`)
-      setError(`Rate limiting attivo. Riprova tra ${remainingTime} secondi.`)
-      return
-    }
-
-    // Cooldown normale molto ridotto per login (solo 1 secondo)
-    if (now - lastLoginAttempt.current < 1000) {
-      const remainingBackoff = Math.ceil((1000 - (now - lastLoginAttempt.current)) / 1000)
-      console.log(`⚠️ Login cooldown active (${remainingBackoff}s remaining)`)
-      setError(`Attendi ${remainingBackoff} secondo prima di riprovare.`)
-      return
-    }
-    
-    lastLoginAttempt.current = now
 
     setIsLoginInProgress(true)
     setIsLoading(true)
@@ -82,22 +58,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
       if (!response.ok) {
         result = await response.json()
         if (response.status === 429) {
-          loginRetryCount.current++
-          // Attiva rate limiting globale
-          activateGlobalRateLimit(1 * 60 * 1000)
-          loginRateLimitedUntil.current = now + (1 * 60 * 1000)
-          console.warn(`⚠️ Login rate limited - activating global protection. Retry count: ${loginRetryCount.current}`)
-          throw new Error('Troppi tentativi di login. Sistema bloccato per 1 minuto.')
+          throw new Error('Too many requests from this IP, please try again later.')
         }
         throw new Error(result.error || `Errore ${response.status}: ${response.statusText}`)
       }
       
       result = await response.json()
 
-      // Reset retry count on success
-      loginRetryCount.current = 0
-      loginRateLimitedUntil.current = 0
-      
       localStorage.setItem('fantaaiuto_token', result.token)
       console.log('✅ Login successful')
       onLogin(result.user)

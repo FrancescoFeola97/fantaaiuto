@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLeague } from '../contexts/LeagueContext'
 import { useAbortController } from './useAbortController'
-import { activateGlobalRateLimit } from '../utils/rateLimitManager'
 
 interface Participant {
   id: string
@@ -15,7 +14,7 @@ export const useParticipants = () => {
   const [isLoading, setIsLoading] = useState(false)
   const { createController, cleanup, clearTimer } = useAbortController()
 
-  const createApiHeaders = useCallback(() => {
+  const createApiHeaders = () => {
     const token = localStorage.getItem('fantaaiuto_token')
     const headers: HeadersInit = {
       'Authorization': `Bearer ${token}`,
@@ -27,7 +26,7 @@ export const useParticipants = () => {
     }
     
     return headers
-  }, [currentLeague?.id])
+  }
 
   const loadParticipants = useCallback(async () => {
     // Evita chiamate multiple simultanee usando una ref invece della dipendenza isLoading
@@ -77,9 +76,7 @@ export const useParticipants = () => {
         console.warn('⚠️ Access denied to participants - user may not be league member')
         setParticipants([])
       } else if (response.status === 429) {
-        console.warn('⚠️ Rate limited - activating global protection')
-        // Attiva rate limiting globale per 1 minuto
-        activateGlobalRateLimit(1 * 60 * 1000)
+        console.warn('⚠️ Rate limited - too many requests to participants API')
         // Non impostare participants vuoti per rate limiting, mantieni i dati esistenti
       } else {
         console.error(`❌ Failed to load participants: ${response.status} ${response.statusText}`)
@@ -98,7 +95,7 @@ export const useParticipants = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [currentLeague, createApiHeaders, createController, clearTimer])
+  }, [])
 
   // Load participants when league changes
   useEffect(() => {
@@ -108,29 +105,9 @@ export const useParticipants = () => {
         loadParticipants()
       }, 500)
       
-      // Listen for participants updates with debouncing (protezione solo per loop)
+      // Listen for participants updates with simple debouncing
       let updateTimeout: NodeJS.Timeout
-      let updateCount = 0
-      let lastUpdateTime = 0
-      
       const handleParticipantsUpdate = () => {
-        const now = Date.now()
-        
-        // Reset counter se è passato più di 10 secondi dall'ultimo update
-        if (now - lastUpdateTime > 10000) {
-          updateCount = 0
-        }
-        
-        lastUpdateTime = now
-        updateCount++
-        
-        // Blocca solo se ci sono troppi update in poco tempo (possibile loop)
-        if (updateCount > 5) {
-          console.log('⚠️ Too many participant updates, possible loop - activating rate limiting')
-          activateGlobalRateLimit(1 * 60 * 1000)
-          return
-        }
-        
         clearTimeout(updateTimeout)
         updateTimeout = setTimeout(() => {
           loadParticipants()
@@ -150,7 +127,7 @@ export const useParticipants = () => {
       setParticipants([])
       cleanup() // Clean up requests when no league is selected
     }
-  }, [currentLeague?.id, cleanup]) // Rimuovere loadParticipants dalle dipendenze per evitare loop infinito
+  }, [currentLeague?.id]) // Non dipendere da loadParticipants per evitare loop infinito
 
   return {
     participants,

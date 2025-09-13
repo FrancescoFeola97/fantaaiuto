@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { League, CreateLeagueRequest, JoinLeagueRequest } from '../../types/League'
 import { useNotifications } from '../../hooks/useNotifications'
 import { useLeague } from '../../contexts/LeagueContext'
@@ -14,7 +14,6 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
   const [showJoinModal, setShowJoinModal] = useState(false)
   const [isCreatingLeague, setIsCreatingLeague] = useState(false)
   const [isJoiningLeague, setIsJoiningLeague] = useState(false)
-  const lastLeagueOperation = useRef<number>(0)
   const { success, error: showError } = useNotifications()
 
   // Create league form
@@ -43,20 +42,10 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
       return
     }
 
-    // Previeni chiamate multiple simultanee con protezione avanzata
-    const now = Date.now()
     if (isCreatingLeague) {
       console.log('⚠️ League creation already in progress, skipping...')
       return
     }
-
-    // Previeni operazioni troppo frequenti (minimo 1 secondo tra operazioni)
-    if (now - lastLeagueOperation.current < 1000) {
-      console.log('⚠️ League operation attempted too frequently, skipping...')
-      return
-    }
-
-    lastLeagueOperation.current = now
 
     try {
       setIsCreatingLeague(true)
@@ -117,20 +106,10 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
       return
     }
 
-    // Previeni chiamate multiple simultanee con protezione avanzata
-    const now = Date.now()
     if (isJoiningLeague) {
       console.log('⚠️ League join already in progress, skipping...')
       return
     }
-
-    // Previeni operazioni troppo frequenti (minimo 1 secondo tra operazioni)
-    if (now - lastLeagueOperation.current < 1000) {
-      console.log('⚠️ League operation attempted too frequently, skipping...')
-      return
-    }
-
-    lastLeagueOperation.current = now
 
     try {
       setIsJoiningLeague(true)

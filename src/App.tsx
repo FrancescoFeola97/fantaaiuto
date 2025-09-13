@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { LoginForm } from './components/auth/LoginForm'
 import { RegisterForm } from './components/auth/RegisterForm'
@@ -7,7 +7,6 @@ import { LoadingScreen } from './components/ui/LoadingScreen'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { LeagueProvider, useLeague } from './contexts/LeagueContext'
 import { buildApiUrl, API_ENDPOINTS } from './config/api'
-import { activateGlobalRateLimit } from './utils/rateLimitManager'
 
 interface User {
   id: string
@@ -38,10 +37,6 @@ function App() {
   const [error, setError] = useState('')
   const [showRegister, setShowRegister] = useState(false)
   const [isVerifyingToken, setIsVerifyingToken] = useState(false)
-  const authCheckInProgress = useRef(false)
-  const lastAuthCheck = useRef<number>(0)
-  const authRetryCount = useRef<number>(0)
-  const rateLimitedUntil = useRef<number>(0)
 
   useEffect(() => {
     // Only check authentication once when app first loads
@@ -49,25 +44,11 @@ function App() {
   }, [])
 
   const checkAuthentication = useCallback(async () => {
-    // Previeni chiamate multiple simultanee (solo protezione base)
-    const now = Date.now()
-    if (authCheckInProgress.current || isVerifyingToken) {
+    if (isVerifyingToken) {
       console.log('⚠️ Token verification already in progress, skipping...')
       return
     }
-    
-    // Controlla se siamo ancora in rate limiting globale (solo per errori 429 reali)
-    if (now < rateLimitedUntil.current) {
-      const remainingTime = Math.ceil((rateLimitedUntil.current - now) / 1000)
-      console.log(`⚠️ Still rate limited for ${remainingTime}s, skipping token verification...`)
-      return
-    }
 
-    // Cooldown normale molto ridotto per token verification (solo 2 secondi)
-    if (now - lastAuthCheck.current < 2000) {
-      console.log(`⚠️ Token verification cooldown active (${Math.ceil((2000 - (now - lastAuthCheck.current)) / 1000)}s remaining)`)
-      return
-    }
     
     try {
       const token = localStorage.getItem('fantaaiuto_token')
@@ -76,8 +57,6 @@ function App() {
         return
       }
 
-      authCheckInProgress.current = true
-      lastAuthCheck.current = now
       setIsVerifyingToken(true)
       console.log('🔍 Verifying token...')
       
@@ -100,25 +79,13 @@ function App() {
         
         if (response.ok) {
           const result = await response.json()
-          // Reset retry count on success
-          authRetryCount.current = 0
-          rateLimitedUntil.current = 0
           setUser(result.user)
           setIsAuthenticated(true)
           console.log('✅ Token verification successful')
         } else if (response.status === 429) {
-          authRetryCount.current++
-          // Attiva rate limiting globale per 1 minuto
-          activateGlobalRateLimit(1 * 60 * 1000)
-          rateLimitedUntil.current = now + (1 * 60 * 1000)
-          console.warn(`⚠️ Rate limited - activating global protection for 1 minute. Retry count: ${authRetryCount.current}`)
-          setError('Troppi tentativi di accesso. Tutte le richieste sono state sospese per 1 minuto.')
+          console.warn('⚠️ Rate limited - too many token verification requests')
+          setError('Troppi tentativi di accesso. Riprova più tardi.')
         } else {
-          // Reset rate limiting per errori non-429
-          if (response.status !== 429) {
-            authRetryCount.current = 0
-            rateLimitedUntil.current = 0
-          }
           localStorage.removeItem('fantaaiuto_token')
           setError('Sessione scaduta. Effettua nuovamente il login.')
         }
@@ -138,7 +105,6 @@ function App() {
     } finally {
       setIsLoading(false)
       setIsVerifyingToken(false)
-      authCheckInProgress.current = false
     }
   }, [])
 
