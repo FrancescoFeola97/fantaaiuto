@@ -12,6 +12,8 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
   const { currentLeague, leagues, isLoading, setCurrentLeague, loadLeagues } = useLeague()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showJoinModal, setShowJoinModal] = useState(false)
+  const [isCreatingLeague, setIsCreatingLeague] = useState(false)
+  const [isJoiningLeague, setIsJoiningLeague] = useState(false)
   const { success, error: showError } = useNotifications()
 
   // Create league form
@@ -40,10 +42,18 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
       return
     }
 
+    // Previeni chiamate multiple simultanee
+    if (isCreatingLeague) {
+      console.log('⚠️ League creation already in progress, skipping...')
+      return
+    }
+
     try {
+      setIsCreatingLeague(true)
+      console.log('🏆 Creating league:', createForm.name)
+      
       const token = localStorage.getItem('fantaaiuto_token')
       if (!token) return
-
 
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/leagues', {
         method: 'POST',
@@ -72,6 +82,7 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
         await loadLeagues()
         setCurrentLeague(newLeague)
         success(`🏆 Lega "${newLeague.name}" creata con successo! Codice invito: ${newLeague.code}`)
+        console.log('✅ League created successfully:', newLeague.name)
       } else {
         const errorText = await response.text()
         console.error('❌ League creation failed:', response.status, errorText)
@@ -85,6 +96,8 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
     } catch (error: any) {
       console.error('❌ Error creating league:', error)
       showError(`❌ Errore: ${error.message}`)
+    } finally {
+      setIsCreatingLeague(false)
     }
   }
 
@@ -94,7 +107,16 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
       return
     }
 
+    // Previeni chiamate multiple simultanee
+    if (isJoiningLeague) {
+      console.log('⚠️ League join already in progress, skipping...')
+      return
+    }
+
     try {
+      setIsJoiningLeague(true)
+      console.log('🎯 Joining league with code:', joinForm.code)
+      
       const token = localStorage.getItem('fantaaiuto_token')
       if (!token) return
 
@@ -114,6 +136,7 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
         // Reload leagues to get the new one
         await loadLeagues()
         success('🎉 Entrato nella lega con successo!')
+        console.log('✅ Successfully joined league')
       } else {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || 'Errore unione lega')
@@ -121,6 +144,8 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
     } catch (error: any) {
       console.error('❌ Error joining league:', error)
       showError(`❌ Errore: ${error.message}`)
+    } finally {
+      setIsJoiningLeague(false)
     }
   }
 
@@ -390,7 +415,14 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
 
       {/* Create League Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isCreatingLeague) {
+              setShowCreateModal(false)
+            }
+          }}
+        >
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               🏆 Crea Nuova Lega
@@ -497,14 +529,25 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
               <div className="flex space-x-3">
                 <button
                   onClick={createLeague}
-                  disabled={!createForm.name.trim()}
+                  disabled={!createForm.name.trim() || isCreatingLeague}
                   className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors"
                 >
-                  Crea Lega
+                  {isCreatingLeague ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creando...
+                    </span>
+                  ) : (
+                    'Crea Lega'
+                  )}
                 </button>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                  disabled={isCreatingLeague}
+                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-300 disabled:text-gray-500 text-gray-700 rounded-lg font-medium transition-colors"
                 >
                   Annulla
                 </button>
@@ -516,7 +559,14 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
 
       {/* Join League Modal */}
       {showJoinModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isJoiningLeague) {
+              setShowJoinModal(false)
+            }
+          }}
+        >
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               ➕ Unisciti a Lega
@@ -550,14 +600,25 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
               <div className="flex space-x-3">
                 <button
                   onClick={joinLeague}
-                  disabled={!joinForm.code.trim()}
+                  disabled={!joinForm.code.trim() || isJoiningLeague}
                   className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white rounded-lg font-medium transition-colors"
                 >
-                  Unisciti
+                  {isJoiningLeague ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Unendosi...
+                    </span>
+                  ) : (
+                    'Unisciti'
+                  )}
                 </button>
                 <button
                   onClick={() => setShowJoinModal(false)}
-                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                  disabled={isJoiningLeague}
+                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-300 disabled:text-gray-500 text-gray-700 rounded-lg font-medium transition-colors"
                 >
                   Annulla
                 </button>

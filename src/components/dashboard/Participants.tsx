@@ -21,6 +21,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   const [participants, setParticipants] = useState<Participant[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [isLoadingParticipants, setIsLoadingParticipants] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newParticipantName, setNewParticipantName] = useState('')
   const [showPlayersModal, setShowPlayersModal] = useState(false)
@@ -64,8 +65,17 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   }
 
   const loadParticipants = async () => {
+    // Evita chiamate multiple simultanee
+    if (isLoadingParticipants) {
+      console.log('⚠️ Load participants already in progress, skipping...')
+      return
+    }
+    
     try {
       if (!currentLeague) return
+      
+      setIsLoadingParticipants(true)
+      console.log('📊 Loading participants for league', currentLeague.id)
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000)
@@ -91,14 +101,23 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
         }))
         
         setParticipants(mappedParticipants)
+        console.log('✅ Successfully loaded', mappedParticipants.length, 'participants')
+      } else if (response.status === 429) {
+        console.warn('⚠️ Rate limited - too many requests to participants API')
+        // Non impostare errore per rate limiting, mantieni i dati esistenti
       } else {
         throw new Error('Errore caricamento partecipanti')
       }
     } catch (error: any) {
-      console.error('❌ Error loading participants:', error)
-      setError(error.message)
+      if (error.name === 'AbortError') {
+        console.log('⚠️ Participants request aborted')
+      } else {
+        console.error('❌ Error loading participants:', error)
+        setError(error.message)
+      }
     } finally {
       setIsLoading(false)
+      setIsLoadingParticipants(false)
     }
   }
 

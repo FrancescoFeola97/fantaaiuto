@@ -11,6 +11,7 @@ interface Participant {
 export const useParticipants = () => {
   const { currentLeague } = useLeague()
   const [participants, setParticipants] = useState<Participant[]>([])
+  const [isLoading, setIsLoading] = useState(false)
   const { createController, cleanup, clearTimer } = useAbortController()
 
   const createApiHeaders = useCallback(() => {
@@ -28,12 +29,21 @@ export const useParticipants = () => {
   }, [currentLeague?.id])
 
   const loadParticipants = useCallback(async () => {
+    // Evita chiamate multiple simultanee
+    if (isLoading) {
+      console.log('⚠️ Load participants already in progress, skipping...')
+      return
+    }
+    
     try {
       if (!currentLeague) {
         console.log('📊 No league selected, skipping participants load')
         setParticipants([])
         return
       }
+
+      setIsLoading(true)
+      console.log('📊 Loading participants for league', currentLeague.id)
 
       // Create new controller for this request (cancels previous ones)
       const controller = createController(30000) // 30 second timeout
@@ -65,6 +75,9 @@ export const useParticipants = () => {
       } else if (response.status === 403) {
         console.warn('⚠️ Access denied to participants - user may not be league member')
         setParticipants([])
+      } else if (response.status === 429) {
+        console.warn('⚠️ Rate limited - too many requests to participants API')
+        // Non impostare participants vuoti per rate limiting, mantieni i dati esistenti
       } else {
         console.error(`❌ Failed to load participants: ${response.status} ${response.statusText}`)
         setParticipants([])
@@ -79,26 +92,33 @@ export const useParticipants = () => {
       if (error.name !== 'AbortError') {
         setParticipants([])
       }
+    } finally {
+      setIsLoading(false)
     }
-  }, [currentLeague, createApiHeaders, createController, clearTimer])
+  }, [currentLeague, createApiHeaders, createController, clearTimer, isLoading])
 
   // Load participants when league changes
   useEffect(() => {
     if (currentLeague) {
-      // Small delay to avoid rapid successive calls
+      // Longer delay to avoid rapid successive calls and reduce API load
       const loadTimer = setTimeout(() => {
         loadParticipants()
-      }, 200)
+      }, 500)
       
-      // Listen for participants updates
+      // Listen for participants updates with debouncing
+      let updateTimeout: NodeJS.Timeout
       const handleParticipantsUpdate = () => {
-        loadParticipants()
+        clearTimeout(updateTimeout)
+        updateTimeout = setTimeout(() => {
+          loadParticipants()
+        }, 300)
       }
       
       window.addEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
       
       return () => {
         clearTimeout(loadTimer)
+        clearTimeout(updateTimeout)
         window.removeEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
         // Clean up any pending requests when league changes
         cleanup()
@@ -107,11 +127,12 @@ export const useParticipants = () => {
       setParticipants([])
       cleanup() // Clean up requests when no league is selected
     }
-  }, [currentLeague?.id, loadParticipants, cleanup])
+  }, [currentLeague?.id, cleanup]) // Rimuovere loadParticipants dalle dipendenze per evitare loop infinito
 
   return {
     participants,
     setParticipants,
-    loadParticipants
+    loadParticipants,
+    isLoading
   }
 }
