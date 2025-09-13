@@ -7,6 +7,7 @@ import { LoadingScreen } from './components/ui/LoadingScreen'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { LeagueProvider, useLeague } from './contexts/LeagueContext'
 import { buildApiUrl, API_ENDPOINTS } from './config/api'
+import { checkRateLimit, activateGlobalRateLimit } from './utils/rateLimitManager'
 
 interface User {
   id: string
@@ -39,6 +40,8 @@ function App() {
   const [isVerifyingToken, setIsVerifyingToken] = useState(false)
   const authCheckInProgress = useRef(false)
   const lastAuthCheck = useRef<number>(0)
+  const authRetryCount = useRef<number>(0)
+  const rateLimitedUntil = useRef<number>(0)
 
   useEffect(() => {
     // Only check authentication once when app first loads
@@ -46,6 +49,11 @@ function App() {
   }, [])
 
   const checkAuthentication = useCallback(async () => {
+    // Controlla rate limiting globale prima di tutto
+    if (!checkRateLimit('token verification')) {
+      return
+    }
+
     // Previeni chiamate multiple simultanee con protezione avanzata
     const now = Date.now()
     if (authCheckInProgress.current || isVerifyingToken) {
@@ -53,9 +61,17 @@ function App() {
       return
     }
     
-    // Previeni chiamate troppo frequenti (minimo 5 secondi tra controlli)
-    if (now - lastAuthCheck.current < 5000) {
-      console.log('⚠️ Token verification called too frequently, skipping...')
+    // Controlla se siamo ancora in rate limiting
+    if (now < rateLimitedUntil.current) {
+      const remainingTime = Math.ceil((rateLimitedUntil.current - now) / 1000)
+      console.log(`⚠️ Still rate limited for ${remainingTime}s, skipping token verification...`)
+      return
+    }
+
+    // Exponential backoff: aumenta il delay dopo ogni retry fallito
+    const backoffDelay = Math.min(5000 * Math.pow(2, authRetryCount.current), 60000)
+    if (now - lastAuthCheck.current < backoffDelay) {
+      console.log(`⚠️ Token verification backoff active (${Math.ceil((backoffDelay - (now - lastAuthCheck.current)) / 1000)}s remaining)`)
       return
     }
     
@@ -90,13 +106,25 @@ function App() {
         
         if (response.ok) {
           const result = await response.json()
+          // Reset retry count on success
+          authRetryCount.current = 0
+          rateLimitedUntil.current = 0
           setUser(result.user)
           setIsAuthenticated(true)
           console.log('✅ Token verification successful')
         } else if (response.status === 429) {
-          console.warn('⚠️ Rate limited - too many token verification requests')
-          setError('Troppi tentativi di accesso. Riprova tra qualche minuto.')
+          authRetryCount.current++
+          // Attiva rate limiting globale per 3 minuti
+          activateGlobalRateLimit(3 * 60 * 1000)
+          rateLimitedUntil.current = now + (3 * 60 * 1000)
+          console.warn(`⚠️ Rate limited - activating global protection for 3 minutes. Retry count: ${authRetryCount.current}`)
+          setError('Troppi tentativi di accesso. Tutte le richieste sono state sospese per 3 minuti.')
         } else {
+          // Reset rate limiting per errori non-429
+          if (response.status !== 429) {
+            authRetryCount.current = 0
+            rateLimitedUntil.current = 0
+          }
           localStorage.removeItem('fantaaiuto_token')
           setError('Sessione scaduta. Effettua nuovamente il login.')
         }

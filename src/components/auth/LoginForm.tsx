@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react'
+import { checkRateLimit, activateGlobalRateLimit } from '../../utils/rateLimitManager'
 
 interface User {
   id: string
@@ -18,12 +19,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
   const [isLoading, setIsLoading] = useState(false)
   const [isLoginInProgress, setIsLoginInProgress] = useState(false)
   const lastLoginAttempt = useRef<number>(0)
+  const loginRetryCount = useRef<number>(0)
+  const loginRateLimitedUntil = useRef<number>(0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!username.trim() || !password) {
       setError('Nome utente e password sono obbligatori')
+      return
+    }
+
+    // Controlla rate limiting globale
+    if (!checkRateLimit('login attempt')) {
+      setError('Sistema temporaneamente bloccato per rate limiting. Riprova più tardi.')
       return
     }
 
@@ -34,9 +43,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
       return
     }
     
-    // Previeni tentativi di login troppo frequenti (minimo 2 secondi tra tentativi)
-    if (now - lastLoginAttempt.current < 2000) {
-      console.log('⚠️ Login attempted too frequently, skipping...')
+    // Controlla se siamo ancora in rate limiting
+    if (now < loginRateLimitedUntil.current) {
+      const remainingTime = Math.ceil((loginRateLimitedUntil.current - now) / 1000)
+      console.log(`⚠️ Login still rate limited for ${remainingTime}s, skipping...`)
+      setError(`Rate limiting attivo. Riprova tra ${remainingTime} secondi.`)
+      return
+    }
+
+    // Exponential backoff per login
+    const backoffDelay = Math.min(2000 * Math.pow(2, loginRetryCount.current), 30000)
+    if (now - lastLoginAttempt.current < backoffDelay) {
+      const remainingBackoff = Math.ceil((backoffDelay - (now - lastLoginAttempt.current)) / 1000)
+      console.log(`⚠️ Login backoff active (${remainingBackoff}s remaining)`)
+      setError(`Attendi ${remainingBackoff} secondi prima di riprovare.`)
       return
     }
     
@@ -69,13 +89,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
       if (!response.ok) {
         result = await response.json()
         if (response.status === 429) {
-          throw new Error('Too many requests from this IP, please try again later.')
+          loginRetryCount.current++
+          // Attiva rate limiting globale
+          activateGlobalRateLimit(3 * 60 * 1000)
+          loginRateLimitedUntil.current = now + (3 * 60 * 1000)
+          console.warn(`⚠️ Login rate limited - activating global protection. Retry count: ${loginRetryCount.current}`)
+          throw new Error('Troppi tentativi di login. Sistema bloccato per 3 minuti.')
         }
         throw new Error(result.error || `Errore ${response.status}: ${response.statusText}`)
       }
       
       result = await response.json()
 
+      // Reset retry count on success
+      loginRetryCount.current = 0
+      loginRateLimitedUntil.current = 0
+      
       localStorage.setItem('fantaaiuto_token', result.token)
       console.log('✅ Login successful')
       onLogin(result.user)

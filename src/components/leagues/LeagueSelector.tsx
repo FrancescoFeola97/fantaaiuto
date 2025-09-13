@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { League, CreateLeagueRequest, JoinLeagueRequest } from '../../types/League'
 import { useNotifications } from '../../hooks/useNotifications'
 import { useLeague } from '../../contexts/LeagueContext'
+import { checkRateLimit } from '../../utils/rateLimitManager'
 
 interface LeagueSelectorProps {
   onLeagueSelect: (league: League) => void
@@ -40,6 +41,12 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
   const createLeague = async () => {
     if (!createForm.name.trim()) {
       showError('Nome lega richiesto')
+      return
+    }
+
+    // Controlla rate limiting globale
+    if (!checkRateLimit('league creation')) {
+      showError('Sistema temporaneamente bloccato. Riprova più tardi.')
       return
     }
 
@@ -114,6 +121,12 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
   const joinLeague = async () => {
     if (!joinForm.code.trim()) {
       showError('Codice lega richiesto')
+      return
+    }
+
+    // Controlla rate limiting globale
+    if (!checkRateLimit('league joining')) {
+      showError('Sistema temporaneamente bloccato. Riprova più tardi.')
       return
     }
 

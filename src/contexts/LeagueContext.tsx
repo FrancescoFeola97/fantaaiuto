@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react'
 import { League } from '../types/League'
+import { checkRateLimit } from '../utils/rateLimitManager'
 
 interface LeagueContextType {
   currentLeague: League | null
@@ -28,6 +29,11 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
   const loadLeagues = useCallback(async () => {
     if (!userId) {
       setIsLoading(false)
+      return
+    }
+
+    // Controlla rate limiting globale
+    if (!checkRateLimit('league loading')) {
       return
     }
 

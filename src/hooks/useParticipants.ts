@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLeague } from '../contexts/LeagueContext'
 import { useAbortController } from './useAbortController'
+import { checkRateLimit, activateGlobalRateLimit } from '../utils/rateLimitManager'
 
 interface Participant {
   id: string
@@ -29,6 +30,11 @@ export const useParticipants = () => {
   }, [currentLeague?.id])
 
   const loadParticipants = useCallback(async () => {
+    // Controlla rate limiting globale prima di tutto
+    if (!checkRateLimit('participants loading')) {
+      return
+    }
+
     // Evita chiamate multiple simultanee usando una ref invece della dipendenza isLoading
     if (isLoading) {
       console.log('⚠️ Load participants already in progress, skipping...')
@@ -76,7 +82,9 @@ export const useParticipants = () => {
         console.warn('⚠️ Access denied to participants - user may not be league member')
         setParticipants([])
       } else if (response.status === 429) {
-        console.warn('⚠️ Rate limited - too many requests to participants API')
+        console.warn('⚠️ Rate limited - activating global protection')
+        // Attiva rate limiting globale per 3 minuti
+        activateGlobalRateLimit(3 * 60 * 1000)
         // Non impostare participants vuoti per rate limiting, mantieni i dati esistenti
       } else {
         console.error(`❌ Failed to load participants: ${response.status} ${response.statusText}`)
@@ -105,12 +113,19 @@ export const useParticipants = () => {
         loadParticipants()
       }, 500)
       
-      // Listen for participants updates with debouncing
+      // Listen for participants updates with debouncing e rate limiting check
       let updateTimeout: NodeJS.Timeout
       const handleParticipantsUpdate = () => {
+        // Controlla rate limiting prima di programmare update
+        if (!checkRateLimit('participants update event')) {
+          return
+        }
         clearTimeout(updateTimeout)
         updateTimeout = setTimeout(() => {
-          loadParticipants()
+          // Doppio controllo al momento dell'esecuzione
+          if (checkRateLimit('participants update execution')) {
+            loadParticipants()
+          }
         }, 300)
       }
       
