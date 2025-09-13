@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { PlayerData } from '../../types/Player'
 import { useNotifications } from '../../hooks/useNotifications'
 import { useLeague } from '../../contexts/LeagueContext'
@@ -44,12 +44,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
     return headers
   }
 
-  useEffect(() => {
-    if (currentLeague) {
-      loadParticipants()
-    }
-  }, [currentLeague])
-
   // Calculate spent budget for a participant
   const getParticipantSpending = (participantName: string): number => {
     return players
@@ -64,7 +58,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
     return budget - spent
   }
 
-  const loadParticipants = async () => {
+  const loadParticipants = useCallback(async () => {
     // Evita chiamate multiple simultanee
     if (isLoadingParticipants) {
       console.log('⚠️ Load participants already in progress, skipping...')
@@ -119,7 +113,13 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
       setIsLoading(false)
       setIsLoadingParticipants(false)
     }
-  }
+  }, [currentLeague?.id])
+
+  useEffect(() => {
+    if (currentLeague) {
+      loadParticipants()
+    }
+  }, [currentLeague?.id, loadParticipants])
 
   const openCreateModal = () => {
     setNewParticipantName('')

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react'
 import { League } from '../types/League'
 
 interface LeagueContextType {
@@ -22,31 +22,30 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
   const [currentLeague, setCurrentLeague] = useState<League | null>(null)
   const [leagues, setLeagues] = useState<League[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const isLoadingLeagues = useRef(false)
+  const lastLeagueLoad = useRef<number>(0)
 
-  useEffect(() => {
-    if (userId) {
-      // Clear any previous user's league data first
-      const savedLeague = localStorage.getItem('fantaaiuto_current_league')
-      if (savedLeague) {
-        // Always clear saved league data when switching users to prevent cross-user contamination
-        localStorage.removeItem('fantaaiuto_current_league')
-        setCurrentLeague(null)
-      }
-      loadLeagues()
-    } else {
-      // Clear data when user logs out
-      setCurrentLeague(null)
-      setLeagues([])
-      localStorage.removeItem('fantaaiuto_current_league')
-      setIsLoading(false)
-    }
-  }, [userId])
-
-  const loadLeagues = async () => {
+  const loadLeagues = useCallback(async () => {
     if (!userId) {
       setIsLoading(false)
       return
     }
+
+    // Previeni chiamate multiple simultanee
+    const now = Date.now()
+    if (isLoadingLeagues.current) {
+      console.log('⚠️ League loading already in progress, skipping...')
+      return
+    }
+
+    // Previeni chiamate troppo frequenti (minimo 3 secondi tra caricamenti)
+    if (now - lastLeagueLoad.current < 3000) {
+      console.log('⚠️ League loading called too frequently, skipping...')
+      return
+    }
+
+    isLoadingLeagues.current = true
+    lastLeagueLoad.current = now
 
     const controller = new AbortController()
     let timeoutId: NodeJS.Timeout | null = null
@@ -102,9 +101,29 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
       if (timeoutId) clearTimeout(timeoutId)
     } finally {
       setIsLoading(false)
+      isLoadingLeagues.current = false
       if (timeoutId) clearTimeout(timeoutId)
     }
-  }
+  }, [userId, currentLeague])
+
+  useEffect(() => {
+    if (userId) {
+      // Clear any previous user's league data first
+      const savedLeague = localStorage.getItem('fantaaiuto_current_league')
+      if (savedLeague) {
+        // Always clear saved league data when switching users to prevent cross-user contamination
+        localStorage.removeItem('fantaaiuto_current_league')
+        setCurrentLeague(null)
+      }
+      loadLeagues()
+    } else {
+      // Clear data when user logs out
+      setCurrentLeague(null)
+      setLeagues([])
+      localStorage.removeItem('fantaaiuto_current_league')
+      setIsLoading(false)
+    }
+  }, [userId, loadLeagues])
 
   const refreshLeague = async () => {
     if (!currentLeague) return

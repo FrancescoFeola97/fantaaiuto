@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { LoginForm } from './components/auth/LoginForm'
 import { RegisterForm } from './components/auth/RegisterForm'
@@ -37,15 +37,25 @@ function App() {
   const [error, setError] = useState('')
   const [showRegister, setShowRegister] = useState(false)
   const [isVerifyingToken, setIsVerifyingToken] = useState(false)
+  const authCheckInProgress = useRef(false)
+  const lastAuthCheck = useRef<number>(0)
 
   useEffect(() => {
+    // Only check authentication once when app first loads
     checkAuthentication()
   }, [])
 
-  const checkAuthentication = async () => {
-    // Previeni chiamate multiple simultanee
-    if (isVerifyingToken) {
+  const checkAuthentication = useCallback(async () => {
+    // Previeni chiamate multiple simultanee con protezione avanzata
+    const now = Date.now()
+    if (authCheckInProgress.current || isVerifyingToken) {
       console.log('⚠️ Token verification already in progress, skipping...')
+      return
+    }
+    
+    // Previeni chiamate troppo frequenti (minimo 5 secondi tra controlli)
+    if (now - lastAuthCheck.current < 5000) {
+      console.log('⚠️ Token verification called too frequently, skipping...')
       return
     }
     
@@ -56,6 +66,8 @@ function App() {
         return
       }
 
+      authCheckInProgress.current = true
+      lastAuthCheck.current = now
       setIsVerifyingToken(true)
       console.log('🔍 Verifying token...')
       
@@ -104,8 +116,9 @@ function App() {
     } finally {
       setIsLoading(false)
       setIsVerifyingToken(false)
+      authCheckInProgress.current = false
     }
-  }
+  }, [])
 
   const handleLogin = (user: User) => {
     setUser(user)

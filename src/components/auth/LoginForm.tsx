@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 
 interface User {
   id: string
@@ -17,6 +17,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isLoginInProgress, setIsLoginInProgress] = useState(false)
+  const lastLoginAttempt = useRef<number>(0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,11 +27,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
       return
     }
 
-    // Previeni chiamate multiple simultanee
+    // Previeni chiamate multiple simultanee con protezione avanzata
+    const now = Date.now()
     if (isLoginInProgress) {
       console.log('⚠️ Login already in progress, skipping...')
       return
     }
+    
+    // Previeni tentativi di login troppo frequenti (minimo 2 secondi tra tentativi)
+    if (now - lastLoginAttempt.current < 2000) {
+      console.log('⚠️ Login attempted too frequently, skipping...')
+      return
+    }
+    
+    lastLoginAttempt.current = now
 
     setIsLoginInProgress(true)
     setIsLoading(true)
