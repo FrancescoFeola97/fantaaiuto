@@ -23,7 +23,7 @@ class RateLimitManager {
   }
 
   // Attiva il rate limiting globale
-  activateRateLimit(durationMs: number = 3 * 60 * 1000): void {
+  activateRateLimit(durationMs: number = 1 * 60 * 1000): void {
     const now = Date.now()
     this.rateLimitedUntil = now + durationMs
     

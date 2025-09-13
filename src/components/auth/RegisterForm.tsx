@@ -47,8 +47,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onRegister, onBackTo
       return
     }
     
-    // Previeni tentativi di registrazione troppo frequenti (minimo 2 secondi tra tentativi)
-    if (now - lastRegisterAttempt.current < 2000) {
+    // Previeni tentativi di registrazione troppo frequenti (minimo 1 secondo tra tentativi)
+    if (now - lastRegisterAttempt.current < 1000) {
       console.log('⚠️ Registration attempted too frequently, skipping...')
       return
     }

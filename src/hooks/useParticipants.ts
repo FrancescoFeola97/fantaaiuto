@@ -83,8 +83,8 @@ export const useParticipants = () => {
         setParticipants([])
       } else if (response.status === 429) {
         console.warn('⚠️ Rate limited - activating global protection')
-        // Attiva rate limiting globale per 3 minuti
-        activateGlobalRateLimit(3 * 60 * 1000)
+        // Attiva rate limiting globale per 1 minuto
+        activateGlobalRateLimit(1 * 60 * 1000)
         // Non impostare participants vuoti per rate limiting, mantieni i dati esistenti
       } else {
         console.error(`❌ Failed to load participants: ${response.status} ${response.statusText}`)

@@ -51,12 +51,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
       return
     }
 
-    // Exponential backoff per login
-    const backoffDelay = Math.min(2000 * Math.pow(2, loginRetryCount.current), 30000)
-    if (now - lastLoginAttempt.current < backoffDelay) {
-      const remainingBackoff = Math.ceil((backoffDelay - (now - lastLoginAttempt.current)) / 1000)
-      console.log(`⚠️ Login backoff active (${remainingBackoff}s remaining)`)
-      setError(`Attendi ${remainingBackoff} secondi prima di riprovare.`)
+    // Cooldown normale molto ridotto per login (solo 1 secondo)
+    if (now - lastLoginAttempt.current < 1000) {
+      const remainingBackoff = Math.ceil((1000 - (now - lastLoginAttempt.current)) / 1000)
+      console.log(`⚠️ Login cooldown active (${remainingBackoff}s remaining)`)
+      setError(`Attendi ${remainingBackoff} secondo prima di riprovare.`)
       return
     }
     
@@ -91,10 +90,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
         if (response.status === 429) {
           loginRetryCount.current++
           // Attiva rate limiting globale
-          activateGlobalRateLimit(3 * 60 * 1000)
-          loginRateLimitedUntil.current = now + (3 * 60 * 1000)
+          activateGlobalRateLimit(1 * 60 * 1000)
+          loginRateLimitedUntil.current = now + (1 * 60 * 1000)
           console.warn(`⚠️ Login rate limited - activating global protection. Retry count: ${loginRetryCount.current}`)
-          throw new Error('Troppi tentativi di login. Sistema bloccato per 3 minuti.')
+          throw new Error('Troppi tentativi di login. Sistema bloccato per 1 minuto.')
         }
         throw new Error(result.error || `Errore ${response.status}: ${response.statusText}`)
       }

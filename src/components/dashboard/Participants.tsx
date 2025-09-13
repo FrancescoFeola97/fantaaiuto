@@ -105,7 +105,7 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
       } else if (response.status === 429) {
         console.warn('⚠️ Rate limited - activating global protection')
         // Attiva rate limiting globale
-        activateGlobalRateLimit(3 * 60 * 1000)
+        activateGlobalRateLimit(1 * 60 * 1000)
         // Non impostare errore per rate limiting, mantieni i dati esistenti
       } else {
         throw new Error('Errore caricamento partecipanti')

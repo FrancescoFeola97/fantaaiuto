@@ -68,10 +68,9 @@ function App() {
       return
     }
 
-    // Exponential backoff: aumenta il delay dopo ogni retry fallito
-    const backoffDelay = Math.min(5000 * Math.pow(2, authRetryCount.current), 60000)
-    if (now - lastAuthCheck.current < backoffDelay) {
-      console.log(`⚠️ Token verification backoff active (${Math.ceil((backoffDelay - (now - lastAuthCheck.current)) / 1000)}s remaining)`)
+    // Cooldown normale molto ridotto per token verification (solo 2 secondi)
+    if (now - lastAuthCheck.current < 2000) {
+      console.log(`⚠️ Token verification cooldown active (${Math.ceil((2000 - (now - lastAuthCheck.current)) / 1000)}s remaining)`)
       return
     }
     
@@ -114,11 +113,11 @@ function App() {
           console.log('✅ Token verification successful')
         } else if (response.status === 429) {
           authRetryCount.current++
-          // Attiva rate limiting globale per 3 minuti
-          activateGlobalRateLimit(3 * 60 * 1000)
-          rateLimitedUntil.current = now + (3 * 60 * 1000)
-          console.warn(`⚠️ Rate limited - activating global protection for 3 minutes. Retry count: ${authRetryCount.current}`)
-          setError('Troppi tentativi di accesso. Tutte le richieste sono state sospese per 3 minuti.')
+          // Attiva rate limiting globale per 1 minuto
+          activateGlobalRateLimit(1 * 60 * 1000)
+          rateLimitedUntil.current = now + (1 * 60 * 1000)
+          console.warn(`⚠️ Rate limited - activating global protection for 1 minute. Retry count: ${authRetryCount.current}`)
+          setError('Troppi tentativi di accesso. Tutte le richieste sono state sospese per 1 minuto.')
         } else {
           // Reset rate limiting per errori non-429
           if (response.status !== 429) {

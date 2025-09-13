@@ -44,8 +44,8 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
       return
     }
 
-    // Previeni chiamate troppo frequenti (minimo 3 secondi tra caricamenti)
-    if (now - lastLeagueLoad.current < 3000) {
+    // Previeni chiamate troppo frequenti (minimo 1 secondo tra caricamenti)
+    if (now - lastLeagueLoad.current < 1000) {
       console.log('⚠️ League loading called too frequently, skipping...')
       return
     }

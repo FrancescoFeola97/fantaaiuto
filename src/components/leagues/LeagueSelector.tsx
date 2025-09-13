@@ -57,8 +57,8 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
       return
     }
 
-    // Previeni operazioni troppo frequenti (minimo 3 secondi tra operazioni)
-    if (now - lastLeagueOperation.current < 3000) {
+    // Previeni operazioni troppo frequenti (minimo 1 secondo tra operazioni)
+    if (now - lastLeagueOperation.current < 1000) {
       console.log('⚠️ League operation attempted too frequently, skipping...')
       return
     }
@@ -137,8 +137,8 @@ export const LeagueSelector: React.FC<LeagueSelectorProps> = () => {
       return
     }
 
-    // Previeni operazioni troppo frequenti (minimo 3 secondi tra operazioni)
-    if (now - lastLeagueOperation.current < 3000) {
+    // Previeni operazioni troppo frequenti (minimo 1 secondo tra operazioni)
+    if (now - lastLeagueOperation.current < 1000) {
       console.log('⚠️ League operation attempted too frequently, skipping...')
       return
     }
