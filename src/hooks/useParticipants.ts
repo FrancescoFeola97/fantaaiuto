@@ -29,7 +29,7 @@ export const useParticipants = () => {
   }, [currentLeague?.id])
 
   const loadParticipants = useCallback(async () => {
-    // Evita chiamate multiple simultanee
+    // Evita chiamate multiple simultanee usando una ref invece della dipendenza isLoading
     if (isLoading) {
       console.log('⚠️ Load participants already in progress, skipping...')
       return
@@ -95,7 +95,7 @@ export const useParticipants = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [currentLeague, createApiHeaders, createController, clearTimer, isLoading])
+  }, [currentLeague, createApiHeaders, createController, clearTimer])
 
   // Load participants when league changes
   useEffect(() => {
