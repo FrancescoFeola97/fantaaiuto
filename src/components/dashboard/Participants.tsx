@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { PlayerData } from '../../types/Player'
 import { useNotifications } from '../../hooks/useNotifications'
 import { useLeague } from '../../contexts/LeagueContext'
-import { checkRateLimit, activateGlobalRateLimit } from '../../utils/rateLimitManager'
+import { activateGlobalRateLimit } from '../../utils/rateLimitManager'
 
 interface Participant {
   id: string
@@ -60,11 +60,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   }
 
   const loadParticipants = useCallback(async () => {
-    // Controlla rate limiting globale
-    if (!checkRateLimit('participants loading (component)')) {
-      return
-    }
-
     // Evita chiamate multiple simultanee
     if (isLoadingParticipants) {
       console.log('⚠️ Load participants already in progress, skipping...')
@@ -137,12 +132,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   const createNewParticipant = async () => {
     if (!newParticipantName.trim()) return
 
-    // Controlla rate limiting globale
-    if (!checkRateLimit('participant creation')) {
-      showError('Sistema temporaneamente bloccato. Riprova più tardi.')
-      return
-    }
-
     const name = newParticipantName.trim()
 
     try {
@@ -186,12 +175,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   const deleteParticipant = async (participantId: string) => {
     if (!confirm('Sei sicuro di voler eliminare questo partecipante?')) return
 
-    // Controlla rate limiting globale
-    if (!checkRateLimit('participant deletion')) {
-      showError('Sistema temporaneamente bloccato. Riprova più tardi.')
-      return
-    }
-
     try {
       if (!currentLeague) return
 
@@ -218,12 +201,6 @@ export const Participants: React.FC<ParticipantsProps> = ({ onBackToPlayers, pla
   const editParticipant = async (participant: Participant) => {
     const newName = prompt('Nome del partecipante:', participant.name)
     if (!newName || newName.trim() === '') return
-
-    // Controlla rate limiting globale
-    if (!checkRateLimit('participant editing')) {
-      showError('Sistema temporaneamente bloccato. Riprova più tardi.')
-      return
-    }
 
     const trimmedName = newName.trim()
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLeague } from '../contexts/LeagueContext'
 import { useAbortController } from './useAbortController'
-import { checkRateLimit, activateGlobalRateLimit } from '../utils/rateLimitManager'
+import { activateGlobalRateLimit } from '../utils/rateLimitManager'
 
 interface Participant {
   id: string
@@ -30,11 +30,6 @@ export const useParticipants = () => {
   }, [currentLeague?.id])
 
   const loadParticipants = useCallback(async () => {
-    // Controlla rate limiting globale prima di tutto
-    if (!checkRateLimit('participants loading')) {
-      return
-    }
-
     // Evita chiamate multiple simultanee usando una ref invece della dipendenza isLoading
     if (isLoading) {
       console.log('⚠️ Load participants already in progress, skipping...')
@@ -113,19 +108,32 @@ export const useParticipants = () => {
         loadParticipants()
       }, 500)
       
-      // Listen for participants updates with debouncing e rate limiting check
+      // Listen for participants updates with debouncing (protezione solo per loop)
       let updateTimeout: NodeJS.Timeout
+      let updateCount = 0
+      let lastUpdateTime = 0
+      
       const handleParticipantsUpdate = () => {
-        // Controlla rate limiting prima di programmare update
-        if (!checkRateLimit('participants update event')) {
+        const now = Date.now()
+        
+        // Reset counter se è passato più di 10 secondi dall'ultimo update
+        if (now - lastUpdateTime > 10000) {
+          updateCount = 0
+        }
+        
+        lastUpdateTime = now
+        updateCount++
+        
+        // Blocca solo se ci sono troppi update in poco tempo (possibile loop)
+        if (updateCount > 5) {
+          console.log('⚠️ Too many participant updates, possible loop - activating rate limiting')
+          activateGlobalRateLimit(1 * 60 * 1000)
           return
         }
+        
         clearTimeout(updateTimeout)
         updateTimeout = setTimeout(() => {
-          // Doppio controllo al momento dell'esecuzione
-          if (checkRateLimit('participants update execution')) {
-            loadParticipants()
-          }
+          loadParticipants()
         }, 300)
       }
       

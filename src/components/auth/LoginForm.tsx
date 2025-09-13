@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { checkRateLimit, activateGlobalRateLimit } from '../../utils/rateLimitManager'
+import { activateGlobalRateLimit } from '../../utils/rateLimitManager'
 
 interface User {
   id: string
@@ -27,12 +27,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onRegisterClick }
     
     if (!username.trim() || !password) {
       setError('Nome utente e password sono obbligatori')
-      return
-    }
-
-    // Controlla rate limiting globale
-    if (!checkRateLimit('login attempt')) {
-      setError('Sistema temporaneamente bloccato per rate limiting. Riprova più tardi.')
       return
     }
 

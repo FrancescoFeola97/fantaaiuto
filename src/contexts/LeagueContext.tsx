@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react'
 import { League } from '../types/League'
-import { checkRateLimit } from '../utils/rateLimitManager'
 
 interface LeagueContextType {
   currentLeague: League | null
@@ -32,26 +31,14 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
       return
     }
 
-    // Controlla rate limiting globale
-    if (!checkRateLimit('league loading')) {
-      return
-    }
-
-    // Previeni chiamate multiple simultanee
-    const now = Date.now()
+    // Previeni chiamate multiple simultanee (solo protezione base)
     if (isLoadingLeagues.current) {
       console.log('⚠️ League loading already in progress, skipping...')
       return
     }
 
-    // Previeni chiamate troppo frequenti (minimo 1 secondo tra caricamenti)
-    if (now - lastLeagueLoad.current < 1000) {
-      console.log('⚠️ League loading called too frequently, skipping...')
-      return
-    }
-
     isLoadingLeagues.current = true
-    lastLeagueLoad.current = now
+    lastLeagueLoad.current = Date.now()
 
     const controller = new AbortController()
     let timeoutId: NodeJS.Timeout | null = null

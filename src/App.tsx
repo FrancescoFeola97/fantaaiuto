@@ -7,7 +7,7 @@ import { LoadingScreen } from './components/ui/LoadingScreen'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { LeagueProvider, useLeague } from './contexts/LeagueContext'
 import { buildApiUrl, API_ENDPOINTS } from './config/api'
-import { checkRateLimit, activateGlobalRateLimit } from './utils/rateLimitManager'
+import { activateGlobalRateLimit } from './utils/rateLimitManager'
 
 interface User {
   id: string
@@ -49,19 +49,14 @@ function App() {
   }, [])
 
   const checkAuthentication = useCallback(async () => {
-    // Controlla rate limiting globale prima di tutto
-    if (!checkRateLimit('token verification')) {
-      return
-    }
-
-    // Previeni chiamate multiple simultanee con protezione avanzata
+    // Previeni chiamate multiple simultanee (solo protezione base)
     const now = Date.now()
     if (authCheckInProgress.current || isVerifyingToken) {
       console.log('⚠️ Token verification already in progress, skipping...')
       return
     }
     
-    // Controlla se siamo ancora in rate limiting
+    // Controlla se siamo ancora in rate limiting globale (solo per errori 429 reali)
     if (now < rateLimitedUntil.current) {
       const remainingTime = Math.ceil((rateLimitedUntil.current - now) / 1000)
       console.log(`⚠️ Still rate limited for ${remainingTime}s, skipping token verification...`)
