@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLeague } from '../contexts/LeagueContext'
+import { useAbortController } from './useAbortController'
 
 interface Participant {
   id: string
@@ -10,6 +11,7 @@ interface Participant {
 export const useParticipants = () => {
   const { currentLeague } = useLeague()
   const [participants, setParticipants] = useState<Participant[]>([])
+  const { createController, cleanup, clearTimer } = useAbortController()
 
   const createApiHeaders = useCallback(() => {
     const token = localStorage.getItem('fantaaiuto_token')
@@ -33,15 +35,16 @@ export const useParticipants = () => {
         return
       }
 
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 20000)
+      // Create new controller for this request (cancels previous ones)
+      const controller = createController(30000) // 30 second timeout
       
       const response = await fetch('https://fantaaiuto-backend.onrender.com/api/participants', {
         headers: createApiHeaders(),
         signal: controller.signal
       })
       
-      clearTimeout(timeoutId)
+      // Clear timeout on successful response
+      clearTimer()
       
       if (response.ok) {
         const data = await response.json()
@@ -59,18 +62,33 @@ export const useParticipants = () => {
         }))
         setParticipants(mappedParticipants)
         console.log(`📊 Loaded ${mappedParticipants.length} participants for league ${currentLeague.id}`)
+      } else if (response.status === 403) {
+        console.warn('⚠️ Access denied to participants - user may not be league member')
+        setParticipants([])
+      } else {
+        console.error(`❌ Failed to load participants: ${response.status} ${response.statusText}`)
+        setParticipants([])
       }
-    } catch (error) {
-      console.error('❌ Failed to load participants:', error)
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log('⚠️ Participants request cancelled (league changed or timeout)')
+      } else {
+        console.error('❌ Error loading participants:', error)
+      }
+      // Don't set participants to empty on abort - keep previous data
+      if (error.name !== 'AbortError') {
+        setParticipants([])
+      }
     }
-  }, [currentLeague, createApiHeaders])
+  }, [currentLeague, createApiHeaders, createController, clearTimer])
 
   // Load participants when league changes
   useEffect(() => {
     if (currentLeague) {
+      // Small delay to avoid rapid successive calls
       const loadTimer = setTimeout(() => {
         loadParticipants()
-      }, 100)
+      }, 200)
       
       // Listen for participants updates
       const handleParticipantsUpdate = () => {
@@ -82,11 +100,14 @@ export const useParticipants = () => {
       return () => {
         clearTimeout(loadTimer)
         window.removeEventListener('fantaaiuto_participants_updated', handleParticipantsUpdate)
+        // Clean up any pending requests when league changes
+        cleanup()
       }
     } else {
       setParticipants([])
+      cleanup() // Clean up requests when no league is selected
     }
-  }, [currentLeague?.id, loadParticipants])
+  }, [currentLeague?.id, loadParticipants, cleanup])
 
   return {
     participants,
