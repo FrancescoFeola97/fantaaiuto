@@ -36,12 +36,19 @@ function App() {
   const [user, setUser] = useState<User | null>(null)
   const [error, setError] = useState('')
   const [showRegister, setShowRegister] = useState(false)
+  const [isVerifyingToken, setIsVerifyingToken] = useState(false)
 
   useEffect(() => {
     checkAuthentication()
   }, [])
 
   const checkAuthentication = async () => {
+    // Previeni chiamate multiple simultanee
+    if (isVerifyingToken) {
+      console.log('⚠️ Token verification already in progress, skipping...')
+      return
+    }
+    
     try {
       const token = localStorage.getItem('fantaaiuto_token')
       if (!token) {
@@ -49,7 +56,8 @@ function App() {
         return
       }
 
-      // Token verification - removed sensitive logging
+      setIsVerifyingToken(true)
+      console.log('🔍 Verifying token...')
       
       // Backend-only authentication with extended timeout for Render cold start
       const controller = new AbortController()
@@ -72,21 +80,30 @@ function App() {
           const result = await response.json()
           setUser(result.user)
           setIsAuthenticated(true)
+          console.log('✅ Token verification successful')
+        } else if (response.status === 429) {
+          console.warn('⚠️ Rate limited - too many token verification requests')
+          setError('Troppi tentativi di accesso. Riprova tra qualche minuto.')
         } else {
           localStorage.removeItem('fantaaiuto_token')
           setError('Sessione scaduta. Effettua nuovamente il login.')
         }
       } catch (error) {
         clearTimeout(timeoutId)
-        console.error('❌ Backend connection failed:', error)
-        localStorage.removeItem('fantaaiuto_token')
-        setError('Impossibile connettersi al server. Verifica la connessione internet.')
+        if ((error as Error).name === 'AbortError') {
+          console.log('⚠️ Token verification request aborted')
+        } else {
+          console.error('❌ Backend connection failed:', error)
+          localStorage.removeItem('fantaaiuto_token')
+          setError('Impossibile connettersi al server. Verifica la connessione internet.')
+        }
       }
     } catch (error) {
       console.error('❌ Authentication check failed:', error)
       setError('Errore durante la verifica dell\'autenticazione.')
     } finally {
       setIsLoading(false)
+      setIsVerifyingToken(false)
     }
   }
 
