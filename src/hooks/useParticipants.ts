@@ -127,7 +127,7 @@ export const useParticipants = () => {
       setParticipants([])
       cleanup() // Clean up requests when no league is selected
     }
-  }, [currentLeague?.id]) // Non dipendere da loadParticipants per evitare loop infinito
+  }, [currentLeague?.id, cleanup]) // cleanup è stabile da useAbortController
 
   return {
     participants,

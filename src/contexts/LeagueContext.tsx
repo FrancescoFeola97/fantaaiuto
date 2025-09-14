@@ -63,19 +63,27 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
         setLeagues(userLeagues)
         
         
-        // Only auto-select if no saved league exists and no current league
-        if (!currentLeague && userLeagues.length > 0 && !localStorage.getItem('fantaaiuto_current_league')) {
+        // Auto-select logic based on current state, not function dependencies
+        const savedLeague = localStorage.getItem('fantaaiuto_current_league')
+        const currentLeagueFromState = JSON.parse(savedLeague || 'null')
+        
+        if (!currentLeagueFromState && userLeagues.length > 0) {
+          // Auto-select first league if none is selected
           const defaultLeague = userLeagues[0]
           setCurrentLeague(defaultLeague)
           localStorage.setItem('fantaaiuto_current_league', JSON.stringify(defaultLeague))
-        }
-        // If current league is set, verify it still exists in the loaded leagues
-        else if (currentLeague) {
-          const stillExists = userLeagues.find((l: League) => l.id === currentLeague.id)
-          if (!stillExists) {
-            // Current league no longer exists, clear it
-            setCurrentLeague(null)
+        } else if (currentLeagueFromState) {
+          // Verify current league still exists
+          const stillExists = userLeagues.find((l: League) => l.id === currentLeagueFromState.id)
+          if (stillExists) {
+            setCurrentLeague(stillExists)
+          } else {
+            // Current league no longer exists, clear it and select first available
+            setCurrentLeague(userLeagues.length > 0 ? userLeagues[0] : null)
             localStorage.removeItem('fantaaiuto_current_league')
+            if (userLeagues.length > 0) {
+              localStorage.setItem('fantaaiuto_current_league', JSON.stringify(userLeagues[0]))
+            }
           }
         }
       } else {
@@ -94,7 +102,7 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
       isLoadingLeagues.current = false
       if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [userId, currentLeague])
+  }, [userId])
 
   useEffect(() => {
     if (userId) {
@@ -113,7 +121,7 @@ export const LeagueProvider: React.FC<LeagueProviderProps> = ({ children, userId
       localStorage.removeItem('fantaaiuto_current_league')
       setIsLoading(false)
     }
-  }, [userId, loadLeagues])
+  }, [userId]) // Non dipendere da loadLeagues per evitare loop infiniti
 
   const refreshLeague = async () => {
     if (!currentLeague) return
